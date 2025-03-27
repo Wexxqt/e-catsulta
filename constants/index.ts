@@ -1,4 +1,4 @@
-export const GenderOptions = ["Male", "Female", "Other"];
+export const GenderOptions = ["male", "female", "other"];
 
 export const PatientFormDefaultValues = {
   firstName: "",
@@ -8,17 +8,16 @@ export const PatientFormDefaultValues = {
   birthDate: new Date(Date.now()),
   gender: "Male" as Gender,
   address: "",
-  occupation: "",
+  category: "",
   emergencyContactName: "",
   emergencyContactNumber: "",
-  primaryPhysician: "",
   insuranceProvider: "",
   insurancePolicyNumber: "",
   allergies: "",
   currentMedication: "",
   familyMedicalHistory: "",
   pastMedicalHistory: "",
-  identificationType: "Birth Certificate",
+  identificationType: "",
   identificationNumber: "",
   identificationDocument: [],
   treatmentConsent: false,
@@ -27,57 +26,25 @@ export const PatientFormDefaultValues = {
 };
 
 export const IdentificationTypes = [
-  "Birth Certificate",
-  "Driver's License",
-  "Medical Insurance Card/Policy",
-  "Military ID Card",
-  "National Identity Card",
-  "Passport",
-  "Resident Alien Card (Green Card)",
-  "Social Security Card",
-  "State ID Card",
-  "Student ID Card",
-  "Voter ID Card",
+  "Student ID",
+  "Employee ID",
 ];
 
 export const Doctors = [
   {
-    image: "/assets/images/dr-green.png",
-    name: "John Green",
-  },
-  {
-    image: "/assets/images/dr-cameron.png",
-    name: "Leila Cameron",
-  },
-  {
-    image: "/assets/images/dr-livingston.png",
-    name: "David Livingston",
-  },
-  {
-    image: "/assets/images/dr-peter.png",
-    name: "Evan Peter",
-  },
-  {
-    image: "/assets/images/dr-powell.png",
-    name: "Jane Powell",
-  },
-  {
-    image: "/assets/images/dr-remirez.png",
-    name: "Alex Ramirez",
-  },
-  {
-    image: "/assets/images/dr-lee.png",
-    name: "Jasmine Lee",
+    image: "/assets/images/dr-abundo.png",
+    name: "Abegail M. Abundo (Medical)",
   },
   {
     image: "/assets/images/dr-cruz.png",
-    name: "Alyana Cruz",
-  },
-  {
-    image: "/assets/images/dr-sharma.png",
-    name: "Hardik Sharma",
+    name: "Genevieve S. De Castro (Dentist)",
   },
 ];
+
+export const Category = [
+  "Student",
+  "Employee",
+]
 
 export const StatusIcon = {
   scheduled: "/assets/icons/check.svg",

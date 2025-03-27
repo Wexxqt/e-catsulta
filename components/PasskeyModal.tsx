@@ -23,7 +23,7 @@ import { decryptKey, encryptKey } from "@/lib/utils";
 export const PasskeyModal = () => {
   const router = useRouter();
   const path = usePathname();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true); // Always open the modal initially
   const [passkey, setPasskey] = useState("");
   const [error, setError] = useState("");
 
@@ -33,16 +33,12 @@ export const PasskeyModal = () => {
       : null;
 
   useEffect(() => {
-    const accessKey = encryptedKey && decryptKey(encryptedKey);
-
-    if (path)
-      if (accessKey === process.env.NEXT_PUBLIC_ADMIN_PASSKEY!.toString()) {
-        setOpen(false);
-        router.push("/admin");
-      } else {
-        setOpen(true);
-      }
-  }, [encryptedKey]);
+    // No need to check for existing key on initial load.
+    // The modal always opens, requiring a passkey.
+    if (path === "/admin" && !open) {
+      router.push("/"); // If they somehow got to admin without authentication, redirect.
+    }
+  }, [path, open, router]);
 
   const closeModal = () => {
     setOpen(false);
@@ -60,6 +56,7 @@ export const PasskeyModal = () => {
       localStorage.setItem("accessKey", encryptedKey);
 
       setOpen(false);
+      router.replace("/admin"); // Use router.replace here
     } else {
       setError("Invalid passkey. Please try again.");
     }

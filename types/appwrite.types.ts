@@ -8,12 +8,11 @@ export interface Patient extends Models.Document {
   birthDate: Date;
   gender: Gender;
   address: string;
-  occupation: string;
+  category: string;
   emergencyContactName: string;
   emergencyContactNumber: string;
   primaryPhysician: string;
-  insuranceProvider: string;
-  insurancePolicyNumber: string;
+  signsSymptoms: string;
   allergies: string | undefined;
   currentMedication: string | undefined;
   familyMedicalHistory: string | undefined;

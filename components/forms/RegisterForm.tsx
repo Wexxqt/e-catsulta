@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SelectItem } from "@/components/ui/select";
 import {
-  Doctors,
+  Category,
   GenderOptions,
   IdentificationTypes,
   PatientFormDefaultValues,
@@ -67,12 +67,10 @@ const RegisterForm = ({ user }: { user: User }) => {
         birthDate: new Date(values.birthDate),
         gender: values.gender,
         address: values.address,
-        occupation: values.occupation,
+        category: values.category,
         emergencyContactName: values.emergencyContactName,
         emergencyContactNumber: values.emergencyContactNumber,
-        primaryPhysician: values.primaryPhysician,
-        insuranceProvider: values.insuranceProvider,
-        insurancePolicyNumber: values.insurancePolicyNumber,
+        signsSymptoms: values.signsSymptoms,
         allergies: values.allergies,
         currentMedication: values.currentMedication,
         familyMedicalHistory: values.familyMedicalHistory,
@@ -104,7 +102,7 @@ const RegisterForm = ({ user }: { user: User }) => {
         className="flex-1 space-y-12"
       >
         <section className="space-y-4">
-          <h1 className="header">Welcome 👋</h1>
+          <h1 className="header">Hi CatSUans! 👋</h1>
           <p className="text-dark-700">Let us know more about yourself.</p>
         </section>
 
@@ -119,7 +117,8 @@ const RegisterForm = ({ user }: { user: User }) => {
             fieldType={FormFieldType.INPUT}
             control={form.control}
             name="name"
-            placeholder="John Doe"
+            label='Full Name'
+            placeholder="Full Name"
             iconSrc="/assets/icons/user.svg"
             iconAlt="user"
           />
@@ -131,7 +130,7 @@ const RegisterForm = ({ user }: { user: User }) => {
               control={form.control}
               name="email"
               label="Email address"
-              placeholder="johndoe@gmail.com"
+              placeholder="yourname@email.com"
               iconSrc="/assets/icons/email.svg"
               iconAlt="email"
             />
@@ -141,7 +140,7 @@ const RegisterForm = ({ user }: { user: User }) => {
               control={form.control}
               name="phone"
               label="Phone Number"
-              placeholder="(555) 123-4567"
+              placeholder="+63 9XXXXXXXXX"
             />
           </div>
 
@@ -180,24 +179,31 @@ const RegisterForm = ({ user }: { user: User }) => {
             />
           </div>
 
-          {/* Address & Occupation */}
+          {/* Address */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
               fieldType={FormFieldType.INPUT}
               control={form.control}
               name="address"
               label="Address"
-              placeholder="14 street, New york, NY - 5101"
-            />
-
-            <CustomFormField
-              fieldType={FormFieldType.INPUT}
-              control={form.control}
-              name="occupation"
-              label="Occupation"
-              placeholder=" Software Engineer"
-            />
+              placeholder="123 Example Street, Example Bldg."
+            /> 
           </div>
+
+          {/* Category */}
+          <CustomFormField
+            fieldType={FormFieldType.SELECT}
+            control={form.control}
+            name="category"
+            label="Category"
+            placeholder="Select Category"
+          >
+            {Category.map((type, i) => (
+              <SelectItem key={type + i} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </CustomFormField>
 
           {/* Emergency Contact Name & Emergency Contact Number */}
           <div className="flex flex-col gap-6 xl:flex-row">
@@ -224,46 +230,14 @@ const RegisterForm = ({ user }: { user: User }) => {
             <h2 className="sub-header">Medical Information</h2>
           </div>
 
-          {/* PRIMARY CARE PHYSICIAN */}
-          <CustomFormField
-            fieldType={FormFieldType.SELECT}
-            control={form.control}
-            name="primaryPhysician"
-            label="Primary care physician"
-            placeholder="Select a physician"
-          >
-            {Doctors.map((doctor, i) => (
-              <SelectItem key={doctor.name + i} value={doctor.name}>
-                <div className="flex cursor-pointer items-center gap-2">
-                  <Image
-                    src={doctor.image}
-                    width={32}
-                    height={32}
-                    alt="doctor"
-                    className="rounded-full border border-dark-500"
-                  />
-                  <p>{doctor.name}</p>
-                </div>
-              </SelectItem>
-            ))}
-          </CustomFormField>
-
           {/* INSURANCE & POLICY NUMBER */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
               fieldType={FormFieldType.INPUT}
               control={form.control}
-              name="insuranceProvider"
-              label="Insurance provider"
-              placeholder="BlueCross BlueShield"
-            />
-
-            <CustomFormField
-              fieldType={FormFieldType.INPUT}
-              control={form.control}
-              name="insurancePolicyNumber"
-              label="Insurance policy number"
-              placeholder="ABC123456789"
+              name="signsSymptoms"
+              label="Signs & Symptoms "
+              placeholder="Fever (often high, sudden onset)"
             />
           </div>
 
@@ -316,7 +290,7 @@ const RegisterForm = ({ user }: { user: User }) => {
             control={form.control}
             name="identificationType"
             label="Identification Type"
-            placeholder="Select identification type"
+            placeholder="Select ID type"
           >
             {IdentificationTypes.map((type, i) => (
               <SelectItem key={type + i} value={type}>
@@ -330,13 +304,13 @@ const RegisterForm = ({ user }: { user: User }) => {
             control={form.control}
             name="identificationNumber"
             label="Identification Number"
-            placeholder="123456789"
+            placeholder="2019-00000"
           />
 
           <CustomFormField
             fieldType={FormFieldType.SKELETON}
             control={form.control}
-            name="identificationDocument"
+            name="identificationDocumen t"
             label="Scanned Copy of Identification Document"
             renderSkeleton={(field) => (
               <FormControl>

@@ -96,17 +96,23 @@ export const registerPatient = async ({
 // GET PATIENT
 export const getPatient = async (userId: string) => {
   try {
+    console.log("Fetching patient for userId:", userId);
+
     const patients = await databases.listDocuments(
       DATABASE_ID!,
       PATIENT_COLLECTION_ID!,
       [Query.equal("userId", [userId])]
     );
 
+    if (!patients?.documents?.length) {
+      console.warn("No patient found for userId:", userId);
+      return parseStringify({ error: "No patient found" }); // ✅ Fix here
+    }
+
+    console.log("Patient data found:", patients.documents[0]);
     return parseStringify(patients.documents[0]);
   } catch (error) {
-    console.error(
-      "An error occurred while retrieving the patient details:",
-      error
-    );
+    console.error("Error retrieving patient details:", error);
+    return parseStringify({ error: "Failed to retrieve patient details" }); // ✅ Fix here
   }
 };

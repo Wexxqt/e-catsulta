@@ -318,13 +318,13 @@
 }
 
 .react-datepicker__day--selected {
-  background-color: #24ae7c !important;
+  background-color: #79baec !important;
   color: #ffffff !important;
   border-radius: 4px;
 }
 
 .react-datepicker__time-list-item--selected {
-  background-color: #24ae7c !important;
+  background-color: #79baec !important;
 }
 
 .react-datepicker__time-container {
@@ -334,6 +334,12 @@
 .react-datepicker__time-list-item {
   display: flex !important;
   align-items: center !important;
+}
+
+.react-datepicker__day--disabled,
+.react-datepicker__time-list-item--disabled {
+  color: #5a5e63 !important; /* Dim the restricted times/dates */
+  pointer-events: none;
 }
 
 /* =====  REACT PHONE NUMBER INPUT OVERRIDES */

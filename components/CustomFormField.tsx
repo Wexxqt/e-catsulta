@@ -25,6 +25,7 @@ export enum FormFieldType {
   DATE_PICKER = "datePicker",
   SELECT = "select",
   SKELETON = "skeleton",
+  BOOKING_CALENDAR = "bookingCalendar",
 }
 
 interface CustomProps {
@@ -40,6 +41,7 @@ interface CustomProps {
   children?: React.ReactNode;
   renderSkeleton?: (field: any) => React.ReactNode;
   fieldType: FormFieldType;
+  reservedDates?: { startDate: Date; endDate: Date }[];
 }
 
 const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
@@ -80,7 +82,7 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
       return (
         <FormControl>
           <PhoneInput
-            defaultCountry="US"
+            defaultCountry="PH"
             placeholder={props.placeholder}
             international
             withCountryCallingCode
@@ -116,15 +118,24 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
             className="ml-2"
           />
           <FormControl>
-            <ReactDatePicker
-              showTimeSelect={props.showTimeSelect ?? false}
-              selected={field.value}
-              onChange={(date: Date) => field.onChange(date)}
-              timeInputLabel="Time:"
-              dateFormat={props.dateFormat ?? "MM/dd/yyyy"}
-              wrapperClassName="date-picker"
-            />
+  <ReactDatePicker
+          showTimeSelect={props.showTimeSelect ?? false}
+          selected={field.value}
+          onChange={(date: Date) => field.onChange(date)}
+          timeInputLabel="Time:"
+          dateFormat={props.dateFormat ?? "MM/dd/yyyy"}
+          wrapperClassName="date-picker"
+          filterDate={(date) => {
+      const day = date.getDay();
+      return day !== 0 && day !== 6; // Exclude Saturdays (6) and Sundays (0)
+    }}
+    filterTime={(time) => {
+      const hours = time.getHours();
+      return hours >= 8 && hours < 17; // Only allow between 8 AM and 5 PM
+    }}
+          />
           </FormControl>
+
         </div>
       );
     case FormFieldType.SELECT:

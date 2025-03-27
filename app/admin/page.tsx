@@ -22,7 +22,7 @@ const AdminPage = async () => {
           />
         </Link>
 
-        <p className="text-16-semibold">Admin Dashboard</p>
+        <a href="/" className="text-16-semibold">Logout</a>
       </header>
 
       <main className="admin-main">
@@ -56,6 +56,7 @@ const AdminPage = async () => {
 
         <DataTable columns={columns} data={appointments.documents} />
       </main>
+      
     </div>
   );
 };
