@@ -4,6 +4,9 @@ import Image from "next/image";
 import ReactDatePicker from "react-datepicker";
 import { Control } from "react-hook-form";
 import PhoneInput from "react-phone-number-input";
+import { useState, useEffect } from "react";
+
+import { Doctors } from "@/constants";
 
 import { Checkbox } from "./ui/checkbox";
 import {
@@ -25,7 +28,6 @@ export enum FormFieldType {
   DATE_PICKER = "datePicker",
   SELECT = "select",
   SKELETON = "skeleton",
-  BOOKING_CALENDAR = "bookingCalendar",
 }
 
 interface CustomProps {
@@ -42,9 +44,39 @@ interface CustomProps {
   renderSkeleton?: (field: any) => React.ReactNode;
   fieldType: FormFieldType;
   reservedDates?: { startDate: Date; endDate: Date }[];
+  doctorId?: string;
 }
 
 const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
+  const [availability, setAvailability] = useState<{ days: number[], startTime: number, endTime: number }>({ days: [], startTime: 8, endTime: 17 });
+  const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
+
+  useEffect(() => {
+    if (props.doctorId) {
+      const doctor = Doctors.find(doc => doc.id === props.doctorId);
+      if (doctor) {
+        setAvailability({
+          days: doctor.availability.days,
+          startTime: doctor.availability.startTime,
+          endTime: doctor.availability.endTime,
+        });
+
+        // Compute available times
+        const times: Date[] = [];
+        for (let hour = doctor.availability.startTime; hour < doctor.availability.endTime; hour++) {
+          times.push(new Date(0, 0, 0, hour, 0)); // Adding on-the-hour times
+          times.push(new Date(0, 0, 0, hour, 30)); // Adding half-hour times
+        }
+        setAvailableTimes(times);
+      }
+    }
+  }, [props.doctorId]);
+
+  const isDateAvailable = (date: Date) => {
+    const day = date.getDay();
+    return availability.days.includes(day);
+  };
+
   switch (props.fieldType) {
     case FormFieldType.INPUT:
       return (
@@ -118,24 +150,17 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
             className="ml-2"
           />
           <FormControl>
-  <ReactDatePicker
-          showTimeSelect={props.showTimeSelect ?? false}
-          selected={field.value}
-          onChange={(date: Date) => field.onChange(date)}
-          timeInputLabel="Time:"
-          dateFormat={props.dateFormat ?? "MM/dd/yyyy"}
-          wrapperClassName="date-picker"
-          filterDate={(date) => {
-      const day = date.getDay();
-      return day !== 0 && day !== 6; // Exclude Saturdays (6) and Sundays (0)
-    }}
-    filterTime={(time) => {
-      const hours = time.getHours();
-      return hours >= 8 && hours < 17; // Only allow between 8 AM and 5 PM
-    }}
-          />
+            <ReactDatePicker
+              showTimeSelect
+              selected={field.value}
+              onChange={(date: Date) => field.onChange(date)}
+              timeInputLabel="Time:"
+              dateFormat={props.dateFormat ?? "MM/dd/yyyy h:mm aa"}
+              wrapperClassName="date-picker"
+              filterDate={isDateAvailable}
+              includeTimes={availableTimes}
+            />
           </FormControl>
-
         </div>
       );
     case FormFieldType.SELECT:

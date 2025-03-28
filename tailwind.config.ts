@@ -22,7 +22,7 @@ const config = {
     extend: {
       colors: {
         green: {
-          500: "#79B5EC",
+          500: "#24AE7C",
           600: "#0D2A1F",
         },
         blue: {
@@ -43,7 +43,7 @@ const config = {
           400: "#1A1D21",
           500: "#363A3D",
           600: "#76828D",
-          700: "#79B5EC",
+          700: "#ABB8C4",
         },
       },
       fontFamily: {
@@ -79,4 +79,3 @@ const config = {
 } satisfies Config;
 
 export default config;
-

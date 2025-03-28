@@ -33,4 +33,4 @@ const Home = ({ searchParams }: SearchParamProps) => {
   );
 };
 
-export default Home;
+export default Home; 

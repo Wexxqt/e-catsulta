@@ -8,7 +8,10 @@ const Register = async ({ params: { userId } }: SearchParamProps) => {
   const user = await getUser(userId);
   const patient = await getPatient(userId);
 
-  if (patient) redirect(`/patients/${userId}/new-appointment`);
+  // Redirect only if the patient is fully registered
+  if (patient && patient.isRegistered) {
+    redirect(`/patients/${userId}/new-appointment`);
+  }
 
   return (
     <div className="flex h-screen max-h-screen">

@@ -32,13 +32,26 @@ export const IdentificationTypes = [
 
 export const Doctors = [
   {
-    image: "/assets/images/dr-abundo.png",
+    id: "abegail-abundo",
     name: "Abegail M. Abundo (Medical)",
+    image: "/assets/images/dr-abundo.png",
+    availability: {
+      days: [1, 3, 5],
+      startTime: 8,
+      endTime: 11,
+    },
   },
   {
-    image: "/assets/images/dr-cruz.png",
+    id: "genevieve-castro",
     name: "Genevieve S. De Castro (Dentist)",
+    image: "/assets/images/dr-cruz.png",
+    availability: {
+      days: [2, 4],
+      startTime: 13,
+      endTime: 17,
+    },
   },
+  // Add other doctors here
 ];
 
 export const Category = [
