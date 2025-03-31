@@ -1,5 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
+<<<<<<< HEAD
 // Removed duplicate declaration of nextConfig
 const nextConfig = {
   typescript: {
@@ -8,6 +9,15 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   }
+=======
+const nextConfig = {
+    typescript: {
+        ignoreBuildErrors: true,
+    },
+    eslint: {
+        ignoreDuringBuilds: true,
+    }
+>>>>>>> c848f7f3b1974781d62fd3ed9e00b0428e5cdb38
 };
 
 export default withSentryConfig(withSentryConfig(withSentryConfig(withSentryConfig(nextConfig, {
