@@ -8,7 +8,7 @@ export const UserFormValidation = z.object({
   email: z.string().email("Invalid email address"),
   phone: z
     .string()
-    .refine((phone) => /^\+\d{10,15}$/.test(phone), "Invalid phone number"),
+    .refine((phone) => /^\+63\d{10}$/.test(phone), "Invalid Philippine phone number"),
 });
 
 export const PatientFormValidation = z.object({
@@ -20,7 +20,11 @@ export const PatientFormValidation = z.object({
   phone: z
     .string()
     .refine((phone) => /^\+\d{10,15}$/.test(phone), "Invalid phone number"),
-  birthDate: z.coerce.date(),
+  birthDate: z
+    .string()
+    .regex(
+      /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/,
+    ),
   gender: z.enum(["male", "female", "other"]),
   address: z
     .string()
@@ -40,15 +44,6 @@ export const PatientFormValidation = z.object({
       (emergencyContactNumber) => /^\+\d{10,15}$/.test(emergencyContactNumber),
       "Invalid phone number"
     ),
-  primaryPhysician: z.string().min(2, "Select at least one doctor"),
-  signsSymptoms: z
-    .string()
-    .min(2, "Insurance name must be at least 2 characters")
-    .max(50, "Insurance name must be at most 50 characters"),
-  insurancePolicyNumber: z
-    .string()
-    .min(2, "Policy number must be at least 2 characters")
-    .max(50, "Policy number must be at most 50 characters"),
   allergies: z.string().optional(),
   currentMedication: z.string().optional(),
   familyMedicalHistory: z.string().optional(),

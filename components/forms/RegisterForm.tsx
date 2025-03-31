@@ -26,7 +26,11 @@ import CustomFormField, { FormFieldType } from "../CustomFormField";
 import { FileUploader } from "../FileUploader";
 import SubmitButton from "../SubmitButton";
 
-const RegisterForm = ({ user }: { user: User }) => {
+interface ExtendedUser extends User {
+  birthDate?: string;
+}
+
+const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -59,6 +63,7 @@ const RegisterForm = ({ user }: { user: User }) => {
     }
 
     try {
+      
       const patient = {
         userId: user.$id,
         name: values.name,
@@ -84,12 +89,15 @@ const RegisterForm = ({ user }: { user: User }) => {
       };
 
       const newPatient = await registerPatient(patient);
+      console.log("New patient response:", newPatient);
 
       if (newPatient) {
+        console.log("Redirecting to:", `/patients/${user.$id}/new-appointment`);
         router.push(`/patients/${user.$id}/new-appointment`);
       }
     } catch (error) {
-      console.log(error);
+      console.error("Error during registration:", error);
+      alert("An error occurred while submitting the form. Please try again.");
     }
 
     setIsLoading(false);
@@ -147,10 +155,11 @@ const RegisterForm = ({ user }: { user: User }) => {
           {/* BirthDate & Gender */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
-              fieldType={FormFieldType.DATE_PICKER}
+              fieldType={FormFieldType.INPUT}
               control={form.control}
               name="birthDate"
               label="Date of birth"
+              placeholder="MM/DD/YYYY"
             />
 
             <CustomFormField
@@ -310,7 +319,7 @@ const RegisterForm = ({ user }: { user: User }) => {
           <CustomFormField
             fieldType={FormFieldType.SKELETON}
             control={form.control}
-            name="identificationDocumen t"
+            name="identificationDocument"
             label="Scanned Copy of Identification Document"
             renderSkeleton={(field) => (
               <FormControl>

@@ -1,5 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
+// Removed duplicate declaration of nextConfig
 const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,

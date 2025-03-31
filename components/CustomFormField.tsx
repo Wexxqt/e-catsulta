@@ -5,9 +5,7 @@ import ReactDatePicker from "react-datepicker";
 import { Control } from "react-hook-form";
 import PhoneInput from "react-phone-number-input";
 import { useState, useEffect } from "react";
-
 import { Doctors } from "@/constants";
-
 import { Checkbox } from "./ui/checkbox";
 import {
   FormControl,
@@ -163,6 +161,7 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
           </FormControl>
         </div>
       );
+
     case FormFieldType.SELECT:
       return (
         <FormControl>

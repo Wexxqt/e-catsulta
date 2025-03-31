@@ -38,7 +38,6 @@ export const PatientForm = () => {
       };
 
       const newUser = await createUser(user);
-
       if (newUser) {
         router.push(`/patients/${newUser.$id}/register`);
       }
