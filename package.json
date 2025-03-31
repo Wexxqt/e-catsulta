@@ -53,13 +53,8 @@
     "@types/react": "^18",
     "@types/react-datepicker": "^6.2.0",
     "@types/react-dom": "^18",
-<<<<<<< HEAD
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.3",
-=======
-    "eslint": "^9.23.0",
-    "eslint-config-next": "14.2.3",
->>>>>>> c848f7f3b1974781d62fd3ed9e00b0428e5cdb38
     "eslint-plugin-import": "^2.29.1",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
