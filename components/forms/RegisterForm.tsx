@@ -37,7 +37,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   const form = useForm<z.infer<typeof PatientFormValidation>>({
     resolver: zodResolver(PatientFormValidation),
     defaultValues: {
-      birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : undefined,
+      ...PatientFormDefaultValues,
       name: user.name,
       email: user.email,
       phone: user.phone,
@@ -63,10 +63,6 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
     }
 
     try {
-<<<<<<< HEAD
-=======
-      console.log("Form values:", values);
->>>>>>> c848f7f3b1974781d62fd3ed9e00b0428e5cdb38
       
       const patient = {
         userId: user.$id,
