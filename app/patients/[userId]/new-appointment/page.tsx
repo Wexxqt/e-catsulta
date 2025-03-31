@@ -7,6 +7,12 @@ import { getPatient } from "@/lib/actions/patient.actions";
 const Appointment = async ({ params: { userId } }: SearchParamProps) => {
   const patient = await getPatient(userId);
 
+  if (!patient) {
+    // Redirect to the registration page if the patient is not found
+    return redirect(`/patients/${userId}/register`);
+  }
+
+
   return (
     <div className="flex h-screen max-h-screen">
       <section className="remove-scrollbar container my-auto">
@@ -44,3 +50,7 @@ const Appointment = async ({ params: { userId } }: SearchParamProps) => {
 };
 
 export default Appointment;
+function redirect(arg0: string) {
+  throw new Error("Function not implemented.");
+}
+

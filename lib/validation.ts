@@ -20,7 +20,11 @@ export const PatientFormValidation = z.object({
   phone: z
     .string()
     .refine((phone) => /^\+\d{10,15}$/.test(phone), "Invalid phone number"),
-  birthDate: z.coerce.date(),
+  birthDate: z
+    .string()
+    .regex(
+      /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/,
+    ),
   gender: z.enum(["male", "female", "other"]),
   address: z
     .string()
