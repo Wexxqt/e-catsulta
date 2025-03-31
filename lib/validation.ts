@@ -51,6 +51,7 @@ export const PatientFormValidation = z.object({
   identificationType: z.string().optional(),
   identificationNumber: z.string().optional(),
   identificationDocument: z.custom<File[]>().optional(),
+  signsSymptoms: z.string().optional(),
   treatmentConsent: z
     .boolean()
     .default(false)
