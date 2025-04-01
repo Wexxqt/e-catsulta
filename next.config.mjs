@@ -10,6 +10,11 @@ const nextConfig = {
   }
 };
 
+const sentryWebpackPluginOptions = {
+  disableServerWebpackPlugin: true,
+  disableClientWebpackPlugin: true,
+};
+
 export default withSentryConfig(withSentryConfig(withSentryConfig(withSentryConfig(nextConfig, {
 // For all available options, see:
 // https://github.com/getsentry/sentry-webpack-plugin#options
