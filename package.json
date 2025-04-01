@@ -49,6 +49,7 @@
     "zod": "^3.23.6"
   },
   "devDependencies": {
+    "@sentry/cli": "^2.43.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-datepicker": "^6.2.0",
