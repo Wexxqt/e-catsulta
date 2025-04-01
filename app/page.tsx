@@ -32,5 +32,5 @@ const Home = ({ searchParams }: SearchParamProps) => {
     </div>
   );
 };
-
+""
 export default Home; 
