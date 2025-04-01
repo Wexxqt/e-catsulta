@@ -11,8 +11,9 @@ const nextConfig = {
 };
 
 const sentryWebpackPluginOptions = {
-  disableServerWebpackPlugin: true,
-  disableClientWebpackPlugin: true,
+  org: "e-catsulta-ye", // Ensure this matches your Sentry organization
+  project: "javascript-nextjs", // Ensure this matches your Sentry project
+  authToken: process.env.SENTRY_AUTH_TOKEN, // Ensure this is set in your environment variables
 };
 
 export default withSentryConfig(withSentryConfig(withSentryConfig(withSentryConfig(nextConfig, {
@@ -90,8 +91,6 @@ automaticVercelMonitors: true,
 // For all available options, see:
 // https://github.com/getsentry/sentry-webpack-plugin#options
 
-org: "e-catsulta",
-project: "javascript-nextjs",
 
 // Only print logs for uploading source maps in CI
 silent: !process.env.CI,
