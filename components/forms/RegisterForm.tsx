@@ -41,6 +41,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : "",
     },
   });
 
@@ -75,7 +76,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         category: values.category,
         emergencyContactName: values.emergencyContactName,
         emergencyContactNumber: values.emergencyContactNumber,
-        signsSymptoms: values.signsSymptoms,
+        signsSymptoms: values.signsSymptoms || "",
         allergies: values.allergies,
         currentMedication: values.currentMedication,
         familyMedicalHistory: values.familyMedicalHistory,

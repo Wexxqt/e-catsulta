@@ -43,14 +43,13 @@ export const Doctors = [
   {
     id: "genevieve-castro",
     name: "Genevieve S. De Castro (Dentist)",
-    image: "/assets/images/dr-cruz.png",
+    image: "/assets/images/dr-cameron.png",
     availability: {
       days: [2, 4],
       startTime: 13,
       endTime: 17,
     },
   },
-  // Add other doctors here
 ];
 
 export const Category = [

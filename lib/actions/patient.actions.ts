@@ -101,6 +101,7 @@ export const getPatient = async (userId: string) => {
       PATIENT_COLLECTION_ID!,
       [Query.equal("userId", userId)]
     );
+    console.log("Fetched patient:", patient);
 
     if (patient.documents.length > 0) {
       return patient.documents[0]; // Return the first matching document

@@ -2,6 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+export function ButtonGhost() {
+  return (
+    <Link href="https://sites.google.com/view/e-catsulta/home?authuser=0">
+      <Button variant="ghost">View Services</Button>
+    </Link>
+  );
+}
 
 const Header = () => {
   return (
@@ -16,13 +25,7 @@ const Header = () => {
         />
       </Link>
 
-      <Link href="https://sites.google.com/view/e-catsulta/home?authuser=0" 
-  target="_blank" 
-  rel="noopener noreferrer" 
-  className="text-green-500"
->
-  View Services
-      </Link>
+      <ButtonGhost />
     </header>
   );
 };

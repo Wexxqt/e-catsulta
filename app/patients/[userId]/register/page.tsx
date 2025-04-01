@@ -8,10 +8,7 @@ const Register = async ({ params: { userId } }: SearchParamProps) => {
   const user = await getUser(userId);
   const patient = await getPatient(userId);
 
-  // Redirect only if the patient is fully registered
-  if (patient && patient.isRegistered) {
-    redirect(`/patients/${userId}/new-appointment`);
-  }
+  if (patient) redirect(`/patients/${userId}/new-appointment`);
 
   return (
     <div className="flex h-screen max-h-screen">
@@ -22,12 +19,12 @@ const Register = async ({ params: { userId } }: SearchParamProps) => {
             height={1000}
             width={1000}
             alt="patient"
-            className="mb-12 h-10 w-fit mx-auto"
+            className="mb-12 h-10 w-fit"
           />
 
           <RegisterForm user={user} />
 
-          <p className="mt-10 py-12 text-dark-600">© 2025 E-CatSulta</p>
+          <p className="copyright py-12">© 2024 CarePluse</p>
         </div>
       </section>
 

@@ -291,8 +291,8 @@
 .react-datepicker__day,
 .react-datepicker-time__header {
   background-color: #1a1d21 !important;
-  border-color: #363a3d !important;
-  color: #abb8c4 !important;
+  border-color: #363d36 !important;
+  color: #6ddd11 !important;
 }
 
 .react-datepicker__current-month,
@@ -328,7 +328,7 @@
 }
 
 .react-datepicker__time-container {
-  border-left: 1px solid #363a3d !important;
+  border-left: 1px solid #383d36 !important;
 }
 
 .react-datepicker__time-list-item {
@@ -338,7 +338,7 @@
 
 .react-datepicker__day--disabled,
 .react-datepicker__time-list-item--disabled {
-  color: #5a5e63 !important; /* Dim the restricted times/dates */
+  color: #fc1d00 !important; /* Dim the restricted times/dates */
   pointer-events: none;
 }
 
