@@ -136,7 +136,7 @@ export const updateAppointment = async ({
     if (!updatedAppointment) throw Error;
 
     const smsMessage = `E-CatSulta. ${type === "schedule" 
-      ? `Hi ${appointment.userName}, your appointment on ${formatDateTime(appointment.schedule!, timeZone).dateTime} is confirmed. See you soon!`
+      ? `Your appointment is on ${formatDateTime(appointment.schedule!, timeZone).dateTime}. See you!`
       : `We regret to inform that your appointment for ${formatDateTime(appointment.schedule!, timeZone).dateTime} is cancelled. Reason:  ${appointment.cancellationReason}`}.`;
     await sendSMSNotification(userId, smsMessage);
 
