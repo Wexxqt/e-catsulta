@@ -11,7 +11,6 @@ export interface Patient extends Models.Document {
   category: string;
   emergencyContactName: string;
   emergencyContactNumber: string;
-  primaryPhysician: string;
   signsSymptoms: string;
   allergies: string | undefined;
   currentMedication: string | undefined;

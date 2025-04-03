@@ -73,7 +73,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         birthDate: new Date(values.birthDate),
         gender: values.gender,
         address: values.address,
-        category: values.category,
+        category: values.category ?? "",
         emergencyContactName: values.emergencyContactName,
         emergencyContactNumber: values.emergencyContactNumber,
         signsSymptoms: values.signsSymptoms || "",
