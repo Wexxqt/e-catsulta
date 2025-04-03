@@ -31,7 +31,7 @@ export const IdentificationTypes = [
 
 export const Doctors = [
   {
-    id: "abegail-abundo",
+    id: "Abegail M. Abundo",
     name: "Abegail M. Abundo (Medical)",
     image: "/assets/images/dr-abundo.png",
     availability: {
@@ -41,7 +41,7 @@ export const Doctors = [
     },
   },
   {
-    id: "genevieve-castro",
+    id: "Genevieve S. De Castro",
     name: "Genevieve S. De Castro (Dentist)",
     image: "/assets/images/dr-cameron.png",
     availability: {
