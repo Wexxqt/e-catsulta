@@ -47,6 +47,8 @@ interface CustomProps {
 
 const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
   const [availability, setAvailability] = useState<{ days: number[], startTime: number, endTime: number }>({ days: [], startTime: 8, endTime: 17 });
+  const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<Date[]>([]);
 
   useEffect(() => {
     if (props.doctorId) {
@@ -57,43 +59,77 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
           startTime: doctor.availability.startTime,
           endTime: doctor.availability.endTime,
         });
-      } else {
-        // Default if doctor not found
-        setAvailability({ days: [0, 1, 2, 3, 4, 5, 6], startTime: 8, endTime: 17 });
+
+        // Compute available times
+        const times: Date[] = [];
+        // Simulate some booked slots for demonstration
+        const booked: Date[] = [];
+        
+        for (let hour = doctor.availability.startTime; hour < doctor.availability.endTime; hour++) {
+          times.push(new Date(0, 0, 0, hour, 0)); // Adding on-the-hour times
+          times.push(new Date(0, 0, 0, hour, 30)); // Adding half-hour times
+          
+          // Randomly mark some slots as booked (for demonstration)
+          if (Math.random() > 0.8) {
+            booked.push(new Date(0, 0, 0, hour, 0));
+          }
+          if (Math.random() > 0.8) {
+            booked.push(new Date(0, 0, 0, hour, 30));
+          }
+        }
+        
+        setAvailableTimes(times);
+        setBookedSlots(booked);
       }
-    } else {
-      // Default if no doctor selected
-      setAvailability({ days: [0, 1, 2, 3, 4, 5, 6], startTime: 8, endTime: 17 });
     }
   }, [props.doctorId]);
 
   const isDateAvailable = (date: Date) => {
-    // Only filter by day of week if a doctor is selected
-    if (props.doctorId) {
-      const day = date.getDay();
-      return availability.days.includes(day);
-    }
-    return true; // Allow all days if no doctor is selected
+    const day = date.getDay();
+    return availability.days.includes(day);
   };
 
-  // Generate time slots
-  const generateTimeSlots = () => {
-    const times: Date[] = [];
-    const currentDate = new Date();
+  // Function to check if a time slot is booked
+  const isTimeBooked = (time: Date) => {
+    if (!time) return false;
     
-    for (let hour = availability.startTime; hour < availability.endTime; hour++) {
-      // On the hour
-      const hourTime = new Date(currentDate);
-      hourTime.setHours(hour, 0, 0, 0);
-      times.push(hourTime);
-      
-      // Half past the hour
-      const halfHourTime = new Date(currentDate);
-      halfHourTime.setHours(hour, 30, 0, 0);
-      times.push(halfHourTime);
-    }
-    
-    return times;
+    return bookedSlots.some(
+      bookedTime => 
+        bookedTime.getHours() === time.getHours() && 
+        bookedTime.getMinutes() === time.getMinutes()
+    );
+  };
+
+  // Add legend component for date picker
+  const DatePickerLegend = () => (
+    <div className="flex justify-end mt-2 gap-4 text-12-regular">
+      <div className="flex items-center">
+        <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
+        <span>Available</span>
+      </div>
+      <div className="flex items-center">
+        <div className="w-3 h-3 rounded-full bg-red-700 mr-1"></div>
+        <span>Booked</span>
+      </div>
+    </div>
+  );
+
+  // Custom time component to show available/booked status
+  const renderTimeListItem = (time: Date, selected: boolean, onClick: () => void) => {
+    const isBooked = isTimeBooked(time);
+    return (
+      <li
+        onClick={onClick}
+        className={`${
+          selected ? "react-datepicker__time-list-item--selected" : "react-datepicker__time-list-item"
+        } ${isBooked ? "bg-red-700/20" : "hover:bg-green-500/20"}`}
+      >
+        {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        <span className="ml-2">
+          {isBooked ? "🔴" : "🟢"}
+        </span>
+      </li>
+    );
   };
 
   switch (props.fieldType) {
@@ -160,28 +196,53 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
       );
     case FormFieldType.DATE_PICKER:
       return (
-        <div className="flex rounded-md border border-dark-500 bg-dark-400">
-          <Image
-            src="/assets/icons/calendar.svg"
-            height={24}
-            width={24}
-            alt="user"
-            className="ml-2"
-          />
-          <FormControl>
-            <ReactDatePicker
-              showTimeSelect
-              selected={field.value}
-              onChange={(date: Date) => field.onChange(date)}
-              timeInputLabel="Time:"
-              dateFormat={props.dateFormat ?? "MM/dd/yyyy h:mm aa"}
-              wrapperClassName="date-picker"
-              filterDate={isDateAvailable}
-              minTime={new Date(0, 0, 0, availability.startTime)}
-              maxTime={new Date(0, 0, 0, availability.endTime - 1, 30)}
-              timeIntervals={30}
+        <div className="flex flex-col">
+          <div className="flex rounded-md border border-dark-500 bg-dark-400">
+            <Image
+              src="/assets/icons/calendar.svg"
+              height={24}
+              width={24}
+              alt="calendar"
+              className="ml-2"
             />
-          </FormControl>
+            <FormControl>
+              <ReactDatePicker
+                showTimeSelect
+                selected={field.value}
+                onChange={(date: Date) => field.onChange(date)}
+                timeInputLabel="Time:"
+                dateFormat={props.dateFormat ?? "MM/dd/yyyy h:mm aa"}
+                wrapperClassName="date-picker"
+                filterDate={isDateAvailable}
+                includeTimes={availableTimes}
+                renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
+                  <div className="flex justify-between px-2 py-2">
+                    <button
+                      onClick={decreaseMonth}
+                      type="button"
+                      className="bg-dark-400 rounded-full p-1"
+                    >
+                      {"<"}
+                    </button>
+                    <div>
+                      {date.toLocaleString("default", {
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </div>
+                    <button
+                      onClick={increaseMonth}
+                      type="button"
+                      className="bg-dark-400 rounded-full p-1"
+                    >
+                      {">"}
+                    </button>
+                  </div>
+                )}
+              />
+            </FormControl>
+          </div>
+          <DatePickerLegend />
         </div>
       );
 
