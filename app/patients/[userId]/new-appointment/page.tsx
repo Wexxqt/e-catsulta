@@ -12,7 +12,6 @@ const Appointment = async ({ params: { userId } }: SearchParamProps) => {
     return redirect(`/patients/${userId}/register`);
   }
 
-
   return (
     <div className="flex h-screen max-h-screen">
       <section className="remove-scrollbar container my-auto">

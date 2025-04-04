@@ -336,9 +336,12 @@
   align-items: center !important;
 }
 
-.react-datepicker__day--disabled,
+.react-datepicker__day--disabled {
+  color: #8d1010 !important; /* Keep this if you still want to show disabled days */
+  pointer-events: none;
+}
 .react-datepicker__time-list-item--disabled {
-  color: #fc1d00 !important; /* Dim the restricted times/dates */
+  color: #c21e1e !important; /* Dim the restricted times/dates */
   pointer-events: none;
 }
 

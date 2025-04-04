@@ -62,3 +62,10 @@ export const StatusIcon = {
   pending: "/assets/icons/pending.svg",
   cancelled: "/assets/icons/cancelled.svg",
 };
+
+// Add holidays constant
+export const Holidays = [
+  new Date("2025-01-01"), // New Year's Day
+  new Date("2025-12-25"), // Christmas Day
+  // Add more holidays here
+];

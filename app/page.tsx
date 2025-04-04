@@ -22,9 +22,8 @@ const Home = ({ searchParams }: SearchParamProps) => {
               <p className="justify-items-end text-dark-600 xl:text-left">
                 © 2025 E-CatSulta
               </p>
-              <Link href="/?admin=true" className="text-green-500">
-                Admin
-              </Link>
+
+              {/* Remove the Admin button */}
             </div>
           </div>
         </section>
@@ -32,5 +31,5 @@ const Home = ({ searchParams }: SearchParamProps) => {
     </div>
   );
 };
-""
-export default Home; 
+
+export default Home;

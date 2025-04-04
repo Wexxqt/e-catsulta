@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 import { StatCard } from "@/components/StatCard";
 import { columns } from "@/components/table/columns";

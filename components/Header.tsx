@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export function ButtonGhost() {
   return (
-    <Link href="https://sites.google.com/view/e-catsulta/home?authuser=0">
+    <Link href="https://landingpage-one-tau.vercel.app/">
       <Button variant="ghost">View Services</Button>
     </Link>
   );
