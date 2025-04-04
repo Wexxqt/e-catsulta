@@ -1,10 +1,10 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import Image from "next/image";
 
 import { Doctors } from "@/constants";
 import { formatDateTime } from "@/lib/utils";
+import Image from "next/image";
 import { Appointment } from "@/types/appwrite.types";
 
 import { AppointmentModal } from "../AppointmentModal";
@@ -61,15 +61,15 @@ export const columns: ColumnDef<Appointment>[] = [
 
       return (
         <div className="flex items-center gap-3">
-          <Image
-            src={doctor?.image!}
-            alt="doctor"
-            width={100}
-            height={100}
-            className="size-8"
-          />
-          <p className="whitespace-nowrap">Dr. {doctor?.name}</p>
-        </div>
+        <Image
+          src={doctor?.image || "/assets/images/default-doctor.png"}
+          alt="doctor"
+          width={100}
+          height={100}
+          className="size-8"
+        />
+        <p className="whitespace-nowrap">Dr. {doctor?.name}</p>
+      </div>
       );
     },
   },

@@ -29,10 +29,12 @@ export const IdentificationTypes = [
   "Employee ID",
 ];
 
+// Updated to ensure consistent doctor data structure
 export const Doctors = [
   {
-    id: "Abegail M. Abundo",
-    name: "Abegail M. Abundo (Medical)",
+    id: "dr-abundo",
+    name: "Abegail M. Abundo",
+    displayName: "Abegail M. Abundo (Medical)",
     image: "/assets/images/dr-abundo.png",
     availability: {
       days: [1, 3, 5],
@@ -41,9 +43,10 @@ export const Doctors = [
     },
   },
   {
-    id: "Genevieve S. De Castro",
-    name: "Genevieve S. De Castro (Dentist)",
-    image: "/assets/images/dr-cameron.png",
+    id: "dr-decastro",
+    name: "Genevieve S. De Castro",
+    displayName: "Genevieve S. De Castro (Dentist)",
+    image: "/assets/images/dr-decastro.png",
     availability: {
       days: [2, 4],
       startTime: 13,

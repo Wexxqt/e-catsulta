@@ -106,21 +106,29 @@ export const columns: ColumnDef<Appointment>[] = [
   },
 ];
 
-// New modal component for viewing patient details
+// Updated modal component with student number
 const PatientDetailModal = ({ patient }: { patient: any }) => {
   return (
     <div className="inline-flex">
       <button
         className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100"
         onClick={() => {
-          // This would open a modal with patient details in a real implementation
+          // Get student ID from identificationNumber if category is Student
+          const studentNumber = patient.category === "Student" ? 
+            `Student Number: ${patient.identificationNumber || 'Not provided'}` : 
+            '';
+          
           alert(`
             Patient: ${patient.name}
+            ${studentNumber}
             Gender: ${patient.gender || 'Not specified'}
             Birth Date: ${patient.birthDate ? new Date(patient.birthDate).toLocaleDateString() : 'Not specified'}
+            Category: ${patient.category || 'Not specified'}
             Signs/Symptoms: ${patient.signsSymptoms || 'None reported'}
             Allergies: ${patient.allergies || 'None reported'}
             Current Medication: ${patient.currentMedication || 'None reported'}
+            Family Medical History: ${patient.familyMedicalHistory || 'None reported'}
+            Past Medical History: ${patient.pastMedicalHistory || 'None reported'}
           `);
         }}
       >

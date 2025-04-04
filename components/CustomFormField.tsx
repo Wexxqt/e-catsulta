@@ -63,7 +63,7 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
 
   useEffect(() => {
     if (doctorId) {
-      const doctor = Doctors.find(doc => doc.id === doctorId);
+      const doctor = Doctors.find(doc => doc.name === doctorId);
       if (doctor) {
         setAvailability({
           days: doctor.availability.days,

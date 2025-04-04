@@ -151,7 +151,7 @@ export const AppointmentForm = ({
               placeholder="Select a doctor"
             >
               {Doctors.map((doctor, i) => (
-                <SelectItem key={doctor.name + i} value={doctor.id}>
+                <SelectItem key={doctor.id} value={doctor.name}>
                   <div className="flex cursor-pointer items-center gap-2">
                     <Image
                       src={doctor.image}
@@ -160,7 +160,7 @@ export const AppointmentForm = ({
                       alt="doctor"
                       className="rounded-full border border-dark-500"
                     />
-                    <p>{doctor.name}</p>
+                    <p>{doctor.displayName || doctor.name}</p>
                   </div>
                 </SelectItem>
               ))}
