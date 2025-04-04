@@ -47,7 +47,6 @@ interface CustomProps {
 
 const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
   const [availability, setAvailability] = useState<{ days: number[], startTime: number, endTime: number }>({ days: [], startTime: 8, endTime: 17 });
-  const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
 
   useEffect(() => {
     if (props.doctorId) {
@@ -58,21 +57,43 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
           startTime: doctor.availability.startTime,
           endTime: doctor.availability.endTime,
         });
-
-        // Compute available times
-        const times: Date[] = [];
-        for (let hour = doctor.availability.startTime; hour < doctor.availability.endTime; hour++) {
-          times.push(new Date(0, 0, 0, hour, 0)); // Adding on-the-hour times
-          times.push(new Date(0, 0, 0, hour, 30)); // Adding half-hour times
-        }
-        setAvailableTimes(times);
+      } else {
+        // Default if doctor not found
+        setAvailability({ days: [0, 1, 2, 3, 4, 5, 6], startTime: 8, endTime: 17 });
       }
+    } else {
+      // Default if no doctor selected
+      setAvailability({ days: [0, 1, 2, 3, 4, 5, 6], startTime: 8, endTime: 17 });
     }
   }, [props.doctorId]);
 
   const isDateAvailable = (date: Date) => {
-    const day = date.getDay();
-    return availability.days.includes(day);
+    // Only filter by day of week if a doctor is selected
+    if (props.doctorId) {
+      const day = date.getDay();
+      return availability.days.includes(day);
+    }
+    return true; // Allow all days if no doctor is selected
+  };
+
+  // Generate time slots
+  const generateTimeSlots = () => {
+    const times: Date[] = [];
+    const currentDate = new Date();
+    
+    for (let hour = availability.startTime; hour < availability.endTime; hour++) {
+      // On the hour
+      const hourTime = new Date(currentDate);
+      hourTime.setHours(hour, 0, 0, 0);
+      times.push(hourTime);
+      
+      // Half past the hour
+      const halfHourTime = new Date(currentDate);
+      halfHourTime.setHours(hour, 30, 0, 0);
+      times.push(halfHourTime);
+    }
+    
+    return times;
   };
 
   switch (props.fieldType) {
@@ -156,7 +177,9 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
               dateFormat={props.dateFormat ?? "MM/dd/yyyy h:mm aa"}
               wrapperClassName="date-picker"
               filterDate={isDateAvailable}
-              includeTimes={availableTimes}
+              minTime={new Date(0, 0, 0, availability.startTime)}
+              maxTime={new Date(0, 0, 0, availability.endTime - 1, 30)}
+              timeIntervals={30}
             />
           </FormControl>
         </div>

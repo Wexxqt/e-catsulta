@@ -32,3 +32,26 @@ export interface Appointment extends Models.Document {
   userId: string;
   cancellationReason: string | null;
 }
+// Add these to your types/appwrite.types.ts file
+export type Gender = "male" | "female" | "other" | "prefer not to say";
+
+export type Status = "pending" | "scheduled" | "cancelled";
+
+export interface CreateAppointmentParams {
+  patient: Patient;
+  schedule: Date;
+  status: Status;
+  primaryPhysician: string;
+  reason: string;
+  note: string;
+  userId: string;
+  cancellationReason: string | null;
+}
+
+export interface UpdateAppointmentParams {
+  appointmentId: string;
+  userId: string;
+  timeZone?: string;
+  appointment: Partial<Appointment>;
+  type: "schedule" | "cancel";
+}
