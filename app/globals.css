@@ -277,72 +277,99 @@
   }
 }
 
-/* =====  REACT-DATEPICKER OVERRIDES */
+/* ==== DATEPICKER WRAPPER ==== */
 .react-datepicker-wrapper.date-picker {
   display: flex;
   align-items: center;
 }
 
+/* ==== DATEPICKER PANEL ==== */
 .react-datepicker,
 .react-datepicker__time,
-.react-datepicker__header,
-.react-datepicker__current-month,
-.react-datepicker__day-name,
-.react-datepicker__day,
-.react-datepicker-time__header {
+.react-datepicker__header {
   background-color: #1a1d21 !important;
   border-color: #363d36 !important;
-  color: #6ddd11 !important;
+  color: #e2e8f0 !important;
+  border-radius: 8px;
 }
 
+/* ==== HEADER ==== */
 .react-datepicker__current-month,
 .react-datepicker__day-name,
 .react-datepicker-time__header {
   color: #ffffff !important;
+  font-weight: 600;
 }
 
-.react-datepicker__triangle {
-  fill: #1a1d21 !important;
-  color: #1a1d21 !important;
-  stroke: #1a1d21 !important;
+/* ==== AVAILABLE DATES ==== */
+.react-datepicker__day {
+  color: #6ddd11 !important; /* Green text for available */
+  transition: background-color 0.2s;
+  border-radius: 4px;
 }
 
-.react-datepicker__time-list-item:hover {
-  background-color: #363a3d !important;
+.react-datepicker__day:hover {
+  background-color: #2d2d2d !important;
+  cursor: pointer;
 }
 
-.react-datepicker__input-container input {
-  background-color: #1a1d21 !important;
-  width: 100%;
-  outline: none;
-}
-
-.react-datepicker__day--selected {
-  background-color: #79baec !important;
+/* ==== SELECTED DATE ==== */
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: #6ddd11 !important;
   color: #ffffff !important;
   border-radius: 4px;
 }
 
-.react-datepicker__time-list-item--selected {
-  background-color: #79baec !important;
+/* ==== DISABLED / BOOKED DATES ==== */
+.react-datepicker__day--disabled {
+  color: #e94f4f !important; /* Red for booked dates */
+  background-color: #2a1a1a !important;
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.6;
 }
 
+/* ==== TIME PANEL ==== */
 .react-datepicker__time-container {
-  border-left: 1px solid #383d36 !important;
+  border-left: 1px solid #444 !important;
+}
+
+.react-datepicker__time-list {
+  background-color: #1a1d21 !important;
 }
 
 .react-datepicker__time-list-item {
-  display: flex !important;
-  align-items: center !important;
+  color: #6ddd11 !important; /* Green for available times */
+  padding: 8px 12px;
+  transition: background-color 0.2s;
 }
 
-.react-datepicker__day--disabled {
-  color: #8d1010 !important; /* Keep this if you still want to show disabled days */
-  pointer-events: none;
+.react-datepicker__time-list-item:hover {
+  background-color: #2d2d2d !important;
+  cursor: pointer;
 }
+
+/* ==== SELECTED TIME ==== */
+.react-datepicker__time-list-item--selected {
+  background-color: #6ddd11 !important;
+  color: #ffffff !important;
+  border-radius: 4px;
+}
+
+/* ==== DISABLED / BOOKED TIME ==== */
 .react-datepicker__time-list-item--disabled {
-  color: #c21e1e !important; /* Dim the restricted times/dates */
+  color: #e94f4f !important; /* Red for booked times */
+  background-color: #2a1a1a !important;
+  cursor: not-allowed;
   pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ==== TRIANGLE POINTER ==== */
+.react-datepicker__triangle {
+  fill: #1a1d21 !important;
+  stroke: #1a1d21 !important;
 }
 
 /* =====  REACT PHONE NUMBER INPUT OVERRIDES */

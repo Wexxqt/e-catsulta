@@ -45,14 +45,25 @@ interface CustomProps {
   doctorId?: string;
 }
 
-const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
-  const [availability, setAvailability] = useState<{ days: number[], startTime: number, endTime: number }>({ days: [], startTime: 8, endTime: 17 });
+// Integrated appointment date picker component
+const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm aa" }: { 
+  field: any;
+  doctorId?: string;
+  dateFormat?: string;
+}) => {
+  const [availability, setAvailability] = useState<{ 
+    days: number[], 
+    startTime: number, 
+    endTime: number 
+  }>({ days: [], startTime: 8, endTime: 17 });
+  
   const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
   const [bookedSlots, setBookedSlots] = useState<Date[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(field.value || null);
 
   useEffect(() => {
-    if (props.doctorId) {
-      const doctor = Doctors.find(doc => doc.id === props.doctorId);
+    if (doctorId) {
+      const doctor = Doctors.find(doc => doc.id === doctorId);
       if (doctor) {
         setAvailability({
           days: doctor.availability.days,
@@ -60,36 +71,48 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
           endTime: doctor.availability.endTime,
         });
 
-        // Compute available times
-        const times: Date[] = [];
-        // Simulate some booked slots for demonstration
-        const booked: Date[] = [];
+        // Reset selected date when doctor changes
+        setSelectedDate(null);
+        field.onChange(null);
         
-        for (let hour = doctor.availability.startTime; hour < doctor.availability.endTime; hour++) {
-          times.push(new Date(0, 0, 0, hour, 0)); // Adding on-the-hour times
-          times.push(new Date(0, 0, 0, hour, 30)); // Adding half-hour times
-          
-          // Randomly mark some slots as booked (for demonstration)
-          if (Math.random() > 0.8) {
-            booked.push(new Date(0, 0, 0, hour, 0));
-          }
-          if (Math.random() > 0.8) {
-            booked.push(new Date(0, 0, 0, hour, 30));
-          }
-        }
-        
-        setAvailableTimes(times);
-        setBookedSlots(booked);
+        // Generate available time slots
+        generateTimeSlots(doctor);
       }
     }
-  }, [props.doctorId]);
+  }, [doctorId]);
 
-  const isDateAvailable = (date: Date) => {
-    const day = date.getDay();
-    return availability.days.includes(day);
+  // Generate available time slots for the selected doctor
+  const generateTimeSlots = (doctor: any) => {
+    const times: Date[] = [];
+    const booked: Date[] = [];
+    
+    // Create time slots in 30-minute increments
+    for (let hour = doctor.availability.startTime; hour < doctor.availability.endTime; hour++) {
+      times.push(new Date(0, 0, 0, hour, 0));
+      times.push(new Date(0, 0, 0, hour, 30));
+      
+      // For demo purposes - mark some slots as booked
+      if (Math.random() > 0.7) {
+        booked.push(new Date(0, 0, 0, hour, 0));
+      }
+      if (Math.random() > 0.7) {
+        booked.push(new Date(0, 0, 0, hour, 30));
+      }
+    }
+    
+    setAvailableTimes(times);
+    setBookedSlots(booked);
   };
 
-  // Function to check if a time slot is booked
+  // Check if a date is available based on doctor's working days
+  const isDateAvailable = (date: Date) => {
+    const day = date.getDay();
+    // Only show future dates
+    const isInFuture = date >= new Date();
+    return availability.days.includes(day) && isInFuture;
+  };
+
+  // Check if a time slot is booked
   const isTimeBooked = (time: Date) => {
     if (!time) return false;
     
@@ -100,38 +123,97 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
     );
   };
 
-  // Add legend component for date picker
-  const DatePickerLegend = () => (
-    <div className="flex justify-end mt-2 gap-4 text-12-regular">
-      <div className="flex items-center">
-        <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
-        <span>Available</span>
-      </div>
-      <div className="flex items-center">
-        <div className="w-3 h-3 rounded-full bg-red-700 mr-1"></div>
-        <span>Booked</span>
-      </div>
-    </div>
-  );
-
-  // Custom time component to show available/booked status
-  const renderTimeListItem = (time: Date, selected: boolean, onClick: () => void) => {
-    const isBooked = isTimeBooked(time);
-    return (
-      <li
-        onClick={onClick}
-        className={`${
-          selected ? "react-datepicker__time-list-item--selected" : "react-datepicker__time-list-item"
-        } ${isBooked ? "bg-red-700/20" : "hover:bg-green-500/20"}`}
-      >
-        {time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        <span className="ml-2">
-          {isBooked ? "🔴" : "🟢"}
-        </span>
-      </li>
-    );
+  // Handle date selection
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+    field.onChange(date);
   };
 
+  return (
+    <div className="flex flex-col">
+      <div className="flex rounded-md border border-dark-500 bg-dark-400">
+        <Image
+          src="/assets/icons/calendar.svg"
+          height={24}
+          width={24}
+          alt="calendar"
+          className="ml-2"
+        />
+        <ReactDatePicker
+          showTimeSelect
+          selected={selectedDate}
+          onChange={handleDateChange}
+          timeInputLabel="Time:"
+          dateFormat={dateFormat}
+          wrapperClassName="date-picker"
+          filterDate={isDateAvailable}
+          includeTimes={availableTimes}
+          minDate={new Date()}
+          placeholderText="Select date and time"
+          timeFormat="h:mm aa"
+          timeIntervals={30}
+          timeCaption="Time"
+          inline={false}
+          renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
+            <div className="flex justify-between px-2 py-2">
+              <button
+                onClick={decreaseMonth}
+                type="button"
+                className="bg-dark-400 rounded-full p-1 text-white hover:bg-dark-500"
+              >
+                {"<"}
+              </button>
+              <div className="font-medium">
+                {date.toLocaleString("default", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </div>
+              <button
+                onClick={increaseMonth}
+                type="button"
+                className="bg-dark-400 rounded-full p-1 text-white hover:bg-dark-500"
+              >
+                {">"}
+              </button>
+            </div>
+          )}
+        />
+      </div>
+      
+      {/* Legend */}
+      <div className="flex gap-4 mt-2 text-12-regular justify-end">
+        <div className="flex items-center">
+          <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
+          <span>Available</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-3 h-3 rounded-full bg-red-700 mr-1"></div>
+          <span>Booked</span>
+        </div>
+      </div>
+      
+      {/* Helper text */}
+      {doctorId ? (
+        selectedDate ? (
+          <p className="text-12-regular text-green-500 mt-1">
+            Appointment set for {selectedDate.toLocaleDateString()} at {selectedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        ) : (
+          <p className="text-12-regular text-dark-600 mt-1">
+            Please select an available date and time
+          </p>
+        )
+      ) : (
+        <p className="text-12-regular text-dark-600 mt-1">
+          Select a doctor first to view available slots
+        </p>
+      )}
+    </div>
+  );
+};
+
+const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
   switch (props.fieldType) {
     case FormFieldType.INPUT:
       return (
@@ -196,56 +278,14 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
       );
     case FormFieldType.DATE_PICKER:
       return (
-        <div className="flex flex-col">
-          <div className="flex rounded-md border border-dark-500 bg-dark-400">
-            <Image
-              src="/assets/icons/calendar.svg"
-              height={24}
-              width={24}
-              alt="calendar"
-              className="ml-2"
-            />
-            <FormControl>
-              <ReactDatePicker
-                showTimeSelect
-                selected={field.value}
-                onChange={(date: Date) => field.onChange(date)}
-                timeInputLabel="Time:"
-                dateFormat={props.dateFormat ?? "MM/dd/yyyy h:mm aa"}
-                wrapperClassName="date-picker"
-                filterDate={isDateAvailable}
-                includeTimes={availableTimes}
-                renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
-                  <div className="flex justify-between px-2 py-2">
-                    <button
-                      onClick={decreaseMonth}
-                      type="button"
-                      className="bg-dark-400 rounded-full p-1"
-                    >
-                      {"<"}
-                    </button>
-                    <div>
-                      {date.toLocaleString("default", {
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </div>
-                    <button
-                      onClick={increaseMonth}
-                      type="button"
-                      className="bg-dark-400 rounded-full p-1"
-                    >
-                      {">"}
-                    </button>
-                  </div>
-                )}
-              />
-            </FormControl>
-          </div>
-          <DatePickerLegend />
-        </div>
+        <FormControl>
+          <AppointmentDatePicker 
+            field={field} 
+            doctorId={props.doctorId} 
+            dateFormat={props.dateFormat} 
+          />
+        </FormControl>
       );
-
     case FormFieldType.SELECT:
       return (
         <FormControl>
