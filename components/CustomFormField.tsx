@@ -17,6 +17,10 @@ import {
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Button } from "./ui/button";
+
+import "react-datepicker/dist/react-datepicker.css";
 
 export enum FormFieldType {
   INPUT = "input",
@@ -45,7 +49,7 @@ interface CustomProps {
   doctorId?: string;
 }
 
-// Integrated appointment date picker component
+// Integrated appointment date picker component with dialog
 const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm aa" }: { 
   field: any;
   doctorId?: string;
@@ -60,6 +64,8 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
   const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
   const [bookedSlots, setBookedSlots] = useState<Date[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(field.value || null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [tempSelectedDate, setTempSelectedDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (doctorId) {
@@ -123,15 +129,34 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
     );
   };
 
-  // Handle date selection
+  // Handle date selection in dialog
   const handleDateChange = (date: Date) => {
-    setSelectedDate(date);
-    field.onChange(date);
+    setTempSelectedDate(date);
+  };
+
+  // Confirm date selection from dialog
+  const confirmDateSelection = () => {
+    if (tempSelectedDate) {
+      setSelectedDate(tempSelectedDate);
+      field.onChange(tempSelectedDate);
+    }
+    setDialogOpen(false);
+  };
+
+  // Format date for display
+  const formatDateDisplay = (date: Date | null) => {
+    if (!date) return "Select date and time";
+    return date.toLocaleDateString() + " - " + 
+           date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <div className="flex flex-col">
-      <div className="flex rounded-md border border-dark-500 bg-dark-400">
+      {/* Date/Time Display and Trigger */}
+      <div 
+        className="flex rounded-md border border-dark-500 bg-dark-400 cursor-pointer" 
+        onClick={() => doctorId && setDialogOpen(true)}
+      >
         <Image
           src="/assets/icons/calendar.svg"
           height={24}
@@ -139,59 +164,89 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
           alt="calendar"
           className="ml-2"
         />
-        <ReactDatePicker
-          showTimeSelect
-          selected={selectedDate}
-          onChange={handleDateChange}
-          timeInputLabel="Time:"
-          dateFormat={dateFormat}
-          wrapperClassName="date-picker"
-          filterDate={isDateAvailable}
-          includeTimes={availableTimes}
-          minDate={new Date()}
-          placeholderText="Select date and time"
-          timeFormat="h:mm aa"
-          timeIntervals={30}
-          timeCaption="Time"
-          inline={false}
-          renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
-            <div className="flex justify-between px-2 py-2">
-              <button
-                onClick={decreaseMonth}
-                type="button"
-                className="bg-dark-400 rounded-full p-1 text-white hover:bg-dark-500"
-              >
-                {"<"}
-              </button>
-              <div className="font-medium">
-                {date.toLocaleString("default", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </div>
-              <button
-                onClick={increaseMonth}
-                type="button"
-                className="bg-dark-400 rounded-full p-1 text-white hover:bg-dark-500"
-              >
-                {">"}
-              </button>
-            </div>
-          )}
-        />
+        <div className="flex-1 p-2 text-sm">
+          {formatDateDisplay(selectedDate)}
+        </div>
       </div>
       
-      {/* Legend */}
-      <div className="flex gap-4 mt-2 text-12-regular justify-end">
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
-          <span>Available</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-red-700 mr-1"></div>
-          <span>Booked</span>
-        </div>
-      </div>
+      {/* DatePicker Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md md:max-w-lg backdrop-blur-lg bg-white/60 dark:bg-zinc-900/60 rounded-2xl shadow-2xl border border-white/20 dark:border-zinc-700/40">
+          <DialogHeader>
+            <DialogTitle>Select Appointment Date & Time</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <ReactDatePicker
+              selected={tempSelectedDate || selectedDate}
+              onChange={handleDateChange}
+              showTimeSelect
+              inline={true}
+              timeInputLabel="Time:"
+              dateFormat={dateFormat}
+              filterDate={isDateAvailable}
+              includeTimes={availableTimes}
+              minDate={new Date()}
+              placeholderText="Select date and time"
+              timeFormat="h:mm aa"
+              timeIntervals={30}
+              timeCaption="Time"
+              renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
+                <div className="flex justify-between px-2 py-2">
+                  <button
+                    onClick={decreaseMonth}
+                    type="button"
+                    className="bg-dark-400 rounded-full p-1 text-white hover:bg-dark-500"
+                  >
+                    {"<"}
+                  </button>
+                  <div className="font-medium">
+                    {date.toLocaleString("default", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </div>
+                  <button
+                    onClick={increaseMonth}
+                    type="button"
+                    className="bg-dark-400 rounded-full p-1 text-white hover:bg-dark-500"
+                  >
+                    {">"}
+                  </button>
+                </div>
+              )}
+            />
+          </div>
+          
+          {/* Legend */}
+          <div className="flex gap-4 mt-2 text-12-regular justify-center">
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
+              <span>Available</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-red-700 mr-1"></div>
+              <span>Booked</span>
+            </div>
+          </div>
+          
+          {/* Action buttons */}
+          <div className="mt-4 flex justify-end gap-3">
+            <Button 
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmDateSelection}
+              disabled={!tempSelectedDate}
+            >
+              Confirm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Helper text */}
       {doctorId ? (
