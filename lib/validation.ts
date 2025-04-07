@@ -25,7 +25,7 @@ export const PatientFormValidation = z.object({
     .regex(
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/,
     ),
-  gender: z.enum(["male", "female", "other"]),
+  gender: z.enum(["Male", "Female", "Other"]),
   address: z
     .string()
     .min(5, "Address must be at least 5 characters")
@@ -41,8 +41,8 @@ export const PatientFormValidation = z.object({
   emergencyContactNumber: z
     .string()
     .refine(
-      (emergencyContactNumber) => /^\+\d{10,15}$/.test(emergencyContactNumber),
-      "Invalid phone number"
+      (emergencyContactNumber) => /^\+639\d{9}$/.test(emergencyContactNumber),
+      "Please enter a valid Philippine phone number (+639XXXXXXXXX)"
     ),
   allergies: z.string().optional(),
   currentMedication: z.string().optional(),
@@ -74,7 +74,13 @@ export const PatientFormValidation = z.object({
 
 export const CreateAppointmentSchema = z.object({
   primaryPhysician: z.string().min(2, "Select at least one doctor"),
-  schedule: z.coerce.date(),
+  schedule: z.coerce.date({
+    required_error: "Please select an appointment date and time",
+    invalid_type_error: "Invalid date format"
+  }).refine(
+    (date) => date instanceof Date && !isNaN(date.getTime()),
+    "Please select a valid appointment date and time"
+  ),
   reason: z
     .string()
     .min(2, "Reason must be at least 2 characters")
@@ -85,7 +91,13 @@ export const CreateAppointmentSchema = z.object({
 
 export const ScheduleAppointmentSchema = z.object({
   primaryPhysician: z.string().min(2, "Select at least one doctor"),
-  schedule: z.coerce.date(),
+  schedule: z.coerce.date({
+    required_error: "Please select an appointment date and time",
+    invalid_type_error: "Invalid date format"
+  }).refine(
+    (date) => date instanceof Date && !isNaN(date.getTime()),
+    "Please select a valid appointment date and time"
+  ),
   reason: z.string().optional(),
   note: z.string().optional(),
   cancellationReason: z.string().optional(),
@@ -93,7 +105,13 @@ export const ScheduleAppointmentSchema = z.object({
 
 export const CancelAppointmentSchema = z.object({
   primaryPhysician: z.string().min(2, "Select at least one doctor"),
-  schedule: z.coerce.date(),
+  schedule: z.coerce.date({
+    required_error: "Please select an appointment date and time",
+    invalid_type_error: "Invalid date format"
+  }).refine(
+    (date) => date instanceof Date && !isNaN(date.getTime()),
+    "Please select a valid appointment date and time"
+  ),
   reason: z.string().optional(),
   note: z.string().optional(),
   cancellationReason: z

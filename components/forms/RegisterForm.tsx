@@ -27,6 +27,7 @@ import { FileUploader } from "../FileUploader";
 import SubmitButton from "../SubmitButton";
 
 interface ExtendedUser extends User {
+  gender: "Male" | "Female" | "Other";
   birthDate?: string;
 }
 
@@ -42,6 +43,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       email: user.email,
       phone: user.phone,
       birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : "",
+      gender: user.gender as "Male" | "Female" | "Other",
     },
   });
 
@@ -71,7 +73,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         email: values.email,
         phone: values.phone,
         birthDate: new Date(values.birthDate),
-        gender: values.gender,
+        gender: values.gender.toLowerCase() as Gender,
         address: values.address,
         category: values.category ?? "",
         emergencyContactName: values.emergencyContactName,

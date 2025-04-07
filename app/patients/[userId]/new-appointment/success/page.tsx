@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Doctors } from "@/constants";
 import { getAppointment } from "@/lib/actions/appointment.actions";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, generateAppointmentCode } from "@/lib/utils";
 
 const RequestSuccess = async ({
   searchParams,
@@ -16,6 +16,9 @@ const RequestSuccess = async ({
   const doctor = Doctors.find(
     (doctor) => doctor.name === appointment.primaryPhysician
   );
+  
+  // Generate a unique appointment code for this patient
+  const appointmentCode = generateAppointmentCode(appointmentId, appointment.patient.$id);
 
   return (
     <div className=" flex h-screen max-h-screen px-[5%]">
@@ -39,14 +42,24 @@ const RequestSuccess = async ({
             unoptimized //
           />
           <h2 className="header mb-6 max-w-[600px] text-center">
-            Your <span className="text-green-500">appointment request</span> has
-            been successfully submitted!
+            Your <span className="text-green-500">appointment</span> has
+            been successfully scheduled!
           </h2>
-          <p>We&apos;ll be in touch shortly to confirm.</p>
+          <p>Please save your appointment code for reference.</p>
+          
+          <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
+  <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">
+    Your Appointment Code
+  </p>
+  <p className="text-xl font-bold tracking-wider text-gray-800 dark:text-white">
+    {appointmentCode}
+  </p>
+</div>
+
         </section>
 
-        <section className="request-details">
-          <p>Requested appointment details: </p>
+        <section className="my-5 flex flex-col gap-3 rounded-xl border border-dark-400 bg-dark-300 p-4">
+          <p>Scheduled appointment details: </p>
           <div className="flex items-center gap-3">
             <Image
               src={doctor?.image!}

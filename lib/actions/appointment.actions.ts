@@ -164,3 +164,25 @@ export const getAppointment = async (appointmentId: string) => {
     );
   }
 };
+
+// GET DOCTOR APPOINTMENTS 
+export const getDoctorAppointments = async (doctorName: string) => {
+  try {
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [
+        Query.equal("primaryPhysician", doctorName),
+        Query.equal("status", "scheduled")
+      ]
+    );
+
+    return parseStringify(appointments.documents);
+  } catch (error) {
+    console.error(
+      "An error occurred while retrieving doctor appointments:",
+      error
+    );
+    return [];
+  }
+};

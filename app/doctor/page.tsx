@@ -15,7 +15,6 @@ import { Appointment } from "@/types/appwrite.types";
 import { decryptKey } from "@/lib/utils";
 
 const DoctorDashboard = () => {
-  const [selectedDoctor, setSelectedDoctor] = useState("");
   const [allAppointments, setAllAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState({
     documents: [],
@@ -25,6 +24,7 @@ const DoctorDashboard = () => {
     totalCount: 0
   });
   const [loading, setLoading] = useState(true);
+  const [currentDoctor, setCurrentDoctor] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -33,21 +33,59 @@ const DoctorDashboard = () => {
       ? window.localStorage.getItem("doctorAccessKey") 
       : null;
     
-    const accessKey = encryptedKey && decryptKey(encryptedKey);
-
-    if (accessKey !== process.env.NEXT_PUBLIC_DOCTOR_PASSKEY!.toString()) {
+    if (!encryptedKey) {
       router.push("/?doctor=true");
       return;
     }
+
+    const accessKey = decryptKey(encryptedKey);
+    const doctorName = localStorage.getItem("doctorName");
+
+    if (!doctorName || !Doctors.some(doc => doc.name === doctorName)) {
+      localStorage.removeItem("doctorAccessKey");
+      localStorage.removeItem("doctorName");
+      router.push("/?doctor=true");
+      return;
+    }
+
+    setCurrentDoctor(doctorName);
 
     const fetchAppointments = async () => {
       setLoading(true);
       const appointments = await getRecentAppointmentList();
       
       if (appointments) {
-        // Store all appointments in a separate state
-        setAllAppointments(appointments.documents);
-        setFilteredAppointments(appointments);
+        // Filter appointments for the current doctor
+        const doctorAppointments = appointments.documents.filter(
+          (appointment: Appointment) => appointment.primaryPhysician === doctorName
+        );
+        
+        // Count appointments by status
+        const counts = doctorAppointments.reduce(
+          (acc: any, appointment: Appointment) => {
+            switch (appointment.status) {
+              case "scheduled":
+                acc.scheduledCount++;
+                break;
+              case "pending":
+                acc.pendingCount++;
+                break;
+              case "cancelled":
+                acc.cancelledCount++;
+                break;
+            }
+            return acc;
+          },
+          { scheduledCount: 0, pendingCount: 0, cancelledCount: 0 }
+        );
+
+        setFilteredAppointments({
+          documents: doctorAppointments,
+          scheduledCount: counts.scheduledCount,
+          pendingCount: counts.pendingCount,
+          cancelledCount: counts.cancelledCount,
+          totalCount: doctorAppointments.length
+        });
       } else {
         console.error("Failed to fetch appointments");
       }
@@ -56,70 +94,6 @@ const DoctorDashboard = () => {
 
     fetchAppointments();
   }, [router]);
-
-  // This effect runs when selectedDoctor changes
-  useEffect(() => {
-    if (selectedDoctor && allAppointments.length > 0) {
-      // Filter appointments for the selected doctor from the original list
-      const doctorAppointments = allAppointments.filter(
-        (appointment: Appointment) => appointment.primaryPhysician === selectedDoctor
-      );
-      
-      // Count appointments by status
-      const counts = doctorAppointments.reduce(
-        (acc: any, appointment: Appointment) => {
-          switch (appointment.status) {
-            case "scheduled":
-              acc.scheduledCount++;
-              break;
-            case "pending":
-              acc.pendingCount++;
-              break;
-            case "cancelled":
-              acc.cancelledCount++;
-              break;
-          }
-          return acc;
-        },
-        { scheduledCount: 0, pendingCount: 0, cancelledCount: 0 }
-      );
-
-      setFilteredAppointments({
-        documents: doctorAppointments,
-        scheduledCount: counts.scheduledCount,
-        pendingCount: counts.pendingCount,
-        cancelledCount: counts.cancelledCount,
-        totalCount: doctorAppointments.length
-      });
-    } else if (!selectedDoctor && allAppointments.length > 0) {
-      // If no doctor is selected, show all appointments
-      const counts = allAppointments.reduce(
-        (acc: any, appointment: Appointment) => {
-          switch (appointment.status) {
-            case "scheduled":
-              acc.scheduledCount++;
-              break;
-            case "pending":
-              acc.pendingCount++;
-              break;
-            case "cancelled":
-              acc.cancelledCount++;
-              break;
-          }
-          return acc;
-        },
-        { scheduledCount: 0, pendingCount: 0, cancelledCount: 0 }
-      );
-
-      setFilteredAppointments({
-        documents: allAppointments,
-        scheduledCount: counts.scheduledCount,
-        pendingCount: counts.pendingCount,
-        cancelledCount: counts.cancelledCount,
-        totalCount: allAppointments.length
-      });
-    }
-  }, [selectedDoctor, allAppointments]);
 
   return (
     <div className="mx-auto max-w-7xl flex flex-col space-y-14 px-4 sm:px-6 lg:px-8">
@@ -134,44 +108,32 @@ const DoctorDashboard = () => {
           />
         </Link>
 
-        <a 
-          href="/" 
-          className="text-lg font-semibold"
-          onClick={() => {
-            if (typeof window !== "undefined") {
-              localStorage.removeItem("doctorAccessKey");
-            }
-          }}
-        >
-          Logout
-        </a>
+        <div className="flex items-center gap-4">
+          <a 
+            href="/" 
+            className="text-lg font-semibold"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("doctorAccessKey");
+                localStorage.removeItem("doctorName");
+              }
+            }}
+          >
+            Logout
+          </a>
+        </div>
       </header>
 
       <main className="admin-main">
         <section className="space-y-4">
-          <h1 className="text-3xl font-semibold">Doctor Dashboard 👨‍⚕️</h1>
-          <p className="text-gray-700">View and manage your appointments</p>
-        </section>
-
-        <section className="mb-6">
-          <div className="flex items-center space-x-4">
-            <label htmlFor="doctor-select" className="text-lg font-semibold">
-              Select Doctor:
-            </label>
-            <select
-              id="doctor-select"
-              value={selectedDoctor}
-              onChange={(e) => setSelectedDoctor(e.target.value)}
-              className="rounded-md border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Doctors</option>
-              {Doctors.map((doctor) => (
-                <option key={doctor.name} value={doctor.name}>
-                  Dr. {doctor.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <h1 className="text-3xl font-semibold">
+  Good to see you again, Dr.{" "}
+  <span className="text-blue-600 font-bold dark:text-blue-400 dark:drop-shadow-glow">
+    {currentDoctor}
+  </span>
+  !
+</h1>
+          <p className="text-14-regular text-dark-700">View and manage your appointments</p>
         </section>
 
         {(filteredAppointments.documents.length > 0 || loading) ? (
@@ -211,9 +173,7 @@ const DoctorDashboard = () => {
         ) : (
           <div className="flex h-40 items-center justify-center bg-gray-50 rounded-lg">
             <p className="text-lg font-medium text-gray-500">
-              {selectedDoctor 
-                ? "No appointments available for the selected doctor." 
-                : "No appointments available."}
+              No appointments available.
             </p>
           </div>
         )}

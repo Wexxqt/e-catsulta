@@ -32,6 +32,15 @@ export interface Appointment extends Models.Document {
   userId: string;
   cancellationReason: string | null;
 }
+
+export interface PatientNote extends Models.Document {
+  patientId: string;
+  doctorId: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Add these to your types/appwrite.types.ts file
 export type Gender = "male" | "female" | "other" | "prefer not to say";
 

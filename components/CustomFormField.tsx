@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
+import { getDoctorAppointments } from "@/lib/actions/appointment.actions";
 
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -58,15 +59,19 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
   const [availability, setAvailability] = useState<{ 
     days: number[], 
     startTime: number, 
-    endTime: number 
-  }>({ days: [], startTime: 8, endTime: 17 });
+    endTime: number,
+    holidays: Date[] 
+  }>({ days: [], startTime: 8, endTime: 17, holidays: [] });
   
   const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
-  const [bookedSlots, setBookedSlots] = useState<Date[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<{ date: Date; slots: Date[]; count: number }[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(field.value || null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [tempSelectedDate, setTempSelectedDate] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [dateSelectionError, setDateSelectionError] = useState("");
 
+  // Fetch real booked appointments when doctor changes or dialog opens
   useEffect(() => {
     if (doctorId) {
       const doctor = Doctors.find(doc => doc.name === doctorId);
@@ -75,72 +80,236 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
           days: doctor.availability.days,
           startTime: doctor.availability.startTime,
           endTime: doctor.availability.endTime,
+          holidays: doctor.availability.holidays || [],
         });
 
-        // Reset selected date when doctor changes
-        setSelectedDate(null);
-        field.onChange(null);
+        // Only reset when doctor changes, not when dialog opens
+        if (!dialogOpen) {
+          // Don't reset date on doctor change if we already have a valid selected date
+          if (!selectedDate) {
+            setSelectedDate(null);
+            field.onChange(null);
+          }
+        }
         
         // Generate available time slots
         generateTimeSlots(doctor);
+        
+        // Fetch real booked appointments
+        fetchBookedAppointments(doctorId);
       }
     }
-  }, [doctorId]);
+  }, [doctorId, dialogOpen]);
+
+  // Update the form field value when selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      field.onChange(selectedDate);
+    }
+  }, [selectedDate]);
+
+  // Function to fetch real booked appointments for this doctor
+  const fetchBookedAppointments = async (doctorId: string) => {
+    setIsLoading(true);
+    try {
+      const appointments = await getDoctorAppointments(doctorId);
+      
+      // Group appointments by date
+      const bookedByDate = appointments.reduce((acc: { date: Date; slots: Date[]; count: number }[], appointment: any) => {
+        const appointmentDate = new Date(appointment.schedule);
+        
+        // Find if we already have this date in our accumulator
+        const existingDateIndex = acc.findIndex(item => 
+          isSameDay(item.date, appointmentDate)
+        );
+        
+        if (existingDateIndex >= 0) {
+          // Add this time to existing date's slots
+          acc[existingDateIndex].slots.push(appointmentDate);
+          acc[existingDateIndex].count += 1;
+        } else {
+          // Create new date entry with this slot
+          acc.push({
+            date: appointmentDate,
+            slots: [appointmentDate],
+            count: 1
+          });
+        }
+        
+        return acc;
+      }, []);
+      
+      setBookedSlots(bookedByDate);
+    } catch (error) {
+      console.error("Error fetching booked appointments:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Generate available time slots for the selected doctor
   const generateTimeSlots = (doctor: any) => {
     const times: Date[] = [];
-    const booked: Date[] = [];
     
     // Create time slots in 30-minute increments
     for (let hour = doctor.availability.startTime; hour < doctor.availability.endTime; hour++) {
       times.push(new Date(0, 0, 0, hour, 0));
       times.push(new Date(0, 0, 0, hour, 30));
-      
-      // For demo purposes - mark some slots as booked
-      if (Math.random() > 0.7) {
-        booked.push(new Date(0, 0, 0, hour, 0));
-      }
-      if (Math.random() > 0.7) {
-        booked.push(new Date(0, 0, 0, hour, 30));
-      }
     }
     
     setAvailableTimes(times);
-    setBookedSlots(booked);
   };
 
-  // Check if a date is available based on doctor's working days
+  // Check if a date is available based on doctor's working days and holidays
   const isDateAvailable = (date: Date) => {
     const day = date.getDay();
-    // Only show future dates
-    const isInFuture = date >= new Date();
-    return availability.days.includes(day) && isInFuture;
+    const now = new Date();
+    
+    // Check if the date is in the past
+    if (date < now) return false;
+    
+    // Check if it's today but past working hours
+    if (isSameDay(date, now)) {
+      const currentHour = now.getHours();
+      if (currentHour >= availability.endTime) return false;
+    }
+    
+    // Check if it's a holiday
+    const isHoliday = availability.holidays?.some(holiday => 
+      isSameDay(new Date(holiday), date)
+    );
+    if (isHoliday) return false;
+    
+    // Check if date has reached the daily booking limit (10 patients per day)
+    const bookedDay = bookedSlots.find(slot => isSameDay(slot.date, date));
+    if (bookedDay && bookedDay.count >= 10) return false;
+    
+    // Check if it's a working day
+    return availability.days.includes(day);
   };
 
-  // Check if a time slot is booked
-  const isTimeBooked = (time: Date) => {
-    if (!time) return false;
+  // Helper function to check if two dates are the same day
+  const isSameDay = (date1: Date, date2: Date) => {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+  };
+
+  // Check if a specific date and time slot is booked
+  const isTimeBooked = (date: Date) => {
+    if (!date) return false;
     
-    return bookedSlots.some(
-      bookedTime => 
-        bookedTime.getHours() === time.getHours() && 
-        bookedTime.getMinutes() === time.getMinutes()
+    const bookedDay = bookedSlots.find(slot => isSameDay(slot.date, date));
+    if (!bookedDay) return false;
+    
+    return bookedDay.slots.some(bookedTime => 
+      bookedTime.getHours() === date.getHours() && 
+      bookedTime.getMinutes() === date.getMinutes()
+    );
+  };
+
+  // Get available time slots for a specific date
+  const getAvailableTimesForDate = (date: Date) => {
+    if (!isDateAvailable(date)) return [];
+    
+    // Check if we're at the 10-patient limit for this day
+    const bookedDay = bookedSlots.find(slot => isSameDay(slot.date, date));
+    if (bookedDay && bookedDay.count >= 10) return [];
+    
+    const now = new Date();
+    const isToday = isSameDay(date, now);
+    
+    return availableTimes.filter(time => {
+      const slotDateTime = new Date(date);
+      slotDateTime.setHours(time.getHours(), time.getMinutes());
+      
+      // For today, only show future time slots
+      if (isToday && slotDateTime <= now) return false;
+      
+      // Check if the slot is booked
+      return !isTimeBooked(slotDateTime);
+    });
+  };
+
+  // Custom day renderer to apply specific classes to days
+  const renderDayContents = (day: number, date: Date) => {
+    // Check if this date is fully booked (10 appointments)
+    const fullyBooked = isDateFullyBooked(date);
+    if (fullyBooked) {
+      return (
+        <div className="fully-booked">{day}</div>
+      );
+    }
+    // No longer adding special styling for days with bookings that aren't fully booked
+    return day;
+  };
+
+  // Function to customize time slots display
+  const renderTimeListItem = ({ time, date, handleClick, isSelected, disabled }: any) => {
+    // Check if this time slot is booked
+    const timeDate = new Date(date);
+    const hour = parseInt(time.split(':')[0]);
+    const minute = time.includes('30') ? 30 : 0;
+    timeDate.setHours(hour, minute);
+    
+    const isBooked = isTimeBooked(timeDate);
+    
+    const className = isBooked
+      ? "react-datepicker__time-list-item--booked"
+      : isSelected
+      ? "react-datepicker__time-list-item--selected"
+      : disabled
+      ? "react-datepicker__time-list-item--disabled"
+      : "";
+    
+    return (
+      <li
+        onClick={isBooked || disabled ? undefined : handleClick}
+        className={`react-datepicker__time-list-item ${className}`}
+      >
+        {time}
+      </li>
     );
   };
 
   // Handle date selection in dialog
   const handleDateChange = (date: Date) => {
     setTempSelectedDate(date);
+    setDateSelectionError("");
+    
+    // Check if time is selected (hours and minutes are not 0)
+    const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
+    if (!hasTime) {
+      setDateSelectionError("Please select both a date and time");
+    }
   };
 
   // Confirm date selection from dialog
   const confirmDateSelection = () => {
-    if (tempSelectedDate) {
-      setSelectedDate(tempSelectedDate);
-      field.onChange(tempSelectedDate);
+    if (!tempSelectedDate) return;
+    
+    // Check if time is selected
+    const hasTime = tempSelectedDate.getHours() !== 0 || tempSelectedDate.getMinutes() !== 0;
+    if (!hasTime) {
+      setDateSelectionError("Please select both a date and time");
+      return;
     }
+    
+    setSelectedDate(tempSelectedDate);
+    field.onChange(tempSelectedDate);
     setDialogOpen(false);
+    setDateSelectionError("");
+  };
+
+  // Check if a date has any booked slots
+  const hasBookedSlots = (date: Date) => {
+    return bookedSlots.some(slot => isSameDay(slot.date, date));
+  };
+
+  // Check if a date is fully booked (10 appointments)
+  const isDateFullyBooked = (date: Date) => {
+    const bookedDay = bookedSlots.find(slot => isSameDay(slot.date, date));
+    return bookedDay && bookedDay.count >= 10;
   };
 
   // Format date for display
@@ -165,18 +334,96 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
           className="ml-2"
         />
         <div className="flex-1 p-2 text-sm">
-          {formatDateDisplay(selectedDate)}
+          {isLoading ? "Loading availability..." : formatDateDisplay(selectedDate)}
         </div>
       </div>
       
       {/* DatePicker Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) {
+          setDateSelectionError("");
+        }
+      }}>
         <DialogContent className="sm:max-w-md md:max-w-lg backdrop-blur-lg bg-white/60 dark:bg-zinc-900/60 rounded-2xl shadow-2xl border border-white/20 dark:border-zinc-700/40">
           <DialogHeader>
             <DialogTitle>Select Appointment Date & Time</DialogTitle>
+            {isLoading && <p className="text-sm text-gray-500">Loading real-time availability...</p>}
           </DialogHeader>
           
           <div className="py-4">
+            <style jsx global>{`
+              /* Remove the booked-day class that applies red styling to days with any bookings */
+              
+              /* Style for fully booked days (10 patients reached) */
+              .fully-booked-day, .fully-booked {
+                background-color: rgba(220, 0, 0, 0.8) !important;
+                border-radius: 0.2rem;
+                color: white !important;
+                font-weight: bold;
+                text-decoration: line-through;
+                cursor: not-allowed !important;
+              }
+              
+              /* Style for booked time slots in the time picker */
+              .react-datepicker__time-list-item--disabled {
+                color: #ccc !important;
+                text-decoration: line-through;
+              }
+              
+              /* Add CSS for individual time slots that are booked */
+              .react-datepicker__time-list-item--booked {
+                background-color: rgba(255, 0, 0, 0.3) !important;
+                color: white !important;
+                font-weight: bold;
+                text-decoration: line-through;
+                cursor: not-allowed !important;
+              }
+              
+              /* Add CSS class for days that have reached the 10 patient limit */
+              ${bookedSlots.map(slot => {
+                const date = new Date(slot.date);
+                const month = date.getMonth();
+                const day = date.getDate();
+                const year = date.getFullYear();
+                
+                // Only apply styling for fully booked days (10 patient limit)
+                if (slot.count >= 10) {
+                  return `
+                    .react-datepicker__day[aria-label*="${month + 1}/${day}/${year}"] {
+                      background-color: rgba(220, 0, 0, 0.8) !important;
+                      border-radius: 0.2rem;
+                      color: white !important;
+                      font-weight: bold;
+                      text-decoration: line-through;
+                      cursor: not-allowed !important;
+                    }
+                  `;
+                }
+                
+                // Don't apply special styling for days with some bookings but not fully booked
+                return '';
+              }).join('')}
+              
+              /* Style for booked time slots */
+              ${bookedSlots.flatMap(slot => 
+                slot.slots.map(bookedTime => {
+                  const hours = bookedTime.getHours();
+                  const minutes = bookedTime.getMinutes();
+                  
+                  // Create a more robust selector
+                  return `
+                    .react-datepicker__time-list-item[aria-disabled="false"]:nth-child(${hours * 2 + (minutes === 30 ? 2 : 1)}) {
+                      background-color: rgba(255, 0, 0, 0.3) !important;
+                      color: white !important;
+                      font-weight: bold;
+                      text-decoration: line-through;
+                      pointer-events: none;
+                    }
+                  `;
+                })
+              ).join('')}
+            `}</style>
             <ReactDatePicker
               selected={tempSelectedDate || selectedDate}
               onChange={handleDateChange}
@@ -185,12 +432,13 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
               timeInputLabel="Time:"
               dateFormat={dateFormat}
               filterDate={isDateAvailable}
-              includeTimes={availableTimes}
+              includeTimes={tempSelectedDate ? getAvailableTimesForDate(tempSelectedDate) : []}
               minDate={new Date()}
               placeholderText="Select date and time"
               timeFormat="h:mm aa"
               timeIntervals={30}
               timeCaption="Time"
+              renderDayContents={renderDayContents}
               renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
                 <div className="flex justify-between px-2 py-2">
                   <button
@@ -218,15 +466,30 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
             />
           </div>
           
+          {/* Error message */}
+          {dateSelectionError && (
+            <p className="text-sm text-red-500 font-medium text-center">
+              {dateSelectionError}
+            </p>
+          )}
+          
           {/* Legend */}
-          <div className="flex gap-4 mt-2 text-12-regular justify-center">
+          <div className="flex flex-wrap gap-4 mt-2 text-12-regular justify-center">
             <div className="flex items-center">
               <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
               <span>Available</span>
             </div>
             <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-red-700 mr-1"></div>
-              <span>Booked</span>
+              <div className="w-3 h-3 rounded-full bg-red-700 opacity-90 mr-1"></div>
+              <span>Fully Booked (10/day)</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-gray-500 mr-1"></div>
+              <span>Holiday/Off</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-gray-400 line-through mr-1">Time</span>
+              <span>Booked Slot</span>
             </div>
           </div>
           
@@ -240,7 +503,7 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
             </Button>
             <Button 
               onClick={confirmDateSelection}
-              disabled={!tempSelectedDate}
+              disabled={!tempSelectedDate || isLoading || !!dateSelectionError}
             >
               Confirm
             </Button>
@@ -256,7 +519,7 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
           </p>
         ) : (
           <p className="text-12-regular text-dark-600 mt-1">
-            Please select an available date and time
+            {isLoading ? "Loading availability..." : "Please select an available date and time"}
           </p>
         )
       ) : (

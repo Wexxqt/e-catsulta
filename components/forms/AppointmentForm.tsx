@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 
@@ -37,6 +37,8 @@ export const AppointmentForm = ({
 }) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+  const [dateError, setDateError] = useState("");
 
   const AppointmentFormValidation = getAppointmentSchema(type);
 
@@ -53,10 +55,34 @@ export const AppointmentForm = ({
     },
   });
 
+  // Watch for changes in the schedule field
+  const scheduleValue = form.watch('schedule');
+  useEffect(() => {
+    if (scheduleValue) {
+      // Check if the date is valid
+      const isValidDate = scheduleValue instanceof Date && !isNaN(scheduleValue.getTime());
+      if (!isValidDate) {
+        setDateError("Please select a valid appointment date and time");
+      } else {
+        setDateError("");
+      }
+    } else {
+      setDateError("Please select an appointment date and time");
+    }
+  }, [scheduleValue]);
+
   const onSubmit = async (
     values: z.infer<typeof AppointmentFormValidation>
   ) => {
     setIsLoading(true);
+    setBookingError("");
+
+    // Double-check date validity
+    if (!values.schedule || !(values.schedule instanceof Date) || isNaN(values.schedule.getTime())) {
+      setBookingError("Please select a valid appointment date and time");
+      setIsLoading(false);
+      return;
+    }
 
     let status;
     switch (type) {
@@ -67,7 +93,7 @@ export const AppointmentForm = ({
         status = "cancelled";
         break;
       default:
-        status = "pending";
+        status = "scheduled";
     }
 
     try {
@@ -94,7 +120,7 @@ export const AppointmentForm = ({
         const appointmentToUpdate = {
           userId,
           appointmentId: appointment?.$id!,
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Add the timeZone property
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           appointment: {
             primaryPhysician: values.primaryPhysician,
             schedule: new Date(values.schedule),
@@ -111,11 +137,20 @@ export const AppointmentForm = ({
           form.reset();
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
+      if (error.message?.includes('conflict') || error.code === 409) {
+        setBookingError("This time slot has just been booked by someone else. Please select a different time.");
+      } else {
+        setBookingError("There was an error booking your appointment. Please try again.");
+      }
     }
     setIsLoading(false);
   };
+
+  const selectedDate = form.watch('schedule');
+  const selectedDoctor = form.watch('primaryPhysician');
+  const hasRequiredFields = type === 'cancel' || (!!selectedDate && !!selectedDoctor);
 
   let buttonLabel;
   switch (type) {
@@ -173,7 +208,7 @@ export const AppointmentForm = ({
               label="Expected appointment date"
               showTimeSelect
               dateFormat="MM/dd/yyyy  -  h:mm aa"
-              doctorId={form.watch('primaryPhysician')} // Pass the selected doctorId
+              doctorId={form.watch('primaryPhysician')}
             />
 
             <div
@@ -210,9 +245,24 @@ export const AppointmentForm = ({
           />
         )}
 
+        {/* Show date error message if any */}
+        {dateError && (
+          <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">
+            {dateError}
+          </div>
+        )}
+        
+        {/* Show booking error message if any */}
+        {bookingError && (
+          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+            {bookingError}
+          </div>
+        )}
+
         <SubmitButton
           isLoading={isLoading}
           className={`${type === "cancel" ? "shad-danger-btn" : "shad-primary-btn"} w-full`}
+          disabled={isLoading || !hasRequiredFields || !!dateError}
         >
           {buttonLabel}
         </SubmitButton>

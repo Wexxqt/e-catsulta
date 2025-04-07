@@ -323,11 +323,51 @@
 
 /* ==== DISABLED / BOOKED DATES ==== */
 .react-datepicker__day--disabled {
-  color: #e94f4f !important; /* Red for booked dates */
-  background-color: #2a1a1a !important;
+  color: #808080 !important; /* Gray for holidays */
+  background-color: transparent !important;
   cursor: not-allowed;
   pointer-events: none;
   opacity: 0.6;
+}
+
+/* ==== BOOKED DATES ==== */
+.react-datepicker__day--booked {
+  color: #e94f4f !important; /* Red for booked dates */
+  background-color: rgba(233, 79, 79, 0.1) !important;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ==== CUSTOM BOOKED DATES AND TIMES ==== */
+/* Make sure booked dates stand out with red background */
+.react-datepicker__day[aria-label*="/202"] {
+  background-color: rgba(255, 100, 100, 0.2);
+  color: rgb(200, 0, 0) !important;
+  font-weight: bold;
+}
+
+/* Style for fully booked days */
+.react-datepicker__day.fully-booked {
+  background-color: rgba(220, 50, 50, 0.7) !important;
+  color: white !important;
+  font-weight: bold;
+  text-decoration: line-through;
+  cursor: not-allowed !important;
+}
+
+/* Style for booked time slots */
+.react-datepicker__time-list-item--booked {
+  background-color: rgba(255, 100, 100, 0.2) !important;
+  color: rgb(200, 0, 0) !important;
+  font-weight: bold !important;
+  text-decoration: line-through !important;
+  pointer-events: none !important;
+}
+
+/* Make selected booked dates stand out */
+.react-datepicker__day--selected[aria-label*="/202"] {
+  background-color: rgba(255, 50, 50, 0.7) !important;
+  color: white !important;
 }
 
 /* ==== TIME PANEL ==== */
@@ -359,8 +399,8 @@
 
 /* ==== DISABLED / BOOKED TIME ==== */
 .react-datepicker__time-list-item--disabled {
-  color: #e94f4f !important; /* Red for booked times */
-  background-color: #2a1a1a !important;
+  color: #808080 !important; /* Gray for unavailable times */
+  background-color: transparent !important;
   cursor: not-allowed;
   pointer-events: none;
   opacity: 0.6;

@@ -2,12 +2,18 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import Image from "next/image";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { formatDateTime } from "@/lib/utils";
 import { Appointment } from "@/types/appwrite.types";
+import { createPatientNote, getPatientNotes } from "@/lib/actions/patient-notes.actions";
 
 import { AppointmentModal } from "../AppointmentModal";
 import { StatusBadge } from "../StatusBadge";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { PatientNote } from "@/types/appwrite.types";
 
 export const columns: ColumnDef<Appointment>[] = [
   {
@@ -82,14 +88,6 @@ export const columns: ColumnDef<Appointment>[] = [
       return (
         <div className="flex gap-1">
           <PatientDetailModal patient={appointment.patient} />
-          <AppointmentModal
-            patientId={appointment.patient.$id}
-            userId={appointment.userId}
-            appointment={appointment}
-            type="schedule"
-            title="Update Appointment"
-            description="Update appointment details or add notes."
-          />
           {appointment.status !== "cancelled" && (
             <AppointmentModal
               patientId={appointment.patient.$id}
@@ -108,35 +106,236 @@ export const columns: ColumnDef<Appointment>[] = [
 
 // Updated modal component with student number
 const PatientDetailModal = ({ patient }: { patient: any }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [notes, setNotes] = useState<PatientNote[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadNotes();
+    }
+  }, [isOpen, patient.$id]);
+
+  const loadNotes = async () => {
+    const patientNotes = await getPatientNotes(patient.$id);
+    setNotes(patientNotes);
+  };
+
+  const handleSubmitNote = async () => {
+    if (!newNote.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const doctorKey = localStorage.getItem("doctorAccessKey");
+      if (!doctorKey) {
+        throw new Error("Not authenticated as doctor");
+      }
+
+      await createPatientNote({
+        patientId: patient.$id,
+        doctorId: "current-doctor-id", // You'll need to get the actual doctor ID
+        note: newNote.trim(),
+      });
+
+      setNewNote("");
+      await loadNotes();
+    } catch (error) {
+      console.error("Error submitting note:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="inline-flex">
+    <>
       <button
         className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100"
-        onClick={() => {
-          // Get student ID from identificationNumber if category is Student
-          const studentNumber = patient.category === "Student" ? 
-            `Student Number: ${patient.identificationNumber || 'Not provided'}` : 
-            '';
-          
-          alert(`
-            Patient: ${patient.name}
-            ${studentNumber}
-            Gender: ${patient.gender || 'Not specified'}
-            Birth Date: ${patient.birthDate ? new Date(patient.birthDate).toLocaleDateString() : 'Not specified'}
-            Category: ${patient.category || 'Not specified'}
-            Signs/Symptoms: ${patient.signsSymptoms || 'None reported'}
-            Allergies: ${patient.allergies || 'None reported'}
-            Current Medication: ${patient.currentMedication || 'None reported'}
-            Family Medical History: ${patient.familyMedicalHistory || 'None reported'}
-            Past Medical History: ${patient.pastMedicalHistory || 'None reported'}
-          `);
-        }}
+        onClick={() => setIsOpen(true)}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
           <circle cx="12" cy="12" r="3"></circle>
         </svg>
       </button>
-    </div>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Patient Information</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Personal Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Full Name</p>
+                  <p className="text-base">{patient.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Gender</p>
+                  <p className="text-base">{patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Birth Date</p>
+                  <p className="text-base">{patient.birthDate ? new Date(patient.birthDate).toLocaleDateString() : 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Category</p>
+                  <p className="text-base">{patient.category || 'Not specified'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Contact Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="text-base">{patient.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="text-base">{patient.phone}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="text-base">{patient.address || 'Not specified'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Identification */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Identification</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">ID Type</p>
+                  <p className="text-base">{patient.identificationType || 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">ID Number</p>
+                  <p className="text-base">{patient.identificationNumber || 'Not specified'}</p>
+                </div>
+                {patient.identificationDocumentId && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500">ID Document</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`/api/documents/${patient.identificationDocumentId}`);
+                            if (!response.ok) {
+                              throw new Error('Failed to get document URL');
+                            }
+                            const data = await response.json();
+                            
+                            // Open the URL in a new tab
+                            window.open(data.url, '_blank');
+                          } catch (error) {
+                            console.error('Error viewing document:', error);
+                            alert('Unable to view document. Please try again later.');
+                          }
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                          <polyline points="15 3 21 3 21 9"></polyline>
+                          <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                        View ID Document
+                      </button>
+                      <span className="text-xs text-gray-500">(Opens in new tab)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Medical Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Medical Information</h3>
+              <div className="grid gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Current Signs & Symptoms</p>
+                  <p className="text-base">{patient.signsSymptoms || 'None reported'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Allergies</p>
+                  <p className="text-base">{patient.allergies || 'None reported'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Current Medication</p>
+                  <p className="text-base">{patient.currentMedication || 'None reported'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Family Medical History</p>
+                  <p className="text-base">{patient.familyMedicalHistory || 'None reported'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Past Medical History</p>
+                  <p className="text-base">{patient.pastMedicalHistory || 'None reported'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Emergency Contact</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="text-base">{patient.emergencyContactName || 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="text-base">{patient.emergencyContactNumber || 'Not specified'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Doctor Notes Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Doctor Notes</h3>
+              
+              {/* Add New Note */}
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Add a new note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="min-h-[100px] p-3"
+                />
+                <Button
+                  onClick={handleSubmitNote}
+                  disabled={isSubmitting || !newNote.trim()}
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  {isSubmitting ? "Adding Note..." : "Add Note"}
+                </Button>
+              </div>
+
+              {/* Notes List */}
+              <div className="space-y-4 mt-4">
+                {notes.map((note) => (
+                  <div key={note.$id} className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm text-gray-500">
+                        {new Date(note.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <p className="text-gray-700 whitespace-pre-wrap">{note.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

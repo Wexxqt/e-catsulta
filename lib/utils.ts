@@ -86,3 +86,16 @@ export function encryptKey(passkey: string) {
 export function decryptKey(passkey: string) {
   return atob(passkey);
 }
+
+// Generate a unique appointment code for patients
+export function generateAppointmentCode(appointmentId: string, patientId: string) {
+  // Take first 3 characters from appointmentId and last 3 from patientId
+  const prefix = appointmentId.substring(0, 3).toUpperCase();
+  const suffix = patientId.substring(patientId.length - 3).toUpperCase();
+  
+  // Add timestamp element for uniqueness
+  const timestamp = new Date().getTime().toString().slice(-6);
+  
+  // Combine and format as XXX-YYYYY-ZZZ
+  return `${prefix}-${timestamp}-${suffix}`;
+}
