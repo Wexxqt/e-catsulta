@@ -95,6 +95,13 @@ const DoctorDashboard = () => {
     fetchAppointments();
   }, [router]);
 
+  // Add a function to handle logout
+  const handleLogout = () => {
+    localStorage.removeItem("doctorAccessKey");
+    localStorage.removeItem("doctorName");
+    router.push("/");
+  };
+
   return (
     <div className="mx-auto max-w-7xl flex flex-col space-y-14 px-4 sm:px-6 lg:px-8">
       <header className="flex justify-between items-center py-4">
@@ -109,18 +116,12 @@ const DoctorDashboard = () => {
         </Link>
 
         <div className="flex items-center gap-4">
-          <a 
-            href="/" 
+          <button 
+            onClick={handleLogout} 
             className="text-lg font-semibold"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                localStorage.removeItem("doctorAccessKey");
-                localStorage.removeItem("doctorName");
-              }
-            }}
           >
             Logout
-          </a>
+          </button>
         </div>
       </header>
 

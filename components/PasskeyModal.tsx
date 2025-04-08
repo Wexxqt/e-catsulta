@@ -33,12 +33,20 @@ export const PasskeyModal = () => {
       : null;
 
   useEffect(() => {
-    // No need to check for existing key on initial load.
-    // The modal always opens, requiring a passkey.
-    if (path === "/admin" && !open) {
-      router.push("/"); // If they somehow got to admin without authentication, redirect.
+    // Check if we're on the admin page and need to show the modal
+    if (path === "/admin") {
+      // Check if we have a valid access key
+      const hasValidKey = encryptedKey && decryptKey(encryptedKey) === process.env.NEXT_PUBLIC_ADMIN_PASSKEY;
+      
+      if (!hasValidKey) {
+        // If no valid key, show the modal
+        setOpen(true);
+      } else {
+        // If we have a valid key, make sure the modal is closed
+        setOpen(false);
+      }
     }
-  }, [path, open, router]);
+  }, [path, encryptedKey]);
 
   const closeModal = () => {
     setOpen(false);

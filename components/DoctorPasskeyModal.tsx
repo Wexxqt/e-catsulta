@@ -33,11 +33,33 @@ export const DoctorPasskeyModal = () => {
   // For debugging
   const [debugInfo, setDebugInfo] = useState("");
 
+  // Get the encrypted key from localStorage
+  const encryptedKey = typeof window !== "undefined" 
+    ? window.localStorage.getItem("doctorAccessKey") 
+    : null;
+
   useEffect(() => {
     if (path === "/doctor" && !open) {
       router.push("/");
     }
   }, [path, open, router]);
+
+  useEffect(() => {
+    // Check if we're on the doctor page and need to show the modal
+    if (path === "/doctor") {
+      // Check if we have a valid access key and doctor name
+      const doctorName = localStorage.getItem("doctorName");
+      const hasValidKey = encryptedKey && doctorName && Doctors.some(doc => doc.name === doctorName);
+      
+      if (!hasValidKey) {
+        // If no valid key or doctor name, show the modal
+        setOpen(true);
+      } else {
+        // If we have a valid key and doctor name, make sure the modal is closed
+        setOpen(false);
+      }
+    }
+  }, [path, encryptedKey]);
 
   const closeModal = () => {
     setOpen(false);

@@ -22,7 +22,7 @@ export const columns: ColumnDef<Appointment>[] = [
     header: "Patient",
     cell: ({ row }) => {
       const appointment = row.original;
-      return <p className="text-14-medium ">{appointment.patient.name}</p>;
+      return <p className="text-14-medium ">{appointment.patient?.name || 'Deleted Patient'}</p>;
     },
   },
   {
@@ -83,7 +83,7 @@ export const columns: ColumnDef<Appointment>[] = [
         <div className="flex gap-1">
           {appointment.status !== "cancelled" && (
             <AppointmentModal
-              patientId={appointment.patient.$id}
+              patientId={appointment.patient?.$id || ''}
               userId={appointment.userId}
               appointment={appointment}
               type="cancel"
