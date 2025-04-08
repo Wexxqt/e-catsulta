@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import {
@@ -21,9 +21,14 @@ import {
 import { decryptKey, encryptKey } from "@/lib/utils";
 import { Doctors } from "@/constants";
 
-export const DoctorPasskeyModal = () => {
+interface DoctorPasskeyModalProps {
+  onSuccess?: () => void;
+}
+
+export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
   const router = useRouter();
   const path = usePathname();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(true);
   const [passkey, setPasskey] = useState("");
   const [error, setError] = useState("");
@@ -39,12 +44,6 @@ export const DoctorPasskeyModal = () => {
     : null;
 
   useEffect(() => {
-    if (path === "/doctor" && !open) {
-      router.push("/");
-    }
-  }, [path, open, router]);
-
-  useEffect(() => {
     // Check if we're on the doctor page and need to show the modal
     if (path === "/doctor") {
       // Check if we have a valid access key and doctor name
@@ -58,12 +57,15 @@ export const DoctorPasskeyModal = () => {
         // If we have a valid key and doctor name, make sure the modal is closed
         setOpen(false);
       }
+    } else if (path === "/" && searchParams.get("doctor") === "true") {
+      // If we're on the main page with doctor=true in the URL, show the modal
+      setOpen(true);
     }
-  }, [path, encryptedKey]);
+  }, [path, encryptedKey, searchParams]);
 
   const closeModal = () => {
     setOpen(false);
-    router.push("/");
+    // Don't redirect to home page when closing the modal
   };
 
   const validatePasskey = async () => {
@@ -99,7 +101,14 @@ export const DoctorPasskeyModal = () => {
         localStorage.setItem("doctorName", selectedDoctor);
 
         setOpen(false);
-        router.replace("/doctor");
+        
+        // Call the onSuccess callback if provided
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          // Use router.push as fallback
+          router.push("/doctor");
+        }
       } else {
         setError("Invalid passkey. Please try again.");
         setPasskey(""); // Clear the passkey on error
@@ -120,7 +129,14 @@ export const DoctorPasskeyModal = () => {
   }, [passkey]);
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog open={open} onOpenChange={(isOpen) => {
+      // Only allow closing via the close button or successful authentication
+      if (!isOpen && !localStorage.getItem("doctorAccessKey")) {
+        setOpen(true);
+      } else {
+        setOpen(isOpen);
+      }
+    }}>
       <AlertDialogContent className="shad-alert-dialog">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-start justify-between">
