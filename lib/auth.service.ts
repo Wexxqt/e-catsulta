@@ -7,8 +7,6 @@ const client = new Client()
 
 const account = new Account(client);
 
-const PRODUCTION_URL = "https://book-ecatsulta.com";
-
 const handleOAuthRedirect = async (userId: string) => {
   try {
     // Check if user exists in our database
@@ -32,9 +30,9 @@ export const loginWithGoogle = async () => {
     // Create OAuth2 session for Google
     await account.createOAuth2Session(
       OAuthProvider.Google,
-      `${PRODUCTION_URL}/auth/callback`,  // Success URL
-      `${PRODUCTION_URL}/login-failed`,   // Failure URL
-      ['profile', 'email']
+      "https://book-ecatsulta.com/auth/callback",     // Success URL
+      "https://book-ecatsulta.com/login-failed",      // Failure URL
+      ['profile', 'email']                            // Requesting basic profile info and email
     );
   } catch (error) {
     console.error("Google login error:", error);
@@ -47,9 +45,9 @@ export const loginWithFacebook = async () => {
     // Create OAuth2 session for Facebook
     await account.createOAuth2Session(
       OAuthProvider.Facebook,
-      `${PRODUCTION_URL}/auth/callback`,  // Success URL
-      `${PRODUCTION_URL}/login-failed`,   // Failure URL
-      ['email', 'public_profile']
+      "https://book-ecatsulta.com/auth/callback",     // Success URL
+      "https://book-ecatsulta.com/login-failed",      // Failure URL
+      ['email', 'public_profile']                     // Requesting basic profile info and email
     );
   } catch (error) {
     console.error("Facebook login error:", error);
