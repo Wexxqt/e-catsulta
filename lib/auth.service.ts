@@ -7,6 +7,8 @@ const client = new Client()
 
 const account = new Account(client);
 
+const PRODUCTION_URL = "https://book-ecatsulta.com";
+
 const handleOAuthRedirect = async (userId: string) => {
   try {
     // Check if user exists in our database
@@ -27,11 +29,11 @@ const handleOAuthRedirect = async (userId: string) => {
 
 export const loginWithGoogle = async () => {
   try {
-    // Create OAuth2 session for Google using Appwrite's domain
+    // Create OAuth2 session for Google
     await account.createOAuth2Session(
       OAuthProvider.Google,
-      "https://cloud.appwrite.io/auth/oauth2/success?redirect=https://book-ecatsulta.com/auth/callback",  // Success URL with redirect
-      "https://cloud.appwrite.io/auth/oauth2/failure?redirect=https://book-ecatsulta.com/login-failed",   // Failure URL with redirect
+      `${PRODUCTION_URL}/auth/callback`,  // Success URL
+      `${PRODUCTION_URL}/login-failed`,   // Failure URL
       ['profile', 'email']
     );
   } catch (error) {
@@ -42,11 +44,11 @@ export const loginWithGoogle = async () => {
 
 export const loginWithFacebook = async () => {
   try {
-    // Create OAuth2 session for Facebook using Appwrite's domain
+    // Create OAuth2 session for Facebook
     await account.createOAuth2Session(
       OAuthProvider.Facebook,
-      "https://cloud.appwrite.io/auth/oauth2/success?redirect=https://book-ecatsulta.com/auth/callback",  // Success URL with redirect
-      "https://cloud.appwrite.io/auth/oauth2/failure?redirect=https://book-ecatsulta.com/login-failed",   // Failure URL with redirect
+      `${PRODUCTION_URL}/auth/callback`,  // Success URL
+      `${PRODUCTION_URL}/login-failed`,   // Failure URL
       ['email', 'public_profile']
     );
   } catch (error) {
