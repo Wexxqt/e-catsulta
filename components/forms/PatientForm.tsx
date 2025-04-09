@@ -13,6 +13,7 @@ import { UserFormValidation } from "@/lib/validation";
 import "react-phone-number-input/style.css";
 import CustomFormField, { FormFieldType } from "../CustomFormField";
 import SubmitButton from "../SubmitButton";
+import SocialLogin from "../SocialLogin";
 
 export const PatientForm = () => {
   const router = useRouter();
@@ -53,7 +54,7 @@ export const PatientForm = () => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 space-y-6">
         <section className="mb-12 space-y-4">
           <h1 className="header">Hi CatSUans! 👋</h1>
-          <p className="text-dark-700">Get started with your medical appoinment.</p>
+          <p className="text-dark-700">Get started with your medical appointment.</p>
         </section>
 
         <CustomFormField
@@ -85,6 +86,8 @@ export const PatientForm = () => {
         />
 
         <SubmitButton isLoading={isLoading}>Get Started</SubmitButton>
+
+        <SocialLogin />
       </form>
     </Form>
   );

@@ -96,20 +96,41 @@ export const registerPatient = async ({
 // GET PATIENT
 export const getPatient = async (userId: string) => {
   try {
+    console.log('Searching for patient with userId:', userId);
+    
+    if (!userId) {
+      console.error('No userId provided to getPatient');
+      return null;
+    }
+
+    if (!DATABASE_ID || !PATIENT_COLLECTION_ID) {
+      console.error('Missing required database configuration');
+      return null;
+    }
+
     const patient = await databases.listDocuments(
-      DATABASE_ID!,
-      PATIENT_COLLECTION_ID!,
+      DATABASE_ID,
+      PATIENT_COLLECTION_ID,
       [Query.equal("userId", userId)]
     );
-    console.log("Fetched patient:", patient);
+    
+    console.log('Database response:', patient);
+    console.log('Number of documents found:', patient.documents.length);
 
     if (patient.documents.length > 0) {
+      console.log('Patient found:', patient.documents[0]);
       return patient.documents[0]; // Return the first matching document
     }
 
+    console.log('No patient found for userId:', userId);
     return null; // No patient found
   } catch (error) {
-    console.error("An error occurred while fetching the patient:", error);
+    console.error('Error in getPatient:', error);
+    console.error('Error details:', {
+      userId,
+      databaseId: DATABASE_ID,
+      collectionId: PATIENT_COLLECTION_ID
+    });
     return null; // Return null if an error occurs
   }
 };

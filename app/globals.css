@@ -81,6 +81,32 @@
     @apply flex w-full flex-col items-center gap-8 border-y-2 border-dark-400 py-8 md:w-fit md:flex-row;
   }
 
+  /* ===== SOCIAL LOGIN */
+  .social-login-divider {
+    @apply relative flex items-center justify-center my-6;
+  }
+
+  .social-login-divider::before,
+  .social-login-divider::after {
+    @apply content-[''] flex-1 border-t border-dark-500;
+  }
+
+  .social-login-divider span {
+    @apply px-4 text-14-regular text-dark-600;
+  }
+
+  .social-login-button {
+    @apply flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-dark-500 bg-dark-400 hover:bg-dark-500 transition-colors duration-200;
+  }
+
+  .social-login-button img {
+    @apply w-5 h-5;
+  }
+
+  .social-login-button span {
+    @apply text-14-medium text-white;
+  }
+
   /* ===== ADMIN */
   .admin-header {
     @apply sticky top-3 z-20 mx-3 flex items-center justify-between rounded-2xl bg-dark-200 px-[5%] py-5 shadow-lg xl:px-12;
