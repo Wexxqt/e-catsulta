@@ -42,15 +42,23 @@ export const loginWithGoogle = async () => {
 
 export const loginWithFacebook = async () => {
   try {
-    // Create OAuth2 session for Facebook
+    // Create OAuth2 session for Facebook with minimal required scopes
     await account.createOAuth2Session(
       OAuthProvider.Facebook,
-      `${window.location.origin}/auth/callback`, // Success URL - redirect to our callback handler
-      `${window.location.origin}/login-failed`,  // Failure URL
-      ['email', 'public_profile']                // Requesting basic profile info and email
+      `${window.location.origin}/auth/callback`,    // Success URL
+      `${window.location.origin}/login-failed`,     // Failure URL
+      ['email', 'public_profile']                   // Minimal required scopes
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Facebook login error:", error);
+    // Add more detailed error logging
+    if (error.response) {
+      console.error("Facebook OAuth error details:", {
+        status: error.response.status,
+        message: error.response.message,
+        type: error.response.type
+      });
+    }
     throw error;
   }
 };
