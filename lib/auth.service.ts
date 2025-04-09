@@ -30,9 +30,9 @@ export const loginWithGoogle = async () => {
     // Create OAuth2 session for Google
     await account.createOAuth2Session(
       OAuthProvider.Google,
-      "https://cloud.appwrite.io/v1/auth/oauth2/success", // Success URL using Appwrite's domain
-      "https://cloud.appwrite.io/v1/auth/oauth2/failure",  // Failure URL using Appwrite's domain
-      ['profile', 'email']                                // Requesting basic profile info and email
+      `${window.location.origin}/auth/callback`,  // Success URL - redirect to our callback handler
+      `${window.location.origin}/login-failed`,   // Failure URL
+      ['profile', 'email']                        // Requesting basic profile info and email
     );
   } catch (error) {
     console.error("Google login error:", error);
@@ -45,9 +45,9 @@ export const loginWithFacebook = async () => {
     // Create OAuth2 session for Facebook
     await account.createOAuth2Session(
       OAuthProvider.Facebook,
-      "https://cloud.appwrite.io/v1/auth/oauth2/success", // Success URL using Appwrite's domain
-      "https://cloud.appwrite.io/v1/auth/oauth2/failure",  // Failure URL using Appwrite's domain
-      ['email', 'public_profile']                         // Requesting basic profile info and email
+      `${window.location.origin}/auth/callback`,  // Success URL - redirect to our callback handler
+      `${window.location.origin}/login-failed`,   // Failure URL
+      ['email', 'public_profile']                 // Requesting basic profile info and email
     );
   } catch (error) {
     console.error("Facebook login error:", error);
