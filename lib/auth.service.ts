@@ -27,12 +27,12 @@ const handleOAuthRedirect = async (userId: string) => {
 
 export const loginWithGoogle = async () => {
   try {
-    // Create OAuth2 session for Google
+    // Create OAuth2 session for Google using Appwrite's domain
     await account.createOAuth2Session(
       OAuthProvider.Google,
-      "https://book-ecatsulta.com/auth/callback",     // Success URL
-      "https://book-ecatsulta.com/login-failed",      // Failure URL
-      ['profile', 'email']                            // Requesting basic profile info and email
+      "https://cloud.appwrite.io/auth/oauth2/success?redirect=https://book-ecatsulta.com/auth/callback",  // Success URL with redirect
+      "https://cloud.appwrite.io/auth/oauth2/failure?redirect=https://book-ecatsulta.com/login-failed",   // Failure URL with redirect
+      ['profile', 'email']
     );
   } catch (error) {
     console.error("Google login error:", error);
@@ -42,12 +42,12 @@ export const loginWithGoogle = async () => {
 
 export const loginWithFacebook = async () => {
   try {
-    // Create OAuth2 session for Facebook
+    // Create OAuth2 session for Facebook using Appwrite's domain
     await account.createOAuth2Session(
       OAuthProvider.Facebook,
-      "https://book-ecatsulta.com/auth/callback",     // Success URL
-      "https://book-ecatsulta.com/login-failed",      // Failure URL
-      ['email', 'public_profile']                     // Requesting basic profile info and email
+      "https://cloud.appwrite.io/auth/oauth2/success?redirect=https://book-ecatsulta.com/auth/callback",  // Success URL with redirect
+      "https://cloud.appwrite.io/auth/oauth2/failure?redirect=https://book-ecatsulta.com/login-failed",   // Failure URL with redirect
+      ['email', 'public_profile']
     );
   } catch (error) {
     console.error("Facebook login error:", error);
