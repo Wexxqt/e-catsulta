@@ -15,37 +15,53 @@ export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
+    let mounted = true;
+
     const handleRedirect = async () => {
       try {
         // Get the current user session
         const session = await account.get();
         console.log('Current session:', session);
         
-        if (!session) {
-          console.log('No session found, redirecting to login-failed');
-          router.push('/login-failed');
+        if (!session || !session.$id) {
+          console.log('No valid session found, redirecting to login-failed');
+          if (mounted) router.push('/login-failed');
           return;
         }
 
-        // Check if user exists in our database
-        const patient = await getPatient(session.$id);
-        console.log('Fetched patient data:', patient);
-        
-        // Redirect based on whether the user exists
-        if (patient) {
-          console.log('Patient exists, redirecting to new-appointment');
-          router.push(`/patients/${session.$id}/new-appointment`);
-        } else {
-          console.log('New patient, redirecting to register');
-          router.push(`/patients/${session.$id}/register`);
+        try {
+          // Check if user exists in our database
+          const patient = await getPatient(session.$id);
+          console.log('Fetched patient data:', patient);
+          
+          if (mounted) {
+            if (patient) {
+              console.log('Patient exists, redirecting to new-appointment');
+              router.push(`/patients/${session.$id}/new-appointment`);
+            } else {
+              console.log('New patient, redirecting to register');
+              router.push(`/patients/${session.$id}/register`);
+            }
+          }
+        } catch (dbError) {
+          console.error('Database error:', dbError);
+          // If there's an error checking the patient, assume they need to register
+          if (mounted) {
+            console.log('Error checking patient status, redirecting to register');
+            router.push(`/patients/${session.$id}/register`);
+          }
         }
       } catch (error) {
         console.error('Auth callback error:', error);
-        router.push('/login-failed');
+        if (mounted) router.push('/login-failed');
       }
     };
 
     handleRedirect();
+
+    return () => {
+      mounted = false;
+    };
   }, [router]);
 
   return (

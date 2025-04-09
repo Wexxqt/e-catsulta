@@ -96,41 +96,60 @@ export const registerPatient = async ({
 // GET PATIENT
 export const getPatient = async (userId: string) => {
   try {
-    console.log('Searching for patient with userId:', userId);
+    console.log('getPatient called with userId:', userId);
     
     if (!userId) {
-      console.error('No userId provided to getPatient');
+      console.error('getPatient: No userId provided');
       return null;
     }
 
     if (!DATABASE_ID || !PATIENT_COLLECTION_ID) {
-      console.error('Missing required database configuration');
+      console.error('getPatient: Missing database configuration', {
+        DATABASE_ID,
+        PATIENT_COLLECTION_ID
+      });
       return null;
     }
 
-    const patient = await databases.listDocuments(
+    // Query the database for the patient
+    const response = await databases.listDocuments(
       DATABASE_ID,
       PATIENT_COLLECTION_ID,
-      [Query.equal("userId", userId)]
+      [
+        Query.equal("userId", userId)
+      ]
     );
-    
-    console.log('Database response:', patient);
-    console.log('Number of documents found:', patient.documents.length);
 
-    if (patient.documents.length > 0) {
-      console.log('Patient found:', patient.documents[0]);
-      return patient.documents[0]; // Return the first matching document
+    console.log('getPatient database response:', {
+      total: response.total,
+      documentsFound: response.documents.length
+    });
+
+    // For new users, this should return null
+    if (!response.documents.length) {
+      console.log('getPatient: No patient found for userId:', userId);
+      return null;
     }
 
-    console.log('No patient found for userId:', userId);
-    return null; // No patient found
-  } catch (error) {
-    console.error('Error in getPatient:', error);
-    console.error('Error details:', {
-      userId,
-      databaseId: DATABASE_ID,
-      collectionId: PATIENT_COLLECTION_ID
+    const patient = response.documents[0];
+    console.log('getPatient: Found patient:', {
+      patientId: patient.$id,
+      userId: patient.userId
     });
-    return null; // Return null if an error occurs
+
+    return patient;
+  } catch (error) {
+    console.error('getPatient error:', error);
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        userId,
+        databaseId: DATABASE_ID,
+        collectionId: PATIENT_COLLECTION_ID
+      });
+    }
+    return null;
   }
 };
