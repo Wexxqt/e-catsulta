@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, getGravatarUrl } from "@/lib/utils";
 import { Appointment } from "@/types/appwrite.types";
 import { createPatientNote, getPatientNotes } from "@/lib/actions/patient-notes.actions";
 
@@ -173,6 +173,20 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="font-semibold text-lg border-b pb-2">Personal Details</h3>
+              
+              {/* Add avatar at the top */}
+              <div className="flex justify-center mb-4">
+                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300">
+                  <Image 
+                    src={getGravatarUrl(patient.email, 200)}
+                    alt={patient.name}
+                    fill
+                    className="object-cover"
+                    sizes="96px"
+                  />
+                </div>
+              </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Full Name</p>

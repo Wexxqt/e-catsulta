@@ -8,7 +8,14 @@ export const UserFormValidation = z.object({
   email: z.string().email("Invalid email address"),
   phone: z
     .string()
-    .refine((phone) => /^\+63\d{10}$/.test(phone), "Invalid Philippine phone number"),
+    .min(10, "Phone number must be at least 10 characters")
+    .refine(
+      (phone) => {
+        // Accept +63 format or without + prefix
+        return /^\+?[0-9]{10,15}$/.test(phone);
+      }, 
+      "Please enter a valid phone number (e.g., +639123456789 or 09123456789)"
+    ),
 });
 
 export const PatientFormValidation = z.object({
@@ -19,7 +26,14 @@ export const PatientFormValidation = z.object({
   email: z.string().email("Invalid email address"),
   phone: z
     .string()
-    .refine((phone) => /^\+\d{10,15}$/.test(phone), "Invalid phone number"),
+    .min(10, "Phone number must be at least 10 characters")
+    .refine(
+      (phone) => {
+        // Accept +63 format or without + prefix
+        return /^\+?[0-9]{10,15}$/.test(phone);
+      }, 
+      "Please enter a valid phone number (e.g., +639123456789 or 09123456789)"
+    ),
   birthDate: z
     .string()
     .regex(

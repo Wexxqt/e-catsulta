@@ -21,15 +21,15 @@ const RequestSuccess = async ({
   const appointmentCode = generateAppointmentCode(appointmentId, appointment.patient.$id);
 
   return (
-    <div className=" flex h-screen max-h-screen px-[5%]">
+    <div className=" flex h-screen max-h-screen px-[10%]">
       <div className="success-img">
-        <Link href="/">
+        <Link href={`/patients/${userId}/dashboard`}>
           <Image
             src="/assets/icons/logo-full.svg"
             height={1000}
             width={1000}
             alt="logo"
-            className="h-10 w-fit"
+            className="h-16 w-fit"
           />
         </Link>
 

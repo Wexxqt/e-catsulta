@@ -36,8 +36,8 @@ export default function AuthCallback() {
           
           if (mounted) {
             if (patient) {
-              console.log('Patient exists, redirecting to new-appointment');
-              router.push(`/patients/${session.$id}/new-appointment`);
+              console.log('Patient exists, redirecting to patient dashboard');
+              router.push(`/patients/${session.$id}/dashboard`);
             } else {
               console.log('New patient, redirecting to register');
               router.push(`/patients/${session.$id}/register`);

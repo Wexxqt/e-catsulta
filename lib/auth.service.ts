@@ -14,7 +14,7 @@ const handleOAuthRedirect = async (userId: string) => {
     
     // Determine redirect URL based on whether user exists
     const redirectUrl = patient 
-      ? `${window.location.origin}/patients/${userId}/new-appointment`
+      ? `${window.location.origin}/patients/${userId}/dashboard`
       : `${window.location.origin}/patients/${userId}/register`;
       
     return redirectUrl;
@@ -52,7 +52,10 @@ export const getCurrentUser = async () => {
 
 export const logout = async () => {
   try {
-    await account.deleteSession('current');
+    console.log("Deleting current session...");
+    const result = await account.deleteSession('current');
+    console.log("Session deleted successfully:", result);
+    return { success: true };
   } catch (error) {
     console.error("Logout error:", error);
     throw error;

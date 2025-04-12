@@ -3,12 +3,13 @@
 import { ColumnDef } from "@tanstack/react-table";
 
 import { Doctors } from "@/constants";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, getGravatarUrl } from "@/lib/utils";
 import Image from "next/image";
 import { Appointment } from "@/types/appwrite.types";
 
 import { AppointmentModal } from "../AppointmentModal";
 import { StatusBadge } from "../StatusBadge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const columns: ColumnDef<Appointment>[] = [
   {
@@ -22,7 +23,20 @@ export const columns: ColumnDef<Appointment>[] = [
     header: "Patient",
     cell: ({ row }) => {
       const appointment = row.original;
-      return <p className="text-14-medium ">{appointment.patient?.name || 'Deleted Patient'}</p>;
+      return (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarImage 
+              src={appointment.patient?.email ? getGravatarUrl(appointment.patient.email, 40) : undefined} 
+              alt={appointment.patient?.name || 'Patient'} 
+            />
+            <AvatarFallback className="bg-gradient-to-br from-dark-300 to-dark-400 text-xs">
+              {appointment.patient?.name ? appointment.patient.name.substring(0, 2).toUpperCase() : 'PT'}
+            </AvatarFallback>
+          </Avatar>
+          <p className="text-14-medium">{appointment.patient?.name || 'Deleted Patient'}</p>
+        </div>
+      );
     },
   },
   {

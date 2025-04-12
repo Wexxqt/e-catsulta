@@ -438,6 +438,102 @@
   stroke: #1a1d21 !important;
 }
 
+/* ==== APPOINTMENT CALENDAR VIEW-ONLY STYLES (Improved for Patients) ==== */
+.appointment-calendar .react-datepicker {
+  font-family: 'Inter', sans-serif;
+  border: 1px solid rgba(74, 79, 85, 0.5);
+  border-radius: 1rem;
+  background-color: #212529;
+  color: #ffffff;
+  pointer-events: none;
+  max-width: 320px;
+  margin: 1rem auto;
+  padding: 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.appointment-calendar .react-datepicker__header {
+  background-color: #23272B;
+  border-bottom: 1px solid rgba(74, 79, 85, 0.3);
+  padding: 0.75rem 0;
+  text-align: center;
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.appointment-calendar .react-datepicker__current-month {
+  color: #E2E6EA;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.5px;
+}
+
+.appointment-calendar .react-datepicker__day-name {
+  color: #9AA5B1;
+  font-size: 0.75rem;
+  width: 2.2rem;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.appointment-calendar .react-datepicker__day {
+  color: #6C757D;
+  opacity: 0.5;
+  cursor: default !important;
+  font-size: 0.9rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  line-height: 2.2rem;
+  margin: 0.1rem;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.appointment-calendar .react-datepicker__day--selected {
+  background-color: #24AE7C;
+  color: white;
+  border-radius: 50%;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(36, 174, 124, 0.4);
+  opacity: 1;
+}
+
+.appointment-calendar .react-datepicker__day--today {
+  font-weight: 600;
+  color: #CBD5E0;
+  opacity: 1;
+}
+
+.appointment-calendar .react-datepicker__day--keyboard-selected {
+  background-color: transparent;
+  border-radius: 0;
+}
+
+.appointment-calendar .react-datepicker__triangle,
+.appointment-calendar .react-datepicker__navigation,
+.appointment-calendar .react-datepicker__month-read-view,
+.appointment-calendar .react-datepicker__year-read-view,
+.appointment-calendar .react-datepicker__time-container {
+  display: none;
+}
+
+.appointment-calendar .react-datepicker__month {
+  margin: 0.2rem 0;
+}
+
+.appointment-calendar .react-datepicker__month-container {
+  float: none;
+}
+
+.appointment-calendar .react-datepicker__day--outside-month {
+  color: #43484D;
+  opacity: 0.4;
+}
+
+
 /* =====  REACT PHONE NUMBER INPUT OVERRIDES */
 .PhoneInputInput {
   outline: none;
@@ -449,4 +545,33 @@
 
 .PhoneInputInput::placeholder {
   color: #1a1d21;
+}
+
+/* Text Utilities */
+.text-12-semibold {
+  @apply text-xs font-semibold;
+}
+
+.text-12-regular {
+  @apply text-xs font-normal;
+}
+
+.text-14-regular {
+  @apply text-sm font-normal;
+}
+
+.text-14-medium {
+  @apply text-sm font-medium;
+}
+
+.text-14-semibold {
+  @apply text-sm font-semibold;
+}
+
+.text-16-medium {
+  @apply text-base font-medium;
+}
+
+.text-32-bold {
+  @apply text-3xl font-bold;
 }

@@ -186,3 +186,57 @@ export const getDoctorAppointments = async (doctorName: string) => {
     return [];
   }
 };
+
+// GET PATIENT APPOINTMENTS
+export const getPatientAppointments = async (patientId: string) => {
+  try {
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [
+        Query.equal("userId", patientId),
+        Query.orderDesc("schedule")
+      ]
+    );
+
+    return parseStringify(appointments.documents);
+  } catch (error) {
+    console.error(
+      "An error occurred while retrieving patient appointments:",
+      error
+    );
+    return [];
+  }
+};
+
+// CLEAR PATIENT APPOINTMENT HISTORY
+export const clearPatientAppointmentHistory = async (patientId: string) => {
+  try {
+    // First, get all appointments for this patient
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [Query.equal("userId", patientId)]
+    );
+
+    // Delete each appointment
+    const deletePromises = appointments.documents.map(appointment => 
+      databases.deleteDocument(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        appointment.$id
+      )
+    );
+
+    // Wait for all deletions to complete
+    await Promise.all(deletePromises);
+    
+    // Revalidate the patient dashboard path
+    revalidatePath(`/patients/${patientId}/dashboard`);
+    
+    return { success: true, count: appointments.documents.length };
+  } catch (error) {
+    console.error("Error clearing patient appointment history:", error);
+    return { success: false, error: String(error) };
+  }
+};

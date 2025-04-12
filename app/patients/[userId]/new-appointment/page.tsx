@@ -16,8 +16,8 @@ const Appointment = async ({ params: { userId } }: SearchParamProps) => {
     <div className="flex h-screen max-h-screen">
       <section className="remove-scrollbar container my-auto">
         <div className="sub-container max-w-[860px] flex-1 justify-between">
-          {/* Clickable Logo */}
-          <Link href="/">
+          {/* Clickable Logo - Redirects to Patient Dashboard */}
+          <Link href={`/patients/${userId}/dashboard`}>
             <Image
               src="/assets/icons/logo-full.svg"
               height={1000}

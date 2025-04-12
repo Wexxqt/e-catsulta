@@ -95,8 +95,8 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       console.log("New patient response:", newPatient);
 
       if (newPatient) {
-        console.log("Redirecting to:", `/patients/${user.$id}/new-appointment`);
-        router.push(`/patients/${user.$id}/new-appointment`);
+        console.log("Redirecting to:", `/patients/${user.$id}/dashboard`);
+        router.push(`/patients/${user.$id}/dashboard`);
       }
     } catch (error) {
       console.error("Error during registration:", error);

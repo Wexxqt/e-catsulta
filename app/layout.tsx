@@ -14,7 +14,7 @@ const fontSans = FontSans({
 export const metadata: Metadata = {
   title: "E-Catsulta",
   description:
-    "A healthcare patient management System designed to streamline patient registration, appointment scheduling, and medical records management for healthcare providers.",
+    "an online appointment system designed to make healthcare services at Catanduanes State University Infirmary more accessible and hassle-free. E-Catsulta lets students and employees schedule visits, check doctor availability, and avoid long waits—anytime, anywhere. ",
   icons: {
     icon: "/assets/icons/logo-icon.svg",
   },

@@ -99,3 +99,30 @@ export function generateAppointmentCode(appointmentId: string, patientId: string
   // Combine and format as XXX-YYYYY-ZZZ
   return `${prefix}-${timestamp}-${suffix}`;
 }
+
+/**
+ * Generate MD5 hash for Gravatar
+ */
+export function md5(d: string): string {
+  // This is a simple implementation of MD5 for client-side
+  // For production, consider using a more robust library
+  // This implementation is enough for Gravatar URLs
+  const r = (d: string) => {
+    return Array.from(d).reduce((a, c) => (a << 5) - a + c.charCodeAt(0), 0) >>> 0;
+  };
+  return r(d).toString(16).padStart(32, '0');
+}
+
+/**
+ * Get a Gravatar URL for an email address
+ */
+export function getGravatarUrl(email: string = '', size: number = 200, defaultImage: string = 'mp'): string {
+  // Trim and lowercase the email
+  const cleanEmail = email.trim().toLowerCase();
+  
+  // Generate MD5 hash or use 'default' for empty emails
+  const hash = cleanEmail ? md5(cleanEmail) : 'default';
+  
+  // Return the Gravatar URL
+  return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=${defaultImage}`;
+}
