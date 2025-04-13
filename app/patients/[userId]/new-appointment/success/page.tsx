@@ -128,7 +128,7 @@ const RequestSuccess = ({ searchParams, params }: any) => {
               <div>
                 <p className="font-medium text-amber-800 dark:text-amber-300 text-sm">Appointment Verification</p>
                 <p className="text-amber-700 dark:text-amber-400 text-sm mt-1">
-                  Please save your appointment code for reference. Take a screenshot of the code and present it at the clinic to confirm your booking.
+                  Please save your appointment code for reference. Take a screenshot of the code and present it at the clinictoc verify your booking.
                 </p>
                 <p className="text-amber-700 dark:text-amber-400 text-sm mt-2 border-t border-amber-200 dark:border-amber-700/50 pt-2">
                   You will receive an SMS notification if your appointment is cancelled.
