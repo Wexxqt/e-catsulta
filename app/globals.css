@@ -27,6 +27,17 @@
 }
 
 @layer utilities {
+  /* Smooth chevron rotation for collapsibles */
+  .rotate-chevron {
+    transform: rotate(0deg);
+    transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+  
+  .rotate-chevron.open {
+    transform: rotate(180deg);
+  }
+
   /* ===== UTILITIES */
   .sidebar {
     @apply remove-scrollbar w-full max-w-72 flex-col overflow-auto bg-black-800 px-7 py-10;
@@ -70,6 +81,59 @@
 
   .copyright {
     @apply text-14-regular justify-items-end text-center text-dark-600 xl:text-left;
+  }
+
+  /* ===== PATIENT DASHBOARD ===== */
+  .dashboard-layout {
+    @apply grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+
+  .dashboard-card {
+    @apply bg-dark-400 p-4 sm:p-6 rounded-lg shadow-lg border border-dark-500;
+  }
+
+  .dashboard-card-full {
+    @apply col-span-1 lg:col-span-3;
+  }
+
+  .dashboard-card-wide {
+    @apply col-span-1 lg:col-span-2;
+  }
+
+  .dashboard-header {
+    @apply flex flex-col sm:flex-row sm:flex-between gap-3 sm:gap-0 mb-4;
+  }
+
+  .dashboard-search-container {
+    @apply flex gap-2 items-center;
+  }
+
+  .dashboard-search-input-wrapper {
+    @apply relative flex-grow;
+  }
+
+  .dashboard-search-input {
+    @apply pl-8 h-9 text-light-200 bg-dark-300 border-dark-500 w-full;
+  }
+
+  .dashboard-filter-btn {
+    @apply h-9 flex gap-2 items-center bg-dark-300 border-dark-500 text-light-200 whitespace-nowrap;
+  }
+
+  .dashboard-actions-container {
+    @apply flex flex-wrap gap-2 mt-2 sm:mt-0;
+  }
+
+  .dashboard-filter-badge {
+    @apply flex h-9 items-center gap-1 rounded-md bg-dark-300 border border-dark-500 px-3 text-light-200;
+  }
+
+  .dashboard-mobile-fab {
+    @apply fixed bottom-6 right-6 sm:hidden z-10 flex flex-col space-y-4;
+  }
+
+  .dashboard-fab-button {
+    @apply h-14 w-14 rounded-full shadow-lg;
   }
 
   /* ==== SUCCESS */

@@ -78,7 +78,7 @@ import {
 
 import { getPatient, updatePatientPersonalInfo, updatePatientMedical } from "@/lib/actions/patient.actions";
 import { getPatientAppointments, clearPatientAppointmentHistory } from "@/lib/actions/appointment.actions";
-import { getPatientNotes } from "@/lib/actions/patient-notes.actions";
+import { getPatientNotes, clearPatientNotesHistory } from "@/lib/actions/patient-notes.actions";
 import { formatDateTime, getGravatarUrl } from "@/lib/utils";
 import { Patient, Appointment, PatientNote } from "@/types/appwrite.types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -132,6 +132,16 @@ const PatientDashboard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<string[]>([]);
+  const [openMobileTabs, setOpenMobileTabs] = useState<{[key: string]: boolean}>({});
+  const [clearingNotes, setClearingNotes] = useState(false);
+
+  // Function to toggle mobile tab accordions
+  const toggleMobileTab = (id: string) => {
+    setOpenMobileTabs(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -194,6 +204,22 @@ const PatientDashboard = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [userId]);
+
+  // Clean up doctor notes for display when they load
+  useEffect(() => {
+    if (notes.length > 0) {
+      // Make a copy to avoid modifying the original data
+      const processedNotes = notes.map(note => {
+        // For historical notes that have "current-doctor-id"
+        if (note.doctorId === "current-doctor-id") {
+          return { ...note, doctorId: "Your Doctor" };
+        }
+        return note;
+      });
+      
+      setNotes(processedNotes);
+    }
+  }, [notes.length]);
 
   // Personal info form
   const personalInfoForm = useForm<z.infer<typeof personalInfoSchema>>({
@@ -427,6 +453,26 @@ const PatientDashboard = () => {
     }
   };
 
+  // Function to handle clearing notes history
+  const handleClearNotesHistory = async () => {
+    if (!patient) return;
+    
+    try {
+      setClearingNotes(true);
+      const result = await clearPatientNotesHistory(patient.$id);
+      
+      if (result.success) {
+        setNotes([]);
+      } else {
+        console.error("Failed to clear notes history:", result.error);
+      }
+    } catch (error) {
+      console.error("Error clearing notes history:", error);
+    } finally {
+      setClearingNotes(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-center min-h-screen">
@@ -489,11 +535,11 @@ const PatientDashboard = () => {
         </AlertDialog>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="dashboard-layout">
         {/* Patient Profile Section */}
-        <div className="col-span-1 bg-dark-400 p-4 sm:p-6 rounded-lg shadow-lg border border-dark-500">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div className="flex flex-1 items-center min-w-0">
+        <div className="col-span-1 dashboard-card">
+          <div className="flex flex-wrap sm:flex-nowrap items-start sm:items-center justify-between mb-4 sm:mb-6 gap-2">
+            <div className="flex flex-1 items-center min-w-0 max-w-full overflow-hidden">
               <div className="relative mr-3 sm:mr-4 flex-shrink-0">
                 <Avatar className="h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 border-2 border-dark-500">
                   <AvatarImage src={getGravatarUrl(patient.email, 200)} alt={patient.name} />
@@ -502,7 +548,7 @@ const PatientDashboard = () => {
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 max-w-[calc(100%-80px)] sm:max-w-[calc(100%-90px)] md:max-w-[calc(100%-100px)]">
                 <h1 className="text-16-semibold sm:text-18-bold text-light-200 truncate mb-0.5">{patient.name}</h1>
                 <p className="text-12-regular sm:text-14-regular text-dark-600 truncate">
                   {patient.identificationType === "employee" 
@@ -519,7 +565,7 @@ const PatientDashboard = () => {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="text-light-200 hover:bg-dark-500 group transition duration-200 flex-shrink-0 ml-3 whitespace-nowrap"
+                  className="text-light-200 hover:bg-dark-500 group transition duration-200 flex-shrink-0 whitespace-nowrap"
                 >
                   <Pencil className="h-4 w-4 mr-2 group-hover:text-green-500" />
                   <span className="hidden sm:inline">Edit</span>
@@ -824,7 +870,7 @@ const PatientDashboard = () => {
         </div>
 
         {/* Medical History Section - Tabbed Interface */}
-        <div className="col-span-1 lg:col-span-2 bg-dark-400 rounded-lg shadow-lg border border-dark-500 z-10">
+        <div className="dashboard-card-wide dashboard-card z-10">
           <Collapsible 
             open={isMedicalInfoOpen} 
             onOpenChange={setIsMedicalInfoOpen}
@@ -998,10 +1044,17 @@ const PatientDashboard = () => {
               <div className="block sm:hidden">
                 <div className="space-y-3">
                   {medicalTabs.map((tab, index) => (
-                    <Collapsible key={tab.id} className="border border-dark-500 rounded-md overflow-hidden">
+                    <Collapsible 
+                      key={tab.id} 
+                      className="border border-dark-500 rounded-md overflow-hidden"
+                      open={openMobileTabs[tab.id]}
+                      onOpenChange={() => toggleMobileTab(tab.id)}
+                    >
                       <CollapsibleTrigger className="flex justify-between items-center w-full p-3 bg-dark-300 hover:bg-dark-500 transition-colors duration-200">
                         <span className="text-14-medium text-light-200">{tab.label}</span>
-                        <ChevronDown className="h-4 w-4 text-light-200 ui-open:rotate-180 transition-transform duration-200" />
+                        <div className={`rotate-chevron ${openMobileTabs[tab.id] ? 'open' : ''}`}>
+                          <ChevronDown className="h-4 w-4 text-light-200" />
+                        </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="p-3 bg-dark-400 text-14-regular text-dark-700">
                         {tab.content}
@@ -1015,18 +1068,18 @@ const PatientDashboard = () => {
         </div>
 
         {/* Appointment History Section */}
-        <div className="col-span-1 lg:col-span-3 bg-dark-400 p-4 sm:p-6 rounded-lg shadow-lg border border-dark-500 relative z-10">
-          <div className="flex flex-col sm:flex-row sm:flex-between gap-3 sm:gap-0 mb-4">
+        <div className="dashboard-card-full dashboard-card relative z-10">
+          <div className="dashboard-header">
             <h2 className="text-16-semibold text-light-200">Appointment History</h2>
             <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex gap-2 items-center">
-                <div className="relative">
+              <div className="dashboard-search-container">
+                <div className="dashboard-search-input-wrapper">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-dark-600" />
                   <Input
                     placeholder="Search appointments..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 h-9 text-light-200 bg-dark-300 border-dark-500"
+                    className="dashboard-search-input"
                   />
                 </div>
                 
@@ -1034,12 +1087,12 @@ const PatientDashboard = () => {
                 {doctors.length > 0 && (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 flex gap-2 items-center bg-dark-300 border-dark-500 text-light-200">
+                      <Button variant="outline" size="sm" className="dashboard-filter-btn">
                         <Filter className="h-4 w-4" />
                         {selectedDoctor ? 'Doctor' : 'Filter by Doctor'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-56 bg-dark-400 border-dark-500 p-0">
+                    <PopoverContent className="w-56 bg-dark-400 border-dark-500 p-0 z-50">
                       <Command className="bg-dark-400">
                         <CommandInput placeholder="Search doctor..." className="h-9 bg-dark-300 text-light-200" />
                         <CommandEmpty>No doctor found.</CommandEmpty>
@@ -1062,10 +1115,10 @@ const PatientDashboard = () => {
                 )}
               </div>
               
-              <div className="flex gap-2">
+              <div className="dashboard-actions-container">
                 {/* Doctor Filter Badge - shows when a doctor is selected */}
                 {selectedDoctor && (
-                  <div className="flex h-9 items-center gap-1 rounded-md bg-dark-300 border border-dark-500 px-3 text-light-200">
+                  <div className="dashboard-filter-badge">
                     <User className="h-3.5 w-3.5" />
                     <span className="text-14-medium truncate max-w-[120px]">{selectedDoctor}</span>
                     <Button 
@@ -1113,7 +1166,7 @@ const PatientDashboard = () => {
                   </AlertDialog>
                 )}
                 
-                <Button className="shad-primary-btn w-full sm:w-auto h-9" onClick={handleNewAppointment}>New Appointment</Button>
+                <Button className="shad-primary-btn h-9" onClick={handleNewAppointment}>New Appointment</Button>
               </div>
             </div>
           </div>
@@ -1351,7 +1404,7 @@ const PatientDashboard = () => {
         </div>
 
         {/* Doctor Notes Section - Collapsible */}
-        <div className="col-span-1 lg:col-span-3 bg-dark-400 rounded-lg shadow-lg border border-dark-500 relative z-10 mt-4 sm:mt-0">
+        <div className="dashboard-card-full dashboard-card relative z-10 mt-4 sm:mt-0">
           <Collapsible 
             open={isNotesOpen} 
             onOpenChange={setIsNotesOpen}
@@ -1359,14 +1412,48 @@ const PatientDashboard = () => {
           >
             <div className="p-4 sm:p-6 flex justify-between items-center">
               <h2 className="text-16-semibold text-light-200">Doctor Notes</h2>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-0 h-7 w-7">
-                  {isNotesOpen ? 
-                    <ChevronUp className="h-5 w-5 text-light-200" /> : 
-                    <ChevronDown className="h-5 w-5 text-light-200" />
-                  }
-                </Button>
-              </CollapsibleTrigger>
+              <div className="flex items-center gap-2">
+                {notes.length > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-500 border-red-500 hover:bg-red-500/10 h-7"
+                        disabled={clearingNotes}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear Notes
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="shad-alert-dialog">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-light-200">Clear Doctor Notes</AlertDialogTitle>
+                        <AlertDialogDescription className="text-dark-700">
+                          Are you sure you want to clear your doctor notes history? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleClearNotesHistory}
+                          className="bg-red-700 text-white hover:bg-red-800"
+                        >
+                          {clearingNotes ? "Clearing..." : "Clear Notes"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-0 h-7 w-7">
+                    {isNotesOpen ? 
+                      <ChevronUp className="h-5 w-5 text-light-200" /> : 
+                      <ChevronDown className="h-5 w-5 text-light-200" />
+                    }
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
             </div>
             
             <CollapsibleContent className="px-4 sm:px-6 pb-6">
@@ -1377,7 +1464,13 @@ const PatientDashboard = () => {
                   {notes.map((note) => (
                     <div key={note.$id} className="p-3 sm:p-4 border border-dark-500 rounded-md bg-dark-300">
                       <div className="flex flex-col sm:flex-between sm:flex-row gap-1 sm:gap-0 mb-2">
-                        <p className="text-14-medium text-light-200">Dr. {note.doctorId.split('-')[0]}</p>
+                        <p className="text-14-medium text-light-200">
+                          {note.doctorId === "current-doctor-id" 
+                            ? "Doctor" 
+                            : note.doctorId.startsWith("Dr. ") 
+                              ? note.doctorId 
+                              : `Dr. ${note.doctorId}`}
+                        </p>
                         <p className="text-12-regular text-dark-600">
                           {format(new Date(note.createdAt), 'MM/dd/yyyy hh:mm a')}
                         </p>
@@ -1393,12 +1486,12 @@ const PatientDashboard = () => {
       </div>
 
       {/* Sticky Mobile Action Buttons */}
-      <div className="fixed bottom-6 right-6 sm:hidden z-10 flex flex-col space-y-4">
+      <div className="dashboard-mobile-fab">
         {/* Logout Button */}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button 
-              className="h-14 w-14 rounded-full shadow-lg bg-red-500 hover:bg-red-600" 
+              className="dashboard-fab-button bg-red-500 hover:bg-red-600" 
             >
               <LogOut className="h-6 w-6" />
             </Button>
@@ -1424,7 +1517,7 @@ const PatientDashboard = () => {
 
         {/* New Appointment Button */}
         <Button 
-          className="h-14 w-14 rounded-full shadow-lg bg-green-500 hover:bg-green-600" 
+          className="dashboard-fab-button bg-green-500 hover:bg-green-600" 
           onClick={handleNewAppointment}
         >
           <Plus className="h-6 w-6" />

@@ -4,16 +4,29 @@ import { ColumnDef } from "@tanstack/react-table";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { formatDateTime, getGravatarUrl } from "@/lib/utils";
 import { Appointment } from "@/types/appwrite.types";
-import { createPatientNote, getPatientNotes } from "@/lib/actions/patient-notes.actions";
+import { createPatientNote, getPatientNotes, deletePatientNote } from "@/lib/actions/patient-notes.actions";
 
 import { AppointmentModal } from "../AppointmentModal";
 import { StatusBadge } from "../StatusBadge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { PatientNote } from "@/types/appwrite.types";
+import { Doctors } from "@/constants";
 
 export const columns: ColumnDef<Appointment>[] = [
   {
@@ -114,6 +127,7 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
   const [notes, setNotes] = useState<PatientNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeletingNote, setIsDeletingNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -131,14 +145,21 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
 
     setIsSubmitting(true);
     try {
+      // Get doctor information from localStorage
       const doctorKey = localStorage.getItem("doctorAccessKey");
-      if (!doctorKey) {
+      const doctorName = localStorage.getItem("doctorName");
+      
+      if (!doctorKey || !doctorName) {
         throw new Error("Not authenticated as doctor");
       }
 
+      // Find the doctor info from constants
+      const doctor = Doctors.find((d: { name: string; id: string }) => d.name === doctorName);
+      const formattedDoctorName = doctor ? doctor.name : doctorName;
+
       await createPatientNote({
         patientId: patient.$id,
-        doctorId: "current-doctor-id", // You'll need to get the actual doctor ID
+        doctorId: formattedDoctorName, // Use the formatted doctor name
         note: newNote.trim(),
       });
 
@@ -148,6 +169,24 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
       console.error("Error submitting note:", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      setIsDeletingNote(noteId);
+      const result = await deletePatientNote(noteId);
+      
+      if (result.success) {
+        // Update local notes state by filtering out the deleted note
+        setNotes(prevNotes => prevNotes.filter(note => note.$id !== noteId));
+      } else {
+        console.error("Failed to delete note:", result.error);
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error);
+    } finally {
+      setIsDeletingNote(null);
     }
   };
 
@@ -345,6 +384,33 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
                       <p className="text-sm text-gray-500">
                         {new Date(note.createdAt).toLocaleString()}
                       </p>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button
+                            className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
+                            disabled={isDeletingNote === note.$id}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this note? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-red-600 text-white hover:bg-red-700"
+                              onClick={() => handleDeleteNote(note.$id)}
+                            >
+                              {isDeletingNote === note.$id ? "Deleting..." : "Delete"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                     <p className="text-gray-700 whitespace-pre-wrap">{note.note}</p>
                   </div>

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Image from "next/image";
@@ -22,7 +22,7 @@ export const PatientForm = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<ReactNode | null>(null);
 
   const form = useForm<z.infer<typeof UserFormValidation>>({
     resolver: zodResolver(UserFormValidation),
@@ -32,6 +32,24 @@ export const PatientForm = () => {
       phone: "",
     },
   });
+
+  // Add a function to check if error is likely due to existing account
+  const isExistingAccountError = (error: any): boolean => {
+    if (error && error.code === 409) return true; // Conflict error typically means account exists
+    
+    // Check error message for common patterns indicating existing account
+    if (error && typeof error === 'string' && 
+        (error.includes('already exists') || 
+         error.includes('already registered') || 
+         error.includes('already in use'))) {
+      return true;
+    }
+    
+    // If we got a user object back instead of creating a new one, it's an existing account
+    if (error && error.$id) return true;
+    
+    return false;
+  };
 
   const onSubmit = async (values: z.infer<typeof UserFormValidation>) => {
     setIsLoading(true);
@@ -60,20 +78,54 @@ export const PatientForm = () => {
       const newUser = await createUser(user);
       console.log("createUser response:", newUser);
       
-      if (newUser && newUser.$id) {
+      // Check if this is likely an existing user account
+      const isExistingUser = !!(newUser && newUser.$createdAt !== newUser.$updatedAt);
+      
+      if (newUser && newUser.$id && !isExistingUser) {
         console.log("Registration successful, redirecting to:", `/patients/${newUser.$id}/register`);
         router.push(`/patients/${newUser.$id}/register`);
       } else {
-        console.error("Registration failed: Server returned empty response");
-        setErrorMessage("Registration failed. This may be due to an email that's already registered, server connection issues, or invalid phone number format. Try logging in with Google instead if you already have an account.");
+        console.error("Account already exists:", newUser);
+        // Show existing account warning
+        setErrorMessage(
+          <div className="flex items-start text-amber-500 font-medium">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span>
+              <strong>Existing account detected!</strong> This email appears to be already registered. Please use the <strong>Google Login</strong> button above instead of registering again. Creating a new account will result in loss of access to your previous medical records.
+            </span>
+          </div>
+        );
       }
     } catch (error) {
       console.error("Registration error:", error);
-      let message = "An error occurred during registration.";
-      if (error instanceof Error) {
-        message += " " + error.message;
+      
+      if (isExistingAccountError(error)) {
+        // Show existing account warning
+        setErrorMessage(
+          <div className="flex items-start text-amber-500 font-medium">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span>
+              <strong>Existing account detected!</strong> This email appears to be already registered. Please use the <strong>Google Login</strong> button above instead of registering again. Creating a new account will result in loss of access to your previous medical records.
+            </span>
+          </div>
+        );
+      } else {
+        // Generic error message for other types of errors
+        setErrorMessage(
+          <div className="flex items-start text-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span>
+              <strong>An error occurred.</strong> Please check your inputs and try again.
+            </span>
+          </div>
+        );
       }
-      setErrorMessage(message);
     }
 
     setIsLoading(false);
@@ -99,16 +151,10 @@ export const PatientForm = () => {
           <p className="text-dark-700">Get started with your medical appointment.</p>
         </section>
         
-        {/* Error message display */}
-        {errorMessage && (
-          <div className="bg-red-500/10 border border-red-500 rounded-md p-3 mb-4">
-            <p className="text-14-medium text-red-500">{errorMessage}</p>
-          </div>
-        )}
-        
         {/* Login option for existing users */}
         <div className="bg-dark-300 p-4 rounded-lg border border-dark-500 mb-6">
           <h2 className="text-16-medium text-light-200 mb-2">Already have an account?</h2>
+          
           <Button 
             type="button"
             className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
@@ -129,6 +175,13 @@ export const PatientForm = () => {
           </Button>
         </div>
         
+        {/* Error message - make it more prominent when it's likely an existing account */}
+        {errorMessage && (
+          <div className="mb-6">
+            <div className="text-14-medium">{errorMessage}</div>
+          </div>
+        )}
+        
         <div className="relative flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-dark-500" />
@@ -138,39 +191,41 @@ export const PatientForm = () => {
           </span>
         </div>
 
-        <CustomFormField
-          fieldType={FormFieldType.INPUT}
-          control={form.control}
-          name="name"
-          label="Full name"
-          placeholder="Full Name"
-          iconSrc="/assets/icons/user.svg"
-          iconAlt="user"
-        />
+        <div className="p-4 rounded-lg border border-dark-500 mb-6">
+          <CustomFormField
+            fieldType={FormFieldType.INPUT}
+            control={form.control}
+            name="name"
+            label="Full name"
+            placeholder="Full Name"
+            iconSrc="/assets/icons/user.svg"
+            iconAlt="user"
+          />
 
-        <CustomFormField
-          fieldType={FormFieldType.INPUT}
-          control={form.control}
-          name="email"
-          label="Email"
-          placeholder="yourname@email.com"
-          iconSrc="/assets/icons/email.svg"
-          iconAlt="email"
-        />
+          <div className="my-4">
+            <CustomFormField
+              fieldType={FormFieldType.INPUT}
+              control={form.control}
+              name="email"
+              label="Email"
+              placeholder="yourname@email.com"
+              iconSrc="/assets/icons/email.svg"
+              iconAlt="email"
+            />
+          </div>
 
-        <CustomFormField
-          fieldType={FormFieldType.PHONE_INPUT}
-          control={form.control}
-          name="phone"
-          label="Phone number"
-          placeholder="+63 9XXXXXXXXX"
-        />
-        
-        <p className="text-12-regular text-dark-600 -mt-4 mb-2">
-          Enter your number with +63 prefix (e.g., +639123456789) or without prefix (e.g., 09123456789)
-        </p>
-
-        <SubmitButton isLoading={isLoading}>Register Now</SubmitButton>
+          <CustomFormField
+            fieldType={FormFieldType.PHONE_INPUT}
+            control={form.control}
+            name="phone"
+            label="Phone number"
+            placeholder="+63 9XXXXXXXXX"
+          />
+          
+          <div className="mt-6">
+            <SubmitButton isLoading={isLoading}>Register as New Patient</SubmitButton>
+          </div>
+        </div>
       </form>
     </Form>
   );
