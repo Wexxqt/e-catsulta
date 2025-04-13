@@ -20,6 +20,7 @@ import {
 import { formatDateTime, getGravatarUrl } from "@/lib/utils";
 import { Appointment } from "@/types/appwrite.types";
 import { createPatientNote, getPatientNotes, deletePatientNote } from "@/lib/actions/patient-notes.actions";
+import { getRecentAppointmentList } from "@/lib/actions/appointment.actions";
 
 import { AppointmentModal } from "../AppointmentModal";
 import { StatusBadge } from "../StatusBadge";
@@ -28,7 +29,62 @@ import { Button } from "@/components/ui/button";
 import { PatientNote } from "@/types/appwrite.types";
 import { Doctors } from "@/constants";
 
-export const columns: ColumnDef<Appointment>[] = [
+// Extended Appointment type for the patient management view
+interface ExtendedAppointment extends Appointment {
+  appointmentCount?: number;
+}
+
+// Component for rendering the reason cell with proper state management
+const AppointmentReasonCell = ({ appointment }: { appointment: ExtendedAppointment }) => {
+  const [showFullReason, setShowFullReason] = useState(false);
+  
+  return (
+    <div className="max-w-[200px]">
+      {appointment.reason ? (
+        <button 
+          onClick={() => setShowFullReason(true)}
+          className="text-white hover:underline text-sm"
+        >
+          View Reason
+        </button>
+      ) : (
+        <span className="text-gray-400 text-sm">No reason</span>
+      )}
+      
+      {showFullReason && (
+        <Dialog open={showFullReason} onOpenChange={setShowFullReason}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Appointment Reason</DialogTitle>
+            </DialogHeader>
+            <div className="mt-2 whitespace-pre-wrap">
+              {appointment.reason || 'No reason provided'}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+};
+
+// Add this function after the AppointmentReasonCell component
+const generateAppointmentCode = (appointment: Appointment) => {
+  if (appointment.appointmentCode) {
+    return appointment.appointmentCode;
+  }
+  
+  // Generate a code based on patient ID and appointment ID
+  // Format: First 3 chars of patient ID + Last 4 chars of appointment ID
+  const patientId = appointment.patient?.$id || 'UNKNOWN';
+  const appointmentId = appointment.$id || 'UNKNOWN';
+  
+  const prefix = patientId.substring(0, 3).toUpperCase();
+  const suffix = appointmentId.substring(appointmentId.length - 4).toUpperCase();
+  
+  return `ECM-${prefix}${suffix}`;
+};
+
+export const columns: ColumnDef<ExtendedAppointment>[] = [
   {
     header: "#",
     cell: ({ row }) => {
@@ -41,6 +97,18 @@ export const columns: ColumnDef<Appointment>[] = [
     cell: ({ row }) => {
       const appointment = row.original;
       return <p className="text-14-medium">{appointment.patient?.name || 'Unknown Patient'}</p>;
+    },
+  },
+  {
+    accessorKey: "appointmentCode",
+    header: "Code",
+    cell: ({ row }) => {
+      const appointment = row.original;
+      return (
+        <p className="text-14-medium text-blue-500 font-medium">
+          {generateAppointmentCode(appointment)}
+        </p>
+      );
     },
   },
   {
@@ -71,12 +139,7 @@ export const columns: ColumnDef<Appointment>[] = [
     accessorKey: "reason",
     header: "Reason",
     cell: ({ row }) => {
-      const appointment = row.original;
-      return (
-        <p className="text-14-regular max-w-[200px] truncate" title={appointment.reason}>
-          {appointment.reason}
-        </p>
-      );
+      return <AppointmentReasonCell appointment={row.original} />;
     },
   },
   {
@@ -85,9 +148,12 @@ export const columns: ColumnDef<Appointment>[] = [
     cell: ({ row }) => {
       const appointment = row.original;
       return (
-        <div className="space-y-1">
-          <p className="text-14-medium">Phone: {appointment.patient?.phone || 'N/A'}</p>
-          <p className="text-14-regular text-gray-600">Email: {appointment.patient?.email || 'N/A'}</p>
+        <div>
+          {appointment.patient ? (
+            <PatientDetailModal patient={appointment.patient} />
+          ) : (
+            <span className="text-gray-500">Patient data unavailable</span>
+          )}
         </div>
       );
     },
@@ -100,17 +166,13 @@ export const columns: ColumnDef<Appointment>[] = [
 
       return (
         <div className="flex gap-1">
-          {appointment.patient ? (
-            <PatientDetailModal patient={appointment.patient} />
-          ) : (
-            <span className="text-gray-500">Patient data unavailable</span>
-          )}
           {appointment.status !== "cancelled" && (
             <AppointmentModal
               patientId={appointment.patient?.$id || ''}
               userId={appointment.userId}
               appointment={appointment}
               type="cancel"
+              buttonVariant="destructive"
               title="Cancel Appointment"
               description="Are you sure you want to cancel this appointment?"
             />
@@ -128,16 +190,46 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
   const [newNote, setNewNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingNote, setIsDeletingNote] = useState<string | null>(null);
+  const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       loadNotes();
+      loadPatientAppointments();
     }
   }, [isOpen, patient.$id]);
 
   const loadNotes = async () => {
     const patientNotes = await getPatientNotes(patient.$id);
     setNotes(patientNotes);
+  };
+
+  const loadPatientAppointments = async () => {
+    try {
+      // This implementation is simplified for testing
+      // In a real app, you would call a server action or API endpoint
+      // to get patient-specific appointments
+      const doctorName = localStorage.getItem("doctorName");
+      
+      if (!doctorName) {
+        throw new Error("Not authenticated as doctor");
+      }
+
+      // For now, we'll just display a placeholder
+      setPatientAppointments([]);
+      console.log("Would load appointments for patient ID:", patient.$id);
+      
+      // This function needs proper implementation with your API
+      /*
+      const patientAppointments = await getPatientAppointmentsForDoctor(
+        patient.$id,
+        doctorName
+      );
+      setPatientAppointments(patientAppointments);
+      */
+    } catch (error) {
+      console.error("Error loading patient appointments:", error);
+    }
   };
 
   const handleSubmitNote = async () => {
@@ -193,13 +285,10 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
   return (
     <>
       <button
-        className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100"
+        className="text-white hover:underline text-sm"
         onClick={() => setIsOpen(true)}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-          <circle cx="12" cy="12" r="3"></circle>
-        </svg>
+        View Details
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -353,6 +442,52 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
                   <p className="text-base">{patient.emergencyContactNumber || 'Not specified'}</p>
                 </div>
               </div>
+            </div>
+
+            {/* Patient Appointments Section */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg border-b pb-2">Appointments History</h3>
+              
+              {patientAppointments.length === 0 ? (
+                <p className="text-gray-500">No appointment records found.</p>
+              ) : (
+                <div className="space-y-3">
+                  {patientAppointments.map((apt) => (
+                    <div key={apt.$id} className="p-3 border border-gray-200 rounded-lg">
+                      <div className="flex justify-between">
+                        <div>
+                          <p className="text-sm text-gray-500">Date & Time</p>
+                          <p className="text-base">{formatDateTime(apt.schedule).dateTime}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Status</p>
+                          <StatusBadge status={apt.status} />
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">Appointment Code</p>
+                        <p className="text-base text-blue-500 font-medium">{generateAppointmentCode(apt)}</p>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">Reason</p>
+                        <p className="text-base">{apt.reason || 'No reason provided'}</p>
+                      </div>
+                      {apt.note && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-500">Note</p>
+                          <p className="text-base">{apt.note}</p>
+                        </div>
+                      )}
+                      {apt.status === 'cancelled' && apt.cancellationReason && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-500">Cancellation Reason</p>
+                          <p className="text-base">{apt.cancellationReason}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Doctor Notes Section */}

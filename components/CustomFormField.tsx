@@ -153,8 +153,11 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
     
     // Create time slots in 30-minute increments
     for (let hour = doctor.availability.startTime; hour < doctor.availability.endTime; hour++) {
-      times.push(new Date(0, 0, 0, hour, 0));
-      times.push(new Date(0, 0, 0, hour, 30));
+      // Skip lunch time (12:00 PM to 1:00 PM)
+      if (hour !== 12) {
+        times.push(new Date(0, 0, 0, hour, 0));
+        times.push(new Date(0, 0, 0, hour, 30));
+      }
     }
     
     setAvailableTimes(times);
@@ -223,8 +226,17 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
       const slotDateTime = new Date(date);
       slotDateTime.setHours(time.getHours(), time.getMinutes());
       
-      // For today, only show future time slots
-      if (isToday && slotDateTime <= now) return false;
+      // For today, only show future time slots with a 30-minute buffer
+      if (isToday) {
+        // Add a 30-minute buffer to current time
+        const bufferTime = new Date(now);
+        bufferTime.setMinutes(bufferTime.getMinutes() + 30);
+        
+        if (slotDateTime <= bufferTime) return false;
+      }
+      
+      // Exclude lunch time (12:00 PM to 1:00 PM)
+      if (time.getHours() === 12) return false;
       
       // Check if the slot is booked
       return !isTimeBooked(slotDateTime);

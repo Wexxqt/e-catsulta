@@ -109,7 +109,6 @@ const RequestSuccess = ({ searchParams, params }: any) => {
             Your <span className="text-green-500">appointment</span> has
             been successfully scheduled!
           </h2>
-          <p>Please save your appointment code for reference.</p>
           
           <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
             <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">
@@ -128,7 +127,7 @@ const RequestSuccess = ({ searchParams, params }: any) => {
               <div>
                 <p className="font-medium text-amber-800 dark:text-amber-300 text-sm">Appointment Verification</p>
                 <p className="text-amber-700 dark:text-amber-400 text-sm mt-1">
-                  Please save your appointment code for reference. Take a screenshot of the code and present it at the clinic to confirm your booking.
+                  Please save your appointment code for reference. Take a screenshot of the code and present it at the clinic to verify your booking.
                 </p>
                 <p className="text-amber-700 dark:text-amber-400 text-sm mt-2 border-t border-amber-200 dark:border-amber-700/50 pt-2">
                   You will receive an SMS notification if your appointment is cancelled.

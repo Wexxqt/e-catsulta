@@ -22,6 +22,9 @@ export const AppointmentModal = ({
   userId,
   appointment,
   type,
+  title,
+  description,
+  buttonVariant = "ghost",
 }: {
   patientId: string;
   userId: string;
@@ -29,6 +32,7 @@ export const AppointmentModal = ({
   type: "schedule" | "cancel";
   title: string;
   description: string;
+  buttonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -36,17 +40,17 @@ export const AppointmentModal = ({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="ghost"
-          className={`capitalize ${type === "schedule" && "text-green-500"}`}
+          variant={buttonVariant}
+          className={`capitalize ${type === "schedule" && buttonVariant === "ghost" && "text-green-500"}`}
         >
           {type}
         </Button>
       </DialogTrigger>
       <DialogContent className="shad-dialog sm:max-w-md">
         <DialogHeader className="mb-4 space-y-3">
-          <DialogTitle className="capitalize">{type} Appointment</DialogTitle>
+          <DialogTitle className="capitalize">{title}</DialogTitle>
           <DialogDescription>
-            Please fill in the following details to {type} appointment
+            {description}
           </DialogDescription>
         </DialogHeader>
 

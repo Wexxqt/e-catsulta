@@ -41,25 +41,10 @@ export const getRecentAppointmentList = async () => {
       [Query.orderDesc("$createdAt")]
     );
 
-    // const scheduledAppointments = (
-    //   appointments.documents as Appointment[]
-    // ).filter((appointment) => appointment.status === "scheduled");
-
-    // const pendingAppointments = (
-    //   appointments.documents as Appointment[]
-    // ).filter((appointment) => appointment.status === "pending");
-
-    // const cancelledAppointments = (
-    //   appointments.documents as Appointment[]
-    // ).filter((appointment) => appointment.status === "cancelled");
-
-    // const data = {
-    //   totalCount: appointments.total,
-    //   scheduledCount: scheduledAppointments.length,
-    //   pendingCount: pendingAppointments.length,
-    //   cancelledCount: cancelledAppointments.length,
-    //   documents: appointments.documents,
-    // };
+    // Filter out archived appointments
+    const filteredDocuments = appointments.documents.filter(
+      (doc: any) => !doc.archived
+    );
 
     const initialCounts = {
       scheduledCount: 0,
@@ -67,7 +52,7 @@ export const getRecentAppointmentList = async () => {
       cancelledCount: 0,
     };
 
-    const counts = (appointments.documents as Appointment[]).reduce(
+    const counts = (filteredDocuments as Appointment[]).reduce(
       (acc, appointment) => {
         switch (appointment.status) {
           case "scheduled":
@@ -86,9 +71,9 @@ export const getRecentAppointmentList = async () => {
     );
 
     const data = {
-      totalCount: appointments.total,
+      totalCount: filteredDocuments.length,
       ...counts,
-      documents: appointments.documents,
+      documents: filteredDocuments,
     };
 
     return parseStringify(data);
@@ -177,7 +162,12 @@ export const getDoctorAppointments = async (doctorName: string) => {
       ]
     );
 
-    return parseStringify(appointments.documents);
+    // Filter out archived appointments
+    const filteredDocuments = appointments.documents.filter(
+      (doc: any) => !doc.archived
+    );
+
+    return parseStringify(filteredDocuments);
   } catch (error) {
     console.error(
       "An error occurred while retrieving doctor appointments:",
@@ -237,6 +227,58 @@ export const clearPatientAppointmentHistory = async (patientId: string) => {
     return { success: true, count: appointments.documents.length };
   } catch (error) {
     console.error("Error clearing patient appointment history:", error);
+    return { success: false, error: String(error) };
+  }
+};
+
+// CLEAR DOCTOR APPOINTMENT HISTORY
+export const clearDoctorAppointmentHistory = async (doctorName: string, preservePatientData: boolean = false) => {
+  try {
+    // Get all appointments for this doctor
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [Query.equal("primaryPhysician", doctorName)]
+    );
+
+    // Keep track of unique patients if preservePatientData is true
+    const uniquePatientIds = new Set<string>();
+    
+    if (preservePatientData) {
+      appointments.documents.forEach((doc: any) => {
+        if (doc.userId) {
+          uniquePatientIds.add(doc.userId);
+        }
+      });
+    }
+
+    // For each appointment, update it to mark as "archived" only
+    // This is better than deletion as it keeps records but hides them from the doctor view
+    const updatePromises = appointments.documents.map(appointment => 
+      databases.updateDocument(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        appointment.$id,
+        { 
+          archived: true
+          // We can't add fields that don't exist in the database schema
+        }
+      )
+    );
+
+    // Wait for all updates to complete
+    await Promise.all(updatePromises);
+    
+    // Revalidate the doctor dashboard path
+    revalidatePath(`/doctor`);
+    
+    return { 
+      success: true, 
+      count: appointments.documents.length,
+      preservedPatientCount: uniquePatientIds.size
+    };
+  } catch (error) {
+    console.error("Error clearing doctor appointment history:", error);
     return { success: false, error: String(error) };
   }
 };

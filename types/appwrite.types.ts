@@ -37,6 +37,8 @@ export interface Appointment extends Models.Document {
   note: string;
   userId: string;
   cancellationReason: string | null;
+  archived?: boolean;
+  appointmentCode?: string;
 }
 
 export interface PatientNote extends Models.Document {
