@@ -13,6 +13,32 @@ import {
 } from "../appwrite.config";
 import { formatDateTime, parseStringify } from "../utils";
 
+/**
+ * Validates and sanitizes appointment data to prevent errors from deleted patients
+ */
+const validateAppointmentData = (appointment: any): any => {
+  try {
+    // If the appointment doesn't exist, return null
+    if (!appointment) return null;
+    
+    // Check if patient property exists and is an object
+    if (!appointment.patient || typeof appointment.patient !== 'object') {
+      // Create a placeholder patient object to prevent errors
+      appointment.patient = {
+        name: "Deleted Patient",
+        $id: appointment.userId || "unknown",
+        email: null,
+        phone: "N/A"
+      };
+    }
+    
+    return appointment;
+  } catch (error) {
+    console.error("Error validating appointment data:", error);
+    return null;
+  }
+};
+
 //  CREATE APPOINTMENT
 export const createAppointment = async (
   appointment: CreateAppointmentParams
@@ -41,10 +67,11 @@ export const getRecentAppointmentList = async () => {
       [Query.orderDesc("$createdAt")]
     );
 
-    // Filter out archived appointments
-    const filteredDocuments = appointments.documents.filter(
-      (doc: any) => !doc.archived
-    );
+    // Filter out archived appointments AND sanitize the data
+    const filteredDocuments = appointments.documents
+      .filter((doc: any) => !doc.archived)
+      .map((doc: any) => validateAppointmentData(doc))
+      .filter((doc) => doc !== null); // Remove any null results
 
     const initialCounts = {
       scheduledCount: 0,
@@ -141,12 +168,13 @@ export const getAppointment = async (appointmentId: string) => {
       appointmentId
     );
 
-    return parseStringify(appointment);
+    return parseStringify(validateAppointmentData(appointment));
   } catch (error) {
     console.error(
       "An error occurred while retrieving the existing patient:",
       error
     );
+    return null;
   }
 };
 
@@ -162,10 +190,11 @@ export const getDoctorAppointments = async (doctorName: string) => {
       ]
     );
 
-    // Filter out archived appointments
-    const filteredDocuments = appointments.documents.filter(
-      (doc: any) => !doc.archived
-    );
+    // Filter out archived appointments AND sanitize the data
+    const filteredDocuments = appointments.documents
+      .filter((doc: any) => !doc.archived)
+      .map((doc: any) => validateAppointmentData(doc))
+      .filter((doc) => doc !== null); // Remove any null results
 
     return parseStringify(filteredDocuments);
   } catch (error) {
@@ -189,7 +218,12 @@ export const getPatientAppointments = async (patientId: string) => {
       ]
     );
 
-    return parseStringify(appointments.documents);
+    // Sanitize the data
+    const validatedAppointments = appointments.documents
+      .map((doc: any) => validateAppointmentData(doc))
+      .filter((doc) => doc !== null); // Remove any null results
+
+    return parseStringify(validatedAppointments);
   } catch (error) {
     console.error(
       "An error occurred while retrieving patient appointments:",

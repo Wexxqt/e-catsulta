@@ -84,6 +84,32 @@ const generateAppointmentCode = (appointment: Appointment) => {
   return `ECM-${prefix}${suffix}`;
 };
 
+// Helper function to safely handle potentially deleted patient data
+const safePatientAccess = (appointment: ExtendedAppointment) => {
+  try {
+    // First verify the patient object exists
+    if (!appointment.patient || typeof appointment.patient !== 'object') {
+      return {
+        name: 'Deleted Patient',
+        email: null,
+        $id: appointment.userId || 'unknown',
+        phone: 'N/A'
+      };
+    }
+    
+    // Return the patient data
+    return appointment.patient;
+  } catch (error) {
+    console.error("Error accessing patient data:", error);
+    return {
+      name: 'Deleted Patient',
+      email: null,
+      $id: appointment.userId || 'unknown',
+      phone: 'N/A'
+    };
+  }
+};
+
 export const columns: ColumnDef<ExtendedAppointment>[] = [
   {
     header: "#",
@@ -96,7 +122,8 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
     header: "Patient",
     cell: ({ row }) => {
       const appointment = row.original;
-      return <p className="text-14-medium">{appointment.patient?.name || 'Unknown Patient'}</p>;
+      const patient = safePatientAccess(appointment);
+      return <p className="text-14-medium">{patient.name}</p>;
     },
   },
   {
@@ -147,10 +174,12 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
     header: "Patient Details",
     cell: ({ row }) => {
       const appointment = row.original;
+      const patient = safePatientAccess(appointment);
+      
       return (
         <div>
-          {appointment.patient ? (
-            <PatientDetailModal patient={appointment.patient} />
+          {patient.$id !== 'unknown' ? (
+            <PatientDetailModal patient={patient} />
           ) : (
             <span className="text-gray-500">Patient data unavailable</span>
           )}
@@ -163,12 +192,13 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
     header: () => <div className="pl-4">Actions</div>,
     cell: ({ row }) => {
       const appointment = row.original;
+      const patient = safePatientAccess(appointment);
 
       return (
         <div className="flex gap-1">
           {appointment.status !== "cancelled" && (
             <AppointmentModal
-              patientId={appointment.patient?.$id || ''}
+              patientId={patient.$id}
               userId={appointment.userId}
               appointment={appointment}
               type="cancel"
@@ -191,6 +221,7 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeletingNote, setIsDeletingNote] = useState<string | null>(null);
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -200,12 +231,27 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
   }, [isOpen, patient.$id]);
 
   const loadNotes = async () => {
-    const patientNotes = await getPatientNotes(patient.$id);
-    setNotes(patientNotes);
+    try {
+      if (!patient || !patient.$id) {
+        setError("Patient data not available");
+        return;
+      }
+      
+      const patientNotes = await getPatientNotes(patient.$id);
+      setNotes(patientNotes);
+    } catch (err) {
+      console.error("Error loading notes:", err);
+      setError("Failed to load patient notes");
+    }
   };
 
   const loadPatientAppointments = async () => {
     try {
+      if (!patient || !patient.$id) {
+        setError("Patient data not available");
+        return;
+      }
+      
       // This implementation is simplified for testing
       // In a real app, you would call a server action or API endpoint
       // to get patient-specific appointments
@@ -229,11 +275,16 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
       */
     } catch (error) {
       console.error("Error loading patient appointments:", error);
+      setError("Failed to load patient appointments");
     }
   };
 
   const handleSubmitNote = async () => {
     if (!newNote.trim()) return;
+    if (!patient || !patient.$id) {
+      setError("Cannot add notes: Patient data not available");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -259,6 +310,7 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
       await loadNotes();
     } catch (error) {
       console.error("Error submitting note:", error);
+      setError("Failed to add note");
     } finally {
       setIsSubmitting(false);
     }
@@ -274,13 +326,20 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
         setNotes(prevNotes => prevNotes.filter(note => note.$id !== noteId));
       } else {
         console.error("Failed to delete note:", result.error);
+        setError("Failed to delete note");
       }
     } catch (error) {
       console.error("Error deleting note:", error);
+      setError("Failed to delete note");
     } finally {
       setIsDeletingNote(null);
     }
   };
+
+  // If the patient data is not valid, don't render a button
+  if (!patient || patient.$id === 'unknown') {
+    return <span className="text-gray-500">Patient data unavailable</span>;
+  }
 
   return (
     <>

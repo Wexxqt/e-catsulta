@@ -11,6 +11,30 @@ import { AppointmentModal } from "../AppointmentModal";
 import { StatusBadge } from "../StatusBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+// Helper function to safely handle potentially deleted patient data
+const safePatientAccess = (appointment: Appointment) => {
+  try {
+    // First verify the patient object exists
+    if (!appointment.patient || typeof appointment.patient !== 'object') {
+      return {
+        name: 'Deleted Patient',
+        email: null,
+        $id: appointment.userId || 'unknown'
+      };
+    }
+    
+    // Return the patient data
+    return appointment.patient;
+  } catch (error) {
+    console.error("Error accessing patient data:", error);
+    return {
+      name: 'Deleted Patient',
+      email: null,
+      $id: appointment.userId || 'unknown'
+    };
+  }
+};
+
 export const columns: ColumnDef<Appointment>[] = [
   {
     header: "#",
@@ -23,18 +47,20 @@ export const columns: ColumnDef<Appointment>[] = [
     header: "Patient",
     cell: ({ row }) => {
       const appointment = row.original;
+      const patient = safePatientAccess(appointment);
+      
       return (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
             <AvatarImage 
-              src={appointment.patient?.email ? getGravatarUrl(appointment.patient.email, 40) : undefined} 
-              alt={appointment.patient?.name || 'Patient'} 
+              src={patient.email ? getGravatarUrl(patient.email, 40) : undefined} 
+              alt={patient.name || 'Patient'} 
             />
             <AvatarFallback className="bg-gradient-to-br from-dark-300 to-dark-400 text-xs">
-              {appointment.patient?.name ? appointment.patient.name.substring(0, 2).toUpperCase() : 'PT'}
+              {patient.name ? patient.name.substring(0, 2).toUpperCase() : 'PT'}
             </AvatarFallback>
           </Avatar>
-          <p className="text-14-medium">{appointment.patient?.name || 'Deleted Patient'}</p>
+          <p className="text-14-medium">{patient.name}</p>
         </div>
       );
     },
@@ -92,12 +118,13 @@ export const columns: ColumnDef<Appointment>[] = [
     header: () => <div className="pl-4">Actions</div>,
     cell: ({ row }) => {
       const appointment = row.original;
+      const patient = safePatientAccess(appointment);
 
       return (
         <div className="flex gap-1">
           {appointment.status !== "cancelled" && (
             <AppointmentModal
-              patientId={appointment.patient?.$id || ''}
+              patientId={patient.$id}
               userId={appointment.userId}
               appointment={appointment}
               type="cancel"
