@@ -12,6 +12,7 @@ import {
   databases,
   storage,
   users,
+  APPOINTMENT_COLLECTION_ID,
 } from "../appwrite.config";
 import { parseStringify } from "../utils";
 import { Patient } from "@/types/appwrite.types";
@@ -41,6 +42,9 @@ interface RegisterUserParams extends CreateUserParams {
   identificationDocument?: any;
   privacyConsent: boolean;
 }
+
+// Define the collection ID for patient notes
+const PATIENT_NOTES_COLLECTION_ID = process.env.PATIENT_NOTES_COLLECTION_ID || "patient_notes";
 
 // CREATE APPWRITE USER
 export const createUser = async (user: CreateUserParams) => {
@@ -496,3 +500,125 @@ export async function updatePatientMedical({
     };
   }
 }
+
+/**
+ * Safely deletes a patient and handles all related data
+ * @param patientId The ID of the patient document to delete
+ * @returns Object with success status and message
+ */
+export const safeDeletePatient = async (patientId: string) => {
+  try {
+    // Validate patient ID
+    if (!patientId) {
+      return {
+        success: false,
+        message: "No patient ID provided"
+      };
+    }
+
+    // Step 1: Get the patient document to get userId
+    const patient = await databases.getDocument(
+      DATABASE_ID!,
+      PATIENT_COLLECTION_ID!,
+      patientId
+    ) as Patient;
+
+    const userId = patient.userId;
+
+    // Step 2: Get all appointments for this patient
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [Query.equal("userId", userId)]
+    );
+
+    // Step 3: Update all appointments to remove patient reference
+    // This is safer than deleting appointments as it preserves history
+    const updatePromises = appointments.documents.map(appointment => 
+      databases.updateDocument(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        appointment.$id,
+        { 
+          // Mark as archived 
+          archived: true,
+          // Add deletion info in the note field if it exists
+          note: appointment.hasOwnProperty('note') && appointment.note
+            ? `${appointment.note}\n[Patient data removed]` 
+            : "[Patient data removed]",
+        }
+      )
+    );
+
+    // Step 4: Get all notes for this patient
+    const notes = await databases.listDocuments(
+      DATABASE_ID!,
+      PATIENT_NOTES_COLLECTION_ID,
+      [Query.equal("patientId", patientId)]
+    );
+
+    // Step 5: Delete all notes
+    const deleteNotePromises = notes.documents.map(note => 
+      databases.deleteDocument(
+        DATABASE_ID!,
+        PATIENT_NOTES_COLLECTION_ID,
+        note.$id
+      )
+    );
+
+    // Step 6: Delete any files associated with this patient
+    if (patient.identificationDocumentId) {
+      try {
+        await storage.deleteFile(
+          BUCKET_ID!,
+          patient.identificationDocumentId
+        );
+      } catch (fileError) {
+        console.error("Error deleting patient ID document:", fileError);
+        // Continue with deletion even if file removal fails
+      }
+    }
+
+    if (patient.avatarId) {
+      try {
+        await storage.deleteFile(
+          BUCKET_ID!,
+          patient.avatarId
+        );
+      } catch (fileError) {
+        console.error("Error deleting patient avatar:", fileError);
+        // Continue with deletion even if file removal fails
+      }
+    }
+
+    // Wait for all updates and deletions to complete
+    await Promise.all([
+      ...updatePromises, 
+      ...deleteNotePromises
+    ]);
+
+    // Step 7: Finally, delete the patient document
+    await databases.deleteDocument(
+      DATABASE_ID!,
+      PATIENT_COLLECTION_ID!,
+      patientId
+    );
+
+    // Revalidate relevant paths
+    revalidatePath(`/admin`);
+    
+    return { 
+      success: true, 
+      message: "Patient deleted successfully",
+      appointmentsUpdated: appointments.documents.length,
+      notesDeleted: notes.documents.length
+    };
+  } catch (error) {
+    console.error("Error safely deleting patient:", error);
+    return { 
+      success: false, 
+      message: "Failed to delete patient",
+      error: String(error)
+    };
+  }
+};
