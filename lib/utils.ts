@@ -117,8 +117,8 @@ export function md5(d: string): string {
  * Get a Gravatar URL for an email address
  */
 export function getGravatarUrl(email: string = '', size: number = 200, defaultImage: string = 'robohash'): string {
-  // Trim and lowercase the email
-  const cleanEmail = email.trim().toLowerCase();
+  // Trim and lowercase the email if it exists, otherwise use empty string
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
   
   // Generate MD5 hash or use 'default' for empty emails
   const hash = cleanEmail ? md5(cleanEmail) : 'default';

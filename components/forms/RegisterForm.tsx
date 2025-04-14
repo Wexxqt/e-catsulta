@@ -35,6 +35,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
 
 interface ExtendedUser extends User {
   gender: "Male" | "Female" | "Other";
@@ -46,6 +47,8 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [idNumberLength, setIdNumberLength] = useState(0);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
   // Format date as user types (automatically add /)
   const formatDateInput = (value: string) => {
@@ -78,6 +81,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
 
   const onSubmit = async (values: z.infer<typeof PatientFormValidation>) => {
     setIsLoading(true);
+    setErrorMessage(null);
 
     // Store file info in form data
     let formData: FormData | undefined;
@@ -85,6 +89,20 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       values.identificationDocument &&
       values.identificationDocument?.length > 0
     ) {
+      // Validate file size and type
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+      const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+      
+      for (const file of values.identificationDocument) {
+        if (file.size > MAX_FILE_SIZE) {
+          throw new Error(`File ${file.name} is too large. Maximum size is 50MB.`);
+        }
+        
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+          throw new Error(`File ${file.name} has an invalid type. Please upload JPEG, PNG, or PDF files only.`);
+        }
+      }
+
       formData = new FormData();
       
       // Add all files to FormData
@@ -106,6 +124,23 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
 
       if (!values.privacyConsent) {
         throw new Error("Please accept the privacy policy to continue");
+      }
+
+      // Validate phone number format
+      const phoneRegex = /^\+?[0-9]{10,15}$/;
+      if (!phoneRegex.test(values.phone)) {
+        throw new Error("Please enter a valid phone number (e.g., +639123456789 or 09123456789)");
+      }
+
+      // Validate emergency contact number format
+      if (!/^\+639\d{9}$/.test(values.emergencyContactNumber)) {
+        throw new Error("Please enter a valid emergency contact number in the format +639XXXXXXXXX");
+      }
+
+      // Validate birth date format
+      const birthDateRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+      if (!birthDateRegex.test(values.birthDate)) {
+        throw new Error("Please enter your date of birth in MM/DD/YYYY format (e.g., 04/14/2000)");
       }
 
       const patient = {
@@ -151,10 +186,11 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       console.error("Error during registration:", error);
       // Show more specific error messages
       if (error instanceof Error) {
-        alert(error.message);
+        setErrorMessage(error.message);
       } else {
-        alert("An unexpected error occurred. Please try again.");
+        setErrorMessage("An unexpected error occurred. Please try again.");
       }
+      setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -518,6 +554,36 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
                 setShowSuccessModal(false);
                 router.push(`/patients/${user.$id}/dashboard`);
               }}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Error Modal */}
+      <Dialog 
+        open={showErrorModal} 
+        onOpenChange={(open) => setShowErrorModal(open)}
+      >
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-bold text-red-600">Registration Error</DialogTitle>
+            <DialogDescription className="text-center">
+              <div className="mt-2 flex flex-col items-center justify-center">
+                <div className="rounded-full bg-red-100 p-3">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+                <p className="mt-4 text-center text-sm text-gray-700">
+                  {errorMessage || "An error occurred during registration. Please try again."}
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-center mt-4">
+            <Button 
+              className="bg-primary text-white hover:bg-primary-dark"
+              onClick={() => setShowErrorModal(false)}
             >
               OK
             </Button>

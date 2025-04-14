@@ -33,7 +33,7 @@ const Appointment = async ({ params: { userId } }: SearchParamProps) => {
             type="create"
           />
 
-          <p className="mt-10 py-12 text-dark-600">© 2025 E-CatSulta</p>
+          <p className="mt-10 py-12 text-dark-600">© 2025 e-catsulta</p>
         </div>
       </section>
 

@@ -93,6 +93,16 @@ export const registerPatient = async ({
   ...patient
 }: RegisterUserParams) => {
   try {
+    // Validate critical environment variables first
+    if (!DATABASE_ID || !PATIENT_COLLECTION_ID || !BUCKET_ID) {
+      console.error("Missing critical environment variables:", {
+        DATABASE_ID: Boolean(DATABASE_ID),
+        PATIENT_COLLECTION_ID: Boolean(PATIENT_COLLECTION_ID),
+        BUCKET_ID: Boolean(BUCKET_ID)
+      });
+      throw new Error("Server configuration error. Please contact support.");
+    }
+
     // Handle multiple document files
     let fileIds = [];
     let fileUrls = [];
@@ -103,53 +113,91 @@ export const registerPatient = async ({
         typeof identificationDocument !== 'string' && 
         'get' in identificationDocument) {
       
-      // Get all files from FormData
-      const blobFiles = identificationDocument.getAll("blobFile") as Blob[];
-      const fileNames = identificationDocument.getAll("fileName") as string[];
-      
-      // Upload each file
-      for (let i = 0; i < blobFiles.length; i++) {
-        try {
-          const inputFile = InputFile.fromBlob(
-            blobFiles[i],
-            fileNames[i]
-          );
-
-          const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
-          const fileUrl = `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
-          
-          fileIds.push(file.$id);
-          fileUrls.push(fileUrl);
-          
-          // Set the first file as the primary one for backward compatibility
-          if (i === 0) {
-            primaryFileId = file.$id;
-            primaryFileUrl = fileUrl;
-          }
-        } catch (fileError) {
-          console.error("Error uploading file:", fileError);
-          throw new Error("Failed to upload identification document. Please try again.");
+      try {
+        // Get all files from FormData
+        const blobFiles = identificationDocument.getAll("blobFile") as Blob[];
+        const fileNames = identificationDocument.getAll("fileName") as string[];
+        
+        if (!blobFiles.length || !fileNames.length) {
+          console.error("File data is missing from FormData");
+          throw new Error("Invalid file data. Please try uploading your documents again.");
         }
+        
+        // Upload each file
+        for (let i = 0; i < blobFiles.length; i++) {
+          try {
+            const inputFile = InputFile.fromBlob(
+              blobFiles[i],
+              fileNames[i]
+            );
+
+            const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+            const fileUrl = `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+            
+            fileIds.push(file.$id);
+            fileUrls.push(fileUrl);
+            
+            // Set the first file as the primary one for backward compatibility
+            if (i === 0) {
+              primaryFileId = file.$id;
+              primaryFileUrl = fileUrl;
+            }
+          } catch (fileError) {
+            console.error("Error uploading file:", fileError);
+            throw new Error("Failed to upload identification document. Please try again.");
+          }
+        }
+      } catch (formDataError) {
+        console.error("Error processing form data:", formDataError);
+        throw new Error("Problem with the uploaded files. Please try again with different files.");
       }
     }
 
-    // Create new patient document
-    const newPatient = await databases.createDocument(
-      DATABASE_ID!,
-      PATIENT_COLLECTION_ID!,
-      ID.unique(),
-      {
-        // Keep the original single file fields for backward compatibility
-        identificationDocumentId: primaryFileId,
-        identificationDocumentUrl: primaryFileUrl,
-        // Add the new array fields for multiple files
-        identificationDocumentIds: fileIds.length > 0 ? JSON.stringify(fileIds) : null,
-        identificationDocumentUrls: fileUrls.length > 0 ? JSON.stringify(fileUrls) : null,
-        ...patient,
-      }
-    );
+    // Prepare document data with error handling
+    const documentData = {
+      // Keep the original single file fields for backward compatibility
+      identificationDocumentId: primaryFileId,
+      identificationDocumentUrl: primaryFileUrl,
+      // Add the new array fields for multiple files
+      identificationDocumentIds: fileIds.length > 0 ? JSON.stringify(fileIds) : null,
+      identificationDocumentUrls: fileUrls.length > 0 ? JSON.stringify(fileUrls) : null,
+      ...patient,
+    };
 
-    console.log("Patient registered successfully:", newPatient.$id);
+    // Validate required fields
+    if (!documentData.userId) {
+      throw new Error("User ID is required");
+    }
+
+    // Create new patient document with retry logic
+    let retryCount = 0;
+    const maxRetries = 2;
+    let newPatient;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        newPatient = await databases.createDocument(
+          DATABASE_ID!,
+          PATIENT_COLLECTION_ID!,
+          ID.unique(),
+          documentData
+        );
+        break; // Success, exit the loop
+      } catch (dbError) {
+        retryCount++;
+        console.error(`Database error (attempt ${retryCount}/${maxRetries+1}):`, dbError);
+        
+        if (retryCount > maxRetries) {
+          // We've exhausted retries, rethrow the error
+          throw dbError;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
+      }
+    }
+
+    console.log("Patient registered successfully:", newPatient?.$id);
     return parseStringify(newPatient);
   } catch (error) {
     console.error("An error occurred while creating a new patient:", error);
