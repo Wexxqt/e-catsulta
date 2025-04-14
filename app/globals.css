@@ -708,3 +708,62 @@
 .text-32-bold {
   @apply text-3xl font-bold;
 }
+
+/* Device optimization CSS */
+.reduced-motion * {
+  transition-duration: 0.05s !important;
+  animation-duration: 0.05s !important;
+  animation-iteration-count: 1 !important;
+}
+
+.reduced-motion .animate-pulse {
+  animation: none !important;
+}
+
+.reduced-motion .animate-spin {
+  animation: none !important;
+}
+
+.reduced-motion .transition-all,
+.reduced-motion .transition-opacity,
+.reduced-motion .transition-transform {
+  transition: none !important;
+}
+
+/* Simplified UI for low-end devices */
+.simplified-ui .dashboard-card {
+  box-shadow: none !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.simplified-ui .shad-primary-btn,
+.simplified-ui .shad-secondary-btn {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.simplified-ui .shad-primary-btn:hover,
+.simplified-ui .shad-secondary-btn:hover {
+  transform: none !important;
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+  .simplified-ui button,
+  .simplified-ui .btn,
+  .simplified-ui a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .simplified-ui input,
+  .simplified-ui select,
+  .simplified-ui textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Low-quality images - reduce effects */
+.low-quality-images img {
+  filter: none !important;
+}

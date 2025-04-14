@@ -126,3 +126,51 @@ export function getGravatarUrl(email: string = '', size: number = 200, defaultIm
   // Return the Gravatar URL
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=${defaultImage}`;
 }
+
+/**
+ * Detects if the current device is a low-end device based on available
+ * hardware capabilities, browser features, and user agent information
+ */
+export function isLowEndDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  // Check for device memory (available in Chrome)
+  const lowMemory = 'deviceMemory' in navigator && (navigator as any).deviceMemory < 2;
+  
+  // Check for hardware concurrency (available in most browsers)
+  const lowConcurrency = navigator.hardwareConcurrency < 4;
+  
+  // Check for known low-end device user agents (iPhone 6/6s, older Android phones)
+  const userAgent = navigator.userAgent;
+  const isOlderPhone = /iPhone\s(5|6|7|8|SE)/i.test(userAgent) || 
+                      /Android\s[4-7]/i.test(userAgent) ||
+                      /Windows\sPhone/i.test(userAgent);
+  
+  // Check for connection type if available
+  const connection = (navigator as any).connection;
+  const slowConnection = connection && 
+    (connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g');
+  
+  // Device is considered low-end if it meets any of these criteria
+  return lowMemory || lowConcurrency || isOlderPhone || slowConnection;
+}
+
+/**
+ * Gets the optimized image quality based on the device and connection
+ */
+export function getOptimizedImageQuality(): number {
+  if (typeof window === 'undefined') return 75; // Default quality
+  
+  const connection = (navigator as any).connection;
+  
+  if (isLowEndDevice()) {
+    return 50; // Lower quality for low-end devices
+  } else if (connection && 
+            (connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g')) {
+    return 40; // Even lower for slow connections
+  } else if (connection && connection.saveData) {
+    return 40; // Respect data saver mode
+  }
+  
+  return 75; // Default quality for normal devices
+}
