@@ -9,7 +9,7 @@ const validateEnvVariables = () => {
     'PATIENT_COLLECTION_ID',
     'APPOINTMENT_COLLECTION_ID',
     'NEXT_PUBLIC_BUCKET_ID',
-    'NEXT_PUBLIC_DATABASE_ID'
+    'DATABASE_ID'
   ];
   
   const missingVars = requiredVars.filter(
@@ -36,6 +36,7 @@ export const {
   DOCTOR_COLLECTION_ID,
   APPOINTMENT_COLLECTION_ID,
   NEXT_PUBLIC_BUCKET_ID: BUCKET_ID,
+  DATABASE_ID,
 } = process.env;
 
 const client = new sdk.Client();
@@ -46,5 +47,3 @@ export const databases = new sdk.Databases(client);
 export const users = new sdk.Users(client);
 export const messaging = new sdk.Messaging(client);
 export const storage = new sdk.Storage(client);
-
-export const DATABASE_ID = process.env.NEXT_PUBLIC_DATABASE_ID || "676eed6f0007da27da19";
