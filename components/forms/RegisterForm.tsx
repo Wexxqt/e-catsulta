@@ -25,6 +25,7 @@ import "react-phone-number-input/style.css";
 import CustomFormField, { FormFieldType } from "../CustomFormField";
 import { FileUploader } from "../FileUploader";
 import SubmitButton from "../SubmitButton";
+import { Input } from "@/components/ui/input";
 
 interface ExtendedUser extends User {
   gender: "Male" | "Female" | "Other";
@@ -34,6 +35,7 @@ interface ExtendedUser extends User {
 const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [idNumberLength, setIdNumberLength] = useState(0);
 
   const form = useForm<z.infer<typeof PatientFormValidation>>({
     resolver: zodResolver(PatientFormValidation),
@@ -50,19 +52,23 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   const onSubmit = async (values: z.infer<typeof PatientFormValidation>) => {
     setIsLoading(true);
 
-    // Store file info in form data as
-    let formData;
+    // Store file info in form data
+    let formData: FormData | undefined;
     if (
       values.identificationDocument &&
       values.identificationDocument?.length > 0
     ) {
-      const blobFile = new Blob([values.identificationDocument[0]], {
-        type: values.identificationDocument[0].type,
-      });
-
       formData = new FormData();
-      formData.append("blobFile", blobFile);
-      formData.append("fileName", values.identificationDocument[0].name);
+      
+      // Add all files to FormData
+      values.identificationDocument.forEach(file => {
+        const blobFile = new Blob([file], {
+          type: file.type,
+        });
+        
+        formData!.append("blobFile", blobFile);
+        formData!.append("fileName", file.name);
+      });
     }
 
     try {
@@ -73,7 +79,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         email: values.email,
         phone: values.phone,
         birthDate: new Date(values.birthDate),
-        gender: values.gender.toLowerCase() as Gender,
+        gender: values.gender as Gender,
         address: values.address,
         category: values.category ?? "",
         emergencyContactName: values.emergencyContactName,
@@ -96,7 +102,17 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
 
       if (newPatient) {
         console.log("Redirecting to:", `/patients/${user.$id}/dashboard`);
-        router.push(`/patients/${user.$id}/dashboard`);
+        
+        // Show success message before redirect
+        alert("Registration successful! Redirecting to your dashboard...");
+        
+        // Use setTimeout to ensure the alert is seen before redirect
+        setTimeout(() => {
+          router.push(`/patients/${user.$id}/dashboard`);
+        }, 500);
+      } else {
+        // If newPatient is null or undefined, something went wrong
+        alert("Registration could not be completed. Please try again.");
       }
     } catch (error) {
       console.error("Error during registration:", error);
@@ -104,6 +120,12 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
     }
 
     setIsLoading(false);
+  };
+
+  // Add a handler to track the ID number length
+  const handleIdNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIdNumberLength(e.target.value.length);
+    // Let React Hook Form handle the actual validation
   };
 
   return (
@@ -115,6 +137,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         <section className="space-y-4">
           <h1 className="header">Hi CatSUans! 👋</h1>
           <p className="text-dark-700">Let us know more about yourself.</p>
+          <p className="text-dark-600 text-sm">Fields marked with * are required.</p>
         </section>
 
         <section className="space-y-6">
@@ -239,28 +262,28 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
 
         <section className="space-y-6">
           <div className="mb-9 space-y-1">
-            <h2 className="sub-header">Medical Information</h2>
+            <h2 className="sub-header">Medical and Dental Information</h2>
           </div>
 
-          {/* INSURANCE & POLICY NUMBER */}
+          {/* Signs & Symptoms */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
               fieldType={FormFieldType.INPUT}
               control={form.control}
               name="signsSymptoms"
               label="Signs & Symptoms "
-              placeholder="Fever (often high, sudden onset)"
+              placeholder="e.g., Headache, sore gums, or tooth pain (if any)"
             />
           </div>
 
-          {/* ALLERGY & CURRENT MEDICATIONS */}
+          {/* Allergies & Current Medications */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
               fieldType={FormFieldType.TEXTAREA}
               control={form.control}
               name="allergies"
               label="Allergies (if any)"
-              placeholder="Peanuts, Penicillin, Pollen"
+              placeholder="e.g., Penicillin, anesthesia (type 'None' if not applicable)"
             />
 
             <CustomFormField
@@ -268,18 +291,18 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
               control={form.control}
               name="currentMedication"
               label="Current medications"
-              placeholder="Ibuprofen 200mg, Levothyroxine 50mcg"
+              placeholder="e.g., Paracetamol, dental antibiotics, or leave blank if none"
             />
           </div>
 
-          {/* FAMILY MEDICATION & PAST MEDICATIONS */}
+          {/* Family Medical History & Past Medical History */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
               fieldType={FormFieldType.TEXTAREA}
               control={form.control}
               name="familyMedicalHistory"
               label=" Family medical history (if relevant)"
-              placeholder="Mother had brain cancer, Father has hypertension"
+              placeholder="e.g., Diabetes, gum disease (optional)"
             />
 
             <CustomFormField
@@ -287,21 +310,21 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
               control={form.control}
               name="pastMedicalHistory"
               label="Past medical history"
-              placeholder="Appendectomy in 2015, Asthma diagnosis in childhood"
+              placeholder="e.g., Asthma, past dental extractions (optional)"
             />
           </div>
         </section>
 
         <section className="space-y-6">
           <div className="mb-9 space-y-1">
-            <h2 className="sub-header">Identification and Verfication</h2>
+            <h2 className="sub-header">Identification and Verification</h2>
           </div>
 
           <CustomFormField
             fieldType={FormFieldType.SELECT}
             control={form.control}
             name="identificationType"
-            label="Identification Type"
+            label="Identification Type *"
             placeholder="Select ID type"
           >
             {IdentificationTypes.map((type, i) => (
@@ -312,21 +335,54 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
           </CustomFormField>
 
           <CustomFormField
-            fieldType={FormFieldType.INPUT}
+            fieldType={FormFieldType.SKELETON}
             control={form.control}
             name="identificationNumber"
-            label="Identification Number"
-            placeholder="2019-00000"
+            label="Identification Number *"
+            placeholder="Enter Student No. or Employee ID (e.g., 2023-0456 or EMP-0123)"
+            renderSkeleton={(field) => (
+              <FormControl>
+                <div className="flex flex-col">
+                  <div className="flex rounded-md border border-dark-500 bg-dark-400">
+                    <Input
+                      placeholder="Enter Student No. or Employee ID (e.g., 2023-0456 or EMP-0123)"
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        handleIdNumberChange(e);
+                      }}
+                      className="shad-input border-0"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="flex justify-end mt-1">
+                    <span className={`text-xs ${idNumberLength > 10 ? 'text-red-500' : 'text-dark-600'}`}>
+                      {idNumberLength}/10 characters
+                    </span>
+                  </div>
+                </div>
+              </FormControl>
+            )}
           />
 
           <CustomFormField
             fieldType={FormFieldType.SKELETON}
             control={form.control}
             name="identificationDocument"
-            label="Scanned Copy of Identification Document"
+            label="Scanned Copy of Identification Document *"
             renderSkeleton={(field) => (
               <FormControl>
-                <FileUploader files={field.value} onChange={field.onChange} />
+                <div>
+                  <FileUploader 
+                    files={field.value || []} 
+                    onChange={field.onChange} 
+                    maxSizeInMB={50}
+                    maxFiles={2}
+                  />
+                  <p className="text-12-regular text-dark-600 mt-1">
+                    Please upload clear scans or photos of both front and back of your school/employee ID. Maximum file size: 50MB per image.
+                  </p>
+                </div>
               </FormControl>
             )}
           />

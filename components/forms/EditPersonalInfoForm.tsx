@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { UpdatePersonalInfoValidation } from "@/lib/validations";
+import { UpdatePersonalInfoValidation } from "@/lib/validation";
 import { z } from "zod";
 
 import CustomFormField, { FormFieldType } from "@/components/CustomFormField";
@@ -30,7 +30,8 @@ const EditPersonalInfoForm = ({ patient, onSuccess }: EditPersonalInfoFormProps)
       email: patient.email || "",
       phone: patient.phone || "",
       birthDate: patient.birthDate ? new Date(patient.birthDate) : undefined,
-      gender: patient.gender || "prefer not to say",
+      gender: (patient.gender ? 
+        (patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)) : "Prefer not to say") as "Male" | "Female" | "Other" | "Prefer not to say",
       address: patient.address || "",
       emergencyContactName: patient.emergencyContactName || "",
       emergencyContactNumber: patient.emergencyContactNumber || "",
@@ -42,9 +43,10 @@ const EditPersonalInfoForm = ({ patient, onSuccess }: EditPersonalInfoFormProps)
     try {
       setIsLoading(true);
 
-      // Update patient information
+      // Update patient information with lowercase gender for database compatibility
       await updatePatient(patient.$id, {
         ...data,
+        gender: data.gender.toLowerCase() as any, // Convert to lowercase for database
       });
 
       // Show success message
@@ -106,10 +108,10 @@ const EditPersonalInfoForm = ({ patient, onSuccess }: EditPersonalInfoFormProps)
             placeholder="Select gender"
             fieldType={FormFieldType.SELECT}
           >
-            <SelectItem value="male">Male</SelectItem>
-            <SelectItem value="female">Female</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-            <SelectItem value="prefer not to say">Prefer not to say</SelectItem>
+            <SelectItem value="Male">Male</SelectItem>
+            <SelectItem value="Female">Female</SelectItem>
+            <SelectItem value="Other">Other</SelectItem>
+            <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
           </CustomFormField>
 
           {/* Address */}

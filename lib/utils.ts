@@ -116,7 +116,7 @@ export function md5(d: string): string {
 /**
  * Get a Gravatar URL for an email address
  */
-export function getGravatarUrl(email: string = '', size: number = 200, defaultImage: string = 'mp'): string {
+export function getGravatarUrl(email: string = '', size: number = 200, defaultImage: string = 'robohash'): string {
   // Trim and lowercase the email
   const cleanEmail = email.trim().toLowerCase();
   

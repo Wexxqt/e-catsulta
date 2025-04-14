@@ -365,6 +365,75 @@
   .date-picker {
     @apply overflow-hidden border-transparent w-full placeholder:text-dark-600  h-11 text-14-medium rounded-md px-3 outline-none !important;
   }
+
+  /* ===== DOCTOR DASHBOARD ===== */
+  .doctor-action-icon {
+    @apply text-white hover:bg-slate-700 p-2 rounded-full transition-colors;
+  }
+
+  .doctor-table-icon {
+    @apply text-white hover:bg-slate-700 text-sm p-2 rounded-full transition-colors;
+  }
+
+  .doctor-detail-modal {
+    @apply sm:max-w-[600px] max-h-[80vh] overflow-y-auto;
+  }
+  
+  .doctor-detail-section {
+    @apply space-y-4;
+  }
+  
+  .doctor-detail-header {
+    @apply font-semibold text-lg border-b pb-2;
+  }
+  
+  .doctor-detail-grid {
+    @apply grid grid-cols-2 gap-4;
+  }
+  
+  .doctor-detail-label {
+    @apply text-sm text-gray-500;
+  }
+  
+  .doctor-detail-value {
+    @apply text-base;
+  }
+  
+  .doctor-detail-value-bold {
+    @apply text-base font-medium;
+  }
+  
+  .doctor-document-button {
+    @apply flex items-center gap-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors;
+  }
+  
+  .doctor-note-container {
+    @apply bg-gray-50 p-4 rounded-lg space-y-2;
+  }
+  
+  .doctor-note-header {
+    @apply flex justify-between items-start;
+  }
+  
+  .doctor-note-timestamp {
+    @apply text-sm text-gray-500;
+  }
+  
+  .doctor-note-delete {
+    @apply text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50;
+  }
+  
+  .doctor-note-content {
+    @apply text-gray-700 whitespace-pre-wrap;
+  }
+  
+  .doctor-appointment-card {
+    @apply p-3 border border-gray-200 rounded-lg;
+  }
+  
+  .doctor-appointment-row {
+    @apply flex justify-between;
+  }
 }
 
 /* ==== DATEPICKER WRAPPER ==== */

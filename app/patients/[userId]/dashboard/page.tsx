@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { format, parse } from "date-fns";
-import { ChevronDown, ChevronUp, Search, Calendar, User, Plus, Clock, Trash2, Edit, Pencil, Users, X, Filter, Check, LogOut } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Calendar, User, Plus, Clock, Trash2, Edit, Pencil, Users, X, Filter, Check, LogOut, Eye } from "lucide-react";
 import ReactDatePicker from "react-datepicker";
 import Image from "next/image";
 
@@ -95,7 +95,7 @@ const personalInfoSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   phone: z.string().min(10, "Phone number must be at least 10 characters"),
   birthDate: z.date().optional(),
-  gender: z.enum(["male", "female", "other", "prefer not to say"], {
+  gender: z.enum(["Male", "Female", "Other", "Prefer not to say"], {
     required_error: "Please select a gender",
   }),
   address: z.string().optional(),
@@ -229,7 +229,7 @@ const PatientDashboard = () => {
       email: patient?.email || "",
       phone: patient?.phone || "",
       birthDate: patient?.birthDate ? new Date(patient.birthDate) : undefined,
-      gender: patient?.gender || "prefer not to say",
+      gender: patient?.gender || "Prefer not to say",
       address: patient?.address || "",
       emergencyContactName: patient?.emergencyContactName || "",
       emergencyContactNumber: patient?.emergencyContactNumber || "",
@@ -258,7 +258,7 @@ const PatientDashboard = () => {
         email: patient.email || "",
         phone: patient.phone || "",
         birthDate: patient.birthDate ? new Date(patient.birthDate) : undefined,
-        gender: patient.gender || "prefer not to say",
+        gender: patient.gender || "Prefer not to say",
         address: patient.address || "",
         emergencyContactName: patient.emergencyContactName || "",
         emergencyContactNumber: patient.emergencyContactNumber || "",
@@ -360,7 +360,7 @@ const PatientDashboard = () => {
         email: data.email,
         phone: data.phone,
         birthDate: data.birthDate,
-        gender: data.gender,
+        gender: data.gender.toLowerCase() as any,
         address: data.address,
         emergencyContactName: data.emergencyContactName,
         emergencyContactNumber: data.emergencyContactNumber,
@@ -644,11 +644,11 @@ const PatientDashboard = () => {
                           <FormItem className="mb-2 sm:mb-0">
                             <FormLabel className="text-light-200 text-14-medium">Date of Birth</FormLabel>
                             <FormControl>
-                              <div className="bg-dark-300 border border-dark-500 rounded-md overflow-hidden">
+                              <div className="flex rounded-md border border-dark-500 bg-dark-300 h-10 sm:h-11 overflow-hidden">
                                 <ReactDatePicker
                                   selected={field.value}
                                   onChange={(date: Date) => field.onChange(date)}
-                                  className="bg-dark-300 text-light-200 w-full p-2 h-10 sm:h-11 rounded-md focus:outline-none"
+                                  className="bg-dark-300 text-light-200 w-full p-2 border-0 focus:outline-none"
                                   placeholderText="Select date of birth"
                                   dateFormat="MM/dd/yyyy"
                                   showMonthDropdown
@@ -683,10 +683,10 @@ const PatientDashboard = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent className="bg-dark-400 border-dark-500 text-light-200">
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                                <SelectItem value="prefer not to say">Prefer not to say</SelectItem>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                                <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -842,7 +842,11 @@ const PatientDashboard = () => {
                 </div>
                 <div>
                   <p className="text-14-regular text-dark-600">Gender</p>
-                  <p className="text-14-medium text-light-200">{patient.gender}</p>
+                  <p className="text-14-medium text-light-200">
+                    {patient.gender ? 
+                      patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) 
+                      : 'N/A'}
+                  </p>
                 </div>
                 <div className="col-span-full">
                   <p className="text-14-regular text-dark-600">Address</p>
@@ -1206,7 +1210,8 @@ const PatientDashboard = () => {
                           className="w-full text-light-200 bg-dark-400 border-dark-500 hover:bg-dark-500"
                           onClick={() => setSelectedAppointment(appointment)}
                         >
-                          View Details
+                          <Eye className="h-4 w-4 mr-2" />
+                          Details
                         </Button>
                       </SheetTrigger>
                       <SheetContent side="bottom" className="h-[85vh] max-h-[85vh] overflow-y-auto pb-10">
@@ -1269,6 +1274,11 @@ const PatientDashboard = () => {
                               </div>
                               
                               <div>
+                                <p className="text-14-regular text-dark-600">Reason for Appointment</p>
+                                <p className="text-14-regular text-light-200">{selectedAppointment.reason || "No reason provided"}</p>
+                              </div>
+                              
+                              <div>
                                 <p className="text-14-regular text-dark-600">Notes</p>
                                 <p className="text-14-regular text-light-200">{selectedAppointment.note || "No notes available"}</p>
                               </div>
@@ -1296,7 +1306,7 @@ const PatientDashboard = () => {
                       <TableHead className="text-14-medium w-[180px]">Date & Time</TableHead>
                       <TableHead className="text-14-medium">Doctor</TableHead>
                       <TableHead className="text-14-medium">Status</TableHead>
-                      <TableHead className="text-14-medium text-right">Actions</TableHead>
+                      <TableHead className="text-14-medium text-right">Details</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1318,7 +1328,7 @@ const PatientDashboard = () => {
                                 className="text-light-200 hover:bg-dark-500"
                                 onClick={() => setSelectedAppointment(appointment)}
                               >
-                                View Details
+                                <Eye className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="shad-dialog sm:max-w-md md:max-w-lg lg:max-w-xl w-[95%] max-h-[90vh] overflow-y-auto">
@@ -1375,6 +1385,11 @@ const PatientDashboard = () => {
                                     <div>
                                       <p className="text-14-regular text-dark-600">Status</p>
                                       <StatusBadge status={selectedAppointment.status} />
+                                    </div>
+                                    
+                                    <div>
+                                      <p className="text-14-regular text-dark-600">Reason for Appointment</p>
+                                      <p className="text-14-regular text-light-200">{selectedAppointment.reason || "No reason provided"}</p>
                                     </div>
                                     
                                     <div>

@@ -162,8 +162,8 @@ const RequestSuccess = ({ searchParams, params }: any) => {
         </section>
 
         <Button variant="outline" className="shad-primary-btn" asChild>
-          <Link href={`/patients/${userId}/new-appointment`}>
-            New Appointment
+          <Link href={`/patients/${userId}/dashboard`}>
+            View Profile
           </Link>
         </Button>
 

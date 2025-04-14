@@ -43,12 +43,16 @@ const AppointmentReasonCell = ({ appointment }: { appointment: ExtendedAppointme
       {appointment.reason ? (
         <button 
           onClick={() => setShowFullReason(true)}
-          className="text-white hover:underline text-sm"
+          className="doctor-table-icon"
+          title="View Reason"
         >
-          View Reason
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
         </button>
       ) : (
-        <span className="text-gray-400 text-sm">No reason</span>
+        <span className="text-gray-400 text-sm">N/A</span>
       )}
       
       {showFullReason && (
@@ -171,7 +175,7 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
   },
   {
     accessorKey: "patientDetails",
-    header: "Patient Details",
+    header: "Details",
     cell: ({ row }) => {
       const appointment = row.original;
       const patient = safePatientAccess(appointment);
@@ -344,22 +348,26 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
   return (
     <>
       <button
-        className="text-white hover:underline text-sm"
+        className="doctor-action-icon"
         onClick={() => setIsOpen(true)}
+        title="View Patient Details"
       >
-        View Details
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="doctor-detail-modal">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Patient Information</DialogTitle>
           </DialogHeader>
           
           <div className="grid gap-6">
             {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Personal Details</h3>
+            <div className="doctor-detail-section">
+              <h3 className="doctor-detail-header">Personal Details</h3>
               
               {/* Add avatar at the top */}
               <div className="flex justify-center mb-4">
@@ -374,86 +382,138 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="doctor-detail-grid">
                 <div>
-                  <p className="text-sm text-gray-500">Full Name</p>
-                  <p className="text-base">{patient.name}</p>
+                  <p className="doctor-detail-label">Full Name</p>
+                  <p className="doctor-detail-value">{patient.name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Gender</p>
-                  <p className="text-base">{patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'Not specified'}</p>
+                  <p className="doctor-detail-label">Gender</p>
+                  <p className="doctor-detail-value">{patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'Not specified'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Birth Date</p>
-                  <p className="text-base">{patient.birthDate ? new Date(patient.birthDate).toLocaleDateString() : 'Not specified'}</p>
+                  <p className="doctor-detail-label">Birth Date</p>
+                  <p className="doctor-detail-value">{patient.birthDate ? new Date(patient.birthDate).toLocaleDateString() : 'Not specified'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Category</p>
-                  <p className="text-base">{patient.category || 'Not specified'}</p>
+                  <p className="doctor-detail-label">Category</p>
+                  <p className="doctor-detail-value">{patient.category || 'Not specified'}</p>
                 </div>
               </div>
             </div>
 
             {/* Contact Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Contact Information</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="doctor-detail-section">
+              <h3 className="doctor-detail-header">Contact Information</h3>
+              <div className="doctor-detail-grid">
                 <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="text-base">{patient.email}</p>
+                  <p className="doctor-detail-label">Email</p>
+                  <p className="doctor-detail-value">{patient.email}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Phone</p>
-                  <p className="text-base">{patient.phone}</p>
+                  <p className="doctor-detail-label">Phone</p>
+                  <p className="doctor-detail-value">{patient.phone}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Address</p>
-                  <p className="text-base">{patient.address || 'Not specified'}</p>
+                  <p className="doctor-detail-label">Address</p>
+                  <p className="doctor-detail-value">{patient.address || 'Not specified'}</p>
                 </div>
               </div>
             </div>
 
             {/* Identification */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Identification</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="doctor-detail-section">
+              <h3 className="doctor-detail-header">Identification</h3>
+              <div className="doctor-detail-grid">
                 <div>
-                  <p className="text-sm text-gray-500">ID Type</p>
-                  <p className="text-base">{patient.identificationType || 'Not specified'}</p>
+                  <p className="doctor-detail-label">ID Type</p>
+                  <p className="doctor-detail-value-bold">
+                    {patient.identificationType ? 
+                      patient.identificationType.charAt(0).toUpperCase() + patient.identificationType.slice(1) : 
+                      'Not specified'}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">ID Number</p>
-                  <p className="text-base">{patient.identificationNumber || 'Not specified'}</p>
+                  <p className="doctor-detail-label">ID Number</p>
+                  <p className="doctor-detail-value">{patient.identificationNumber || 'Not specified'}</p>
                 </div>
-                {patient.identificationDocumentId && (
+                {(patient.identificationDocumentId || patient.identificationDocumentIds) && (
                   <div className="col-span-2">
-                    <p className="text-sm text-gray-500">ID Document</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <button 
-                        onClick={async () => {
-                          try {
-                            const response = await fetch(`/api/documents/${patient.identificationDocumentId}`);
-                            if (!response.ok) {
-                              throw new Error('Failed to get document URL');
+                    <p className="doctor-detail-label">ID Document</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {/* Primary document button */}
+                      {patient.identificationDocumentId && (
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(`/api/documents/${patient.identificationDocumentId}`);
+                              if (!response.ok) {
+                                throw new Error('Failed to get document URL');
+                              }
+                              const data = await response.json();
+                              
+                              // Open the URL in a new tab
+                              window.open(data.url, '_blank');
+                            } catch (error) {
+                              console.error('Error viewing document:', error);
+                              alert('Unable to view document. Please try again later.');
                             }
-                            const data = await response.json();
-                            
-                            // Open the URL in a new tab
-                            window.open(data.url, '_blank');
-                          } catch (error) {
-                            console.error('Error viewing document:', error);
-                            alert('Unable to view document. Please try again later.');
-                          }
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                          <polyline points="15 3 21 3 21 9"></polyline>
-                          <line x1="10" y1="14" x2="21" y2="3"></line>
-                        </svg>
-                        View ID Document
-                      </button>
+                          }}
+                          className="doctor-document-button"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                          </svg>
+                          {patient.identificationDocumentIds ? "View Front of ID" : "View ID Document"}
+                        </button>
+                      )}
+                      
+                      {/* Additional documents if available */}
+                      {patient.identificationDocumentIds && (
+                        <>
+                          {(() => {
+                            try {
+                              const docIds = JSON.parse(patient.identificationDocumentIds);
+                              // Skip the first document if it's already shown above
+                              if (docIds.length > 1 && docIds[1]) {
+                                return (
+                                  <button 
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(`/api/documents/${docIds[1]}`);
+                                        if (!response.ok) {
+                                          throw new Error('Failed to get document URL');
+                                        }
+                                        const data = await response.json();
+                                        
+                                        // Open the URL in a new tab
+                                        window.open(data.url, '_blank');
+                                      } catch (error) {
+                                        console.error('Error viewing document:', error);
+                                        alert('Unable to view document. Please try again later.');
+                                      }
+                                    }}
+                                    className="doctor-document-button"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                      <polyline points="15 3 21 3 21 9"></polyline>
+                                      <line x1="10" y1="14" x2="21" y2="3"></line>
+                                    </svg>
+                                    View Back of ID
+                                  </button>
+                                );
+                              }
+                              return null;
+                            } catch (e) {
+                              console.error("Error parsing document IDs:", e);
+                              return null;
+                            }
+                          })()}
+                        </>
+                      )}
                       <span className="text-xs text-gray-500">(Opens in new tab)</span>
                     </div>
                   </div>
@@ -462,85 +522,85 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
             </div>
 
             {/* Medical Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Medical Information</h3>
+            <div className="doctor-detail-section">
+              <h3 className="doctor-detail-header">Medical Information</h3>
               <div className="grid gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Current Signs & Symptoms</p>
-                  <p className="text-base">{patient.signsSymptoms || 'None reported'}</p>
+                  <p className="doctor-detail-label">Current Signs & Symptoms</p>
+                  <p className="doctor-detail-value">{patient.signsSymptoms || 'None reported'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Allergies</p>
-                  <p className="text-base">{patient.allergies || 'None reported'}</p>
+                  <p className="doctor-detail-label">Allergies</p>
+                  <p className="doctor-detail-value">{patient.allergies || 'None reported'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Current Medication</p>
-                  <p className="text-base">{patient.currentMedication || 'None reported'}</p>
+                  <p className="doctor-detail-label">Current Medication</p>
+                  <p className="doctor-detail-value">{patient.currentMedication || 'None reported'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Family Medical History</p>
-                  <p className="text-base">{patient.familyMedicalHistory || 'None reported'}</p>
+                  <p className="doctor-detail-label">Family Medical History</p>
+                  <p className="doctor-detail-value">{patient.familyMedicalHistory || 'None reported'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Past Medical History</p>
-                  <p className="text-base">{patient.pastMedicalHistory || 'None reported'}</p>
+                  <p className="doctor-detail-label">Past Medical History</p>
+                  <p className="doctor-detail-value">{patient.pastMedicalHistory || 'None reported'}</p>
                 </div>
               </div>
             </div>
 
             {/* Emergency Contact */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Emergency Contact</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="doctor-detail-section">
+              <h3 className="doctor-detail-header">Emergency Contact</h3>
+              <div className="doctor-detail-grid">
                 <div>
-                  <p className="text-sm text-gray-500">Name</p>
-                  <p className="text-base">{patient.emergencyContactName || 'Not specified'}</p>
+                  <p className="doctor-detail-label">Name</p>
+                  <p className="doctor-detail-value">{patient.emergencyContactName || 'Not specified'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Phone</p>
-                  <p className="text-base">{patient.emergencyContactNumber || 'Not specified'}</p>
+                  <p className="doctor-detail-label">Phone</p>
+                  <p className="doctor-detail-value">{patient.emergencyContactNumber || 'Not specified'}</p>
                 </div>
               </div>
             </div>
 
             {/* Patient Appointments Section */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Appointments History</h3>
+            <div className="doctor-detail-section">
+              <h3 className="doctor-detail-header">Appointments History</h3>
               
               {patientAppointments.length === 0 ? (
                 <p className="text-gray-500">No appointment records found.</p>
               ) : (
                 <div className="space-y-3">
                   {patientAppointments.map((apt) => (
-                    <div key={apt.$id} className="p-3 border border-gray-200 rounded-lg">
-                      <div className="flex justify-between">
+                    <div key={apt.$id} className="doctor-appointment-card">
+                      <div className="doctor-appointment-row">
                         <div>
-                          <p className="text-sm text-gray-500">Date & Time</p>
-                          <p className="text-base">{formatDateTime(apt.schedule).dateTime}</p>
+                          <p className="doctor-detail-label">Date & Time</p>
+                          <p className="doctor-detail-value">{formatDateTime(apt.schedule).dateTime}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-500">Status</p>
+                          <p className="doctor-detail-label">Status</p>
                           <StatusBadge status={apt.status} />
                         </div>
                       </div>
                       <div className="mt-2">
-                        <p className="text-sm text-gray-500">Appointment Code</p>
+                        <p className="doctor-detail-label">Appointment Code</p>
                         <p className="text-base text-blue-500 font-medium">{generateAppointmentCode(apt)}</p>
                       </div>
                       <div className="mt-2">
-                        <p className="text-sm text-gray-500">Reason</p>
-                        <p className="text-base">{apt.reason || 'No reason provided'}</p>
+                        <p className="doctor-detail-label">Reason</p>
+                        <p className="doctor-detail-value">{apt.reason || 'No reason provided'}</p>
                       </div>
                       {apt.note && (
                         <div className="mt-2">
-                          <p className="text-sm text-gray-500">Note</p>
-                          <p className="text-base">{apt.note}</p>
+                          <p className="doctor-detail-label">Note</p>
+                          <p className="doctor-detail-value">{apt.note}</p>
                         </div>
                       )}
                       {apt.status === 'cancelled' && apt.cancellationReason && (
                         <div className="mt-2">
-                          <p className="text-sm text-gray-500">Cancellation Reason</p>
-                          <p className="text-base">{apt.cancellationReason}</p>
+                          <p className="doctor-detail-label">Cancellation Reason</p>
+                          <p className="doctor-detail-value">{apt.cancellationReason}</p>
                         </div>
                       )}
                     </div>
@@ -550,8 +610,8 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
             </div>
 
             {/* Doctor Notes Section */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">Doctor Notes</h3>
+            <div className="doctor-detail-section">
+              <h3 className="doctor-detail-header">Doctor Notes</h3>
               
               {/* Add New Note */}
               <div className="space-y-2">
@@ -573,15 +633,15 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
               {/* Notes List */}
               <div className="space-y-4 mt-4">
                 {notes.map((note) => (
-                  <div key={note.$id} className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <div className="flex justify-between items-start">
-                      <p className="text-sm text-gray-500">
+                  <div key={note.$id} className="doctor-note-container">
+                    <div className="doctor-note-header">
+                      <p className="doctor-note-timestamp">
                         {new Date(note.createdAt).toLocaleString()}
                       </p>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <button
-                            className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
+                            className="doctor-note-delete"
                             disabled={isDeletingNote === note.$id}
                           >
                             <Trash2 size={16} />
@@ -606,7 +666,7 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                    <p className="text-gray-700 whitespace-pre-wrap">{note.note}</p>
+                    <p className="doctor-note-content">{note.note}</p>
                   </div>
                 ))}
               </div>

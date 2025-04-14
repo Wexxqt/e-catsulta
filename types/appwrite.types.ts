@@ -16,11 +16,19 @@ export interface Patient extends Models.Document {
   currentMedication: string | undefined;
   familyMedicalHistory: string | undefined;
   pastMedicalHistory: string | undefined;
-  identificationType: string | undefined;
-  identificationNumber: string | undefined;
+  identificationType: string;
+  identificationNumber: string;
   identificationDocument: FormData | undefined;
-  identificationDocumentId?: string;
-  identificationDocumentUrl?: string;
+
+  // Primary ID document (first one uploaded)
+  identificationDocumentId: string;
+  identificationDocumentUrl: string;
+  
+  // Additional fields for multiple ID documents (JSON strings of arrays)
+  identificationDocumentIds?: string; // JSON string of file IDs array
+  identificationDocumentUrls?: string; // JSON string of file URLs array
+  // Profile picture from OAuth provider (e.g. Google)
+  profilePictureUrl?: string;
   avatarDocument: FormData | undefined;
   avatarId?: string;
   avatarUrl?: string;
@@ -50,7 +58,7 @@ export interface PatientNote extends Models.Document {
 }
 
 // Add these to your types/appwrite.types.ts file
-export type Gender = "male" | "female" | "other" | "prefer not to say";
+export type Gender = "Male" | "Female" | "Other" | "Prefer not to say";
 
 export type Status = "pending" | "scheduled" | "cancelled";
 

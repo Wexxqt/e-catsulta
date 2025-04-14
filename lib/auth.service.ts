@@ -42,8 +42,22 @@ export const loginWithGoogle = async () => {
 
 export const getCurrentUser = async () => {
   try {
+    // Get basic user data
     const currentUser = await account.get();
-    return currentUser;
+    
+    // Get user preferences including OAuth providers data (which contains profile image)
+    try {
+      const prefs = await account.getPrefs();
+      
+      // Combine user data with preferences
+      return {
+        ...currentUser,
+        prefs
+      };
+    } catch (prefsError) {
+      console.error("Error getting user preferences:", prefsError);
+      return currentUser;
+    }
   } catch (error) {
     console.error("Get current user error:", error);
     return null;

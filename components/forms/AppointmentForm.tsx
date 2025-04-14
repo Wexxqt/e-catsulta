@@ -219,7 +219,7 @@ export const AppointmentForm = ({
                 control={form.control}
                 name="reason"
                 label="Appointment reason"
-                placeholder="Annual monthly check-up"
+                placeholder="e.g., Cleaning, Filling, Consultation"
                 disabled={type === "schedule"}
               />
 
@@ -228,7 +228,7 @@ export const AppointmentForm = ({
                 control={form.control}
                 name="note"
                 label="Comments/notes"
-                placeholder="Prefer afternoon appointments, if possible"
+                placeholder="e.g., Preferred time, Allergies, Concerns (Optional)"
                 disabled={type === "schedule"}
               />
             </div>

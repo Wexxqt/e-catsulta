@@ -37,9 +37,10 @@ interface RegisterUserParams extends CreateUserParams {
   currentMedication?: string;
   familyMedicalHistory?: string;
   pastMedicalHistory?: string;
-  identificationType?: string;
-  identificationNumber?: string;
+  identificationType: string;
+  identificationNumber: string;
   identificationDocument?: any;
+  profilePictureUrl?: string;
   privacyConsent: boolean;
 }
 
@@ -92,29 +93,53 @@ export const registerPatient = async ({
   ...patient
 }: RegisterUserParams) => {
   try {
-    // Upload file ->  // https://appwrite.io/docs/references/cloud/client-web/storage#createFile
-    let file;
+    // Handle multiple document files
+    let fileIds = [];
+    let fileUrls = [];
+    let primaryFileId = null;
+    let primaryFileUrl = null;
+    
     if (identificationDocument && 
         typeof identificationDocument !== 'string' && 
         'get' in identificationDocument) {
-      const inputFile = InputFile.fromBlob(
-        identificationDocument.get("blobFile") as Blob,
-        identificationDocument.get("fileName") as string
-      );
+      
+      // Get all files from FormData
+      const blobFiles = identificationDocument.getAll("blobFile") as Blob[];
+      const fileNames = identificationDocument.getAll("fileName") as string[];
+      
+      // Upload each file
+      for (let i = 0; i < blobFiles.length; i++) {
+        const inputFile = InputFile.fromBlob(
+          blobFiles[i],
+          fileNames[i]
+        );
 
-      file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+        const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+        const fileUrl = `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+        
+        fileIds.push(file.$id);
+        fileUrls.push(fileUrl);
+        
+        // Set the first file as the primary one for backward compatibility
+        if (i === 0) {
+          primaryFileId = file.$id;
+          primaryFileUrl = fileUrl;
+        }
+      }
     }
 
-    // Create new patient document -> https://appwrite.io/docs/references/cloud/server-nodejs/databases#createDocument
+    // Create new patient document
     const newPatient = await databases.createDocument(
       DATABASE_ID!,
       PATIENT_COLLECTION_ID!,
       ID.unique(),
       {
-        identificationDocumentId: file?.$id ? file.$id : null,
-        identificationDocumentUrl: file?.$id
-          ? `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`
-          : null,
+        // Keep the original single file fields for backward compatibility
+        identificationDocumentId: primaryFileId,
+        identificationDocumentUrl: primaryFileUrl,
+        // Add the new array fields for multiple files
+        identificationDocumentIds: fileIds.length > 0 ? JSON.stringify(fileIds) : null,
+        identificationDocumentUrls: fileUrls.length > 0 ? JSON.stringify(fileUrls) : null,
         ...patient,
       }
     );
@@ -543,8 +568,8 @@ export const safeDeletePatient = async (patientId: string) => {
           // Mark as archived 
           archived: true,
           // Add deletion info in the note field if it exists
-          note: appointment.hasOwnProperty('note') && appointment.note
-            ? `${appointment.note}\n[Patient data removed]` 
+          note: (appointment as any).hasOwnProperty('note') && (appointment as any).note
+            ? `${(appointment as any).note}\n[Patient data removed]` 
             : "[Patient data removed]",
         }
       )
