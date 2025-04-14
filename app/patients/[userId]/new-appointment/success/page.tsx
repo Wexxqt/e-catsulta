@@ -119,26 +119,9 @@ const RequestSuccess = ({ searchParams, params }: any) => {
             </p>
           </div>
 
-          <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-md max-w-[500px] mx-auto">
-            <div className="flex items-start gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div>
-                <p className="font-medium text-amber-800 dark:text-amber-300 text-sm">Appointment Verification</p>
-                <p className="text-amber-700 dark:text-amber-400 text-sm mt-1">
-                  Please save your appointment code for reference. Take a screenshot of the code and present it at the clinic to verify your booking.
-                </p>
-                <p className="text-amber-700 dark:text-amber-400 text-sm mt-2 border-t border-amber-200 dark:border-amber-700/50 pt-2">
-                  You will receive an SMS notification if your appointment is cancelled.
-                </p>
-              </div>
-            </div>
-          </div>
-
         </section>
 
-        <section className="my-5 flex flex-col gap-3 rounded-xl border border-dark-400 bg-dark-300 p-4">
+        <section className="my-5 flex flex-col gap-3 rounded-xl border-2 border-blue-500 dark:border-blue-400 bg-dark-300 p-4 shadow-sm">
           <p>Scheduled appointment details: </p>
           <div className="flex items-center gap-3">
             <Image
@@ -160,6 +143,23 @@ const RequestSuccess = ({ searchParams, params }: any) => {
             <p> {formatDateTime(appointment.schedule).dateTime}</p>
           </div>
         </section>
+
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-md max-w-[500px] mx-auto">
+          <div className="flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <p className="font-medium text-amber-800 dark:text-amber-300 text-sm">Appointment Verification</p>
+              <p className="text-amber-700 dark:text-amber-400 text-sm mt-1">
+                Please save your appointment code for reference. Take a screenshot of the code and present it at the clinic to verify your booking.
+              </p>
+              <p className="text-amber-700 dark:text-amber-400 text-sm mt-2 border-t border-amber-200 dark:border-amber-700/50 pt-2">
+                You will receive an SMS notification if your appointment is cancelled.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <Button variant="outline" className="shad-primary-btn" asChild>
           <Link href={`/patients/${userId}/dashboard`}>

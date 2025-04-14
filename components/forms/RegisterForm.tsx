@@ -83,39 +83,6 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
     setIsLoading(true);
     setErrorMessage(null);
 
-    // Store file info in form data
-    let formData: FormData | undefined;
-    if (
-      values.identificationDocument &&
-      values.identificationDocument?.length > 0
-    ) {
-      // Validate file size and type
-      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-      const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-      
-      for (const file of values.identificationDocument) {
-        if (file.size > MAX_FILE_SIZE) {
-          throw new Error(`File ${file.name} is too large. Maximum size is 50MB.`);
-        }
-        
-        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-          throw new Error(`File ${file.name} has an invalid type. Please upload JPEG, PNG, or PDF files only.`);
-        }
-      }
-
-      formData = new FormData();
-      
-      // Add all files to FormData
-      values.identificationDocument.forEach(file => {
-        const blobFile = new Blob([file], {
-          type: file.type,
-        });
-        
-        formData!.append("blobFile", blobFile);
-        formData!.append("fileName", file.name);
-      });
-    }
-
     try {
       // Validate required fields
       if (!values.identificationType || !values.identificationNumber) {
@@ -142,6 +109,70 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       if (!birthDateRegex.test(values.birthDate)) {
         throw new Error("Please enter your date of birth in MM/DD/YYYY format (e.g., 04/14/2000)");
       }
+      
+      // Store file info in form data
+      let formData: FormData | undefined;
+      let hasFiles = false;
+      
+      if (values.identificationDocument && values.identificationDocument.length > 0) {
+        // Check if running on a low-end or mobile device
+        const isLowEndOrMobile = typeof window !== 'undefined' && (
+          window.navigator.userAgent.includes('iPhone') || 
+          window.navigator.userAgent.includes('Android') ||
+          (window as any).isLowEndDevice === true
+        );
+        
+        // Detect iPhone 6 and similar older devices specifically
+        const isOlderIPhone = typeof window !== 'undefined' && (
+          /iPhone\s(5|6|7|8|SE)/i.test(window.navigator.userAgent)
+        );
+        
+        // Validate file size and type
+        const MAX_FILE_SIZE = isLowEndOrMobile ? 15 * 1024 * 1024 : 50 * 1024 * 1024; // 15MB for mobile, 50MB for desktop
+        const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+        
+        for (const file of values.identificationDocument) {
+          if (file.size > MAX_FILE_SIZE) {
+            throw new Error(`File ${file.name} is too large. ${isLowEndOrMobile ? "Maximum size is 15MB on mobile devices." : "Maximum size is 50MB."}`);
+          }
+          
+          if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+            throw new Error(`File ${file.name} has an invalid type. Please upload JPEG, PNG, or PDF files only.`);
+          }
+        }
+
+        formData = new FormData();
+        hasFiles = true;
+        
+        try {
+          // Add all files to FormData with reduced size for mobile
+          if (isOlderIPhone) {
+            // For older iPhones, use a single file approach to reduce memory usage
+            const mainFile = values.identificationDocument[0];
+            const blobFile = new Blob([mainFile], { type: mainFile.type });
+            formData!.append("blobFile", blobFile);
+            formData!.append("fileName", mainFile.name);
+            
+            // If there's a second file, add it as well, but we'll be more cautious
+            if (values.identificationDocument.length > 1) {
+              const secondFile = values.identificationDocument[1];
+              const secondBlob = new Blob([secondFile], { type: secondFile.type });
+              formData!.append("blobFile2", secondBlob);
+              formData!.append("fileName2", secondFile.name);
+            }
+          } else {
+            // For more capable devices, process normally
+            values.identificationDocument.forEach((file, index) => {
+              const blobFile = new Blob([file], { type: file.type });
+              formData!.append(`blobFile${index}`, blobFile);
+              formData!.append(`fileName${index}`, file.name);
+            });
+          }
+        } catch (fileError) {
+          console.error("File processing error:", fileError);
+          throw new Error("Unable to process your documents. Please try uploading smaller or fewer files.");
+        }
+      }
 
       const patient = {
         userId: user.$id,
@@ -161,13 +192,43 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         pastMedicalHistory: values.pastMedicalHistory,
         identificationType: values.identificationType,
         identificationNumber: values.identificationNumber,
-        identificationDocument: values.identificationDocument
-          ? formData
-          : undefined,
+        identificationDocument: hasFiles ? formData : undefined,
         privacyConsent: values.privacyConsent,
       };
 
-      const newPatient = await registerPatient(patient);
+      // Attempt registration with retry for mobile devices
+      let newPatient = null;
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      while (!newPatient && retryCount <= maxRetries) {
+        try {
+          newPatient = await registerPatient(patient);
+          
+          if (!newPatient && retryCount < maxRetries) {
+            retryCount++;
+            console.log(`Registration attempt ${retryCount} failed, retrying...`);
+            // Wait a moment before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          
+          if (!newPatient && retryCount >= maxRetries) {
+            throw new Error("Registration could not be completed after multiple attempts. Please try again later.");
+          }
+          
+          break; // Break out of retry loop if successful
+        } catch (innerError) {
+          if (retryCount >= maxRetries) {
+            throw innerError; // Re-throw if we've exhausted retries
+          }
+          retryCount++;
+          console.log(`Registration attempt ${retryCount} failed with error, retrying...`, innerError);
+          // Wait a moment before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
       console.log("New patient response:", newPatient);
 
       if (newPatient) {
@@ -186,7 +247,14 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       console.error("Error during registration:", error);
       // Show more specific error messages
       if (error instanceof Error) {
-        setErrorMessage(error.message);
+        // Check for specific network or server errors
+        if (error.message.includes("network") || error.message.includes("5") || error.message.includes("timeout")) {
+          setErrorMessage("Network error. Please check your connection and try again.");
+        } else if (error.message.includes("file") || error.message.includes("document") || error.message.includes("upload")) {
+          setErrorMessage("There was an issue with your document upload. Please try using smaller files or fewer documents.");
+        } else {
+          setErrorMessage(error.message);
+        }
       } else {
         setErrorMessage("An unexpected error occurred. Please try again.");
       }
@@ -465,11 +533,15 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
                   <FileUploader 
                     files={field.value || []} 
                     onChange={field.onChange} 
-                    maxSizeInMB={50}
-                    maxFiles={2}
+                    maxSizeInMB={typeof window !== 'undefined' && window.navigator.userAgent.includes('iPhone') ? 15 : 50}
+                    maxFiles={typeof window !== 'undefined' && 
+                             (/iPhone\s(5|6|7|8|SE)/i.test(window.navigator.userAgent)) ? 1 : 2}
                   />
                   <p className="text-12-regular text-dark-600 mt-1">
-                    Please upload clear scans or photos of both front and back of your school/employee ID. Maximum file size: 50MB per image.
+                    {typeof window !== 'undefined' && 
+                     (/iPhone\s(5|6|7|8|SE)/i.test(window.navigator.userAgent)) 
+                      ? "Please upload a clear scan or photo of your school/employee ID. Maximum file size: 15MB." 
+                      : "Please upload clear scans or photos of both front and back of your school/employee ID. Maximum file size: 50MB per image."}
                   </p>
                 </div>
               </FormControl>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { isLowEndDevice } from "./utils";
+import { isLowEndDevice } from "@/lib/utils";
 
 interface DeviceOptimizerProps {
   children: React.ReactNode;
