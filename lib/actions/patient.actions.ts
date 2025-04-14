@@ -144,9 +144,12 @@ export const registerPatient = async ({
       }
     );
 
+    console.log("Patient registered successfully:", newPatient.$id);
     return parseStringify(newPatient);
   } catch (error) {
     console.error("An error occurred while creating a new patient:", error);
+    // Return null explicitly so we can check for this in the component
+    return null;
   }
 };
 

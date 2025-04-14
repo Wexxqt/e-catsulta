@@ -485,7 +485,12 @@ const PatientDashboard = () => {
     return (
       <div className="flex-center flex-col min-h-screen">
         <p className="text-16-medium text-light-200 mb-4">Patient information not found.</p>
-        <Button className="shad-primary-btn">Register as Patient</Button>
+        <Button 
+          className="shad-primary-btn" 
+          onClick={() => router.push("/")}
+        >
+          Register as Patient
+        </Button>
       </div>
     );
   }

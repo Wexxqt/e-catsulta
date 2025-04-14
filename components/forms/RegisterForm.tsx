@@ -26,6 +26,15 @@ import CustomFormField, { FormFieldType } from "../CustomFormField";
 import { FileUploader } from "../FileUploader";
 import SubmitButton from "../SubmitButton";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface ExtendedUser extends User {
   gender: "Male" | "Female" | "Other";
@@ -36,6 +45,24 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [idNumberLength, setIdNumberLength] = useState(0);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Format date as user types (automatically add /)
+  const formatDateInput = (value: string) => {
+    // Remove any non-numeric characters
+    let numericValue = value.replace(/[^0-9]/g, '');
+    
+    // Format with slashes
+    if (numericValue.length > 4) {
+      // Format: MM/DD/YYYY
+      return `${numericValue.slice(0, 2)}/${numericValue.slice(2, 4)}/${numericValue.slice(4, 8)}`;
+    } else if (numericValue.length > 2) {
+      // Format: MM/DD
+      return `${numericValue.slice(0, 2)}/${numericValue.slice(2)}`;
+    }
+    
+    return numericValue;
+  };
 
   const form = useForm<z.infer<typeof PatientFormValidation>>({
     resolver: zodResolver(PatientFormValidation),
@@ -101,15 +128,15 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       console.log("New patient response:", newPatient);
 
       if (newPatient) {
-        console.log("Redirecting to:", `/patients/${user.$id}/dashboard`);
+        // Ensure we have the user ID for redirection
+        const userIdForRedirect = user.$id;
+        console.log("User ID for redirection:", userIdForRedirect);
+        console.log("Redirecting to:", `/patients/${userIdForRedirect}/dashboard`);
         
-        // Show success message before redirect
-        alert("Registration successful! Redirecting to your dashboard...");
+        // Show success modal instead of alert
+        setShowSuccessModal(true);
         
-        // Use setTimeout to ensure the alert is seen before redirect
-        setTimeout(() => {
-          router.push(`/patients/${user.$id}/dashboard`);
-        }, 500);
+        // No automatic redirect - will happen when user clicks the button
       } else {
         // If newPatient is null or undefined, something went wrong
         alert("Registration could not be completed. Please try again.");
@@ -181,11 +208,26 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
           {/* BirthDate & Gender */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
-              fieldType={FormFieldType.INPUT}
+              fieldType={FormFieldType.SKELETON}
               control={form.control}
               name="birthDate"
               label="Date of birth"
-              placeholder="MM/DD/YYYY"
+              renderSkeleton={(field) => (
+                <FormControl>
+                  <div className="flex rounded-md border border-dark-500 bg-dark-400">
+                    <Input
+                      placeholder="MM/DD/YYYY (e.g., 04/14/2000)"
+                      className="shad-input border-0"
+                      maxLength={10}
+                      value={field.value}
+                      onChange={(e) => {
+                        const formattedValue = formatDateInput(e.target.value);
+                        field.onChange(formattedValue);
+                      }}
+                    />
+                  </div>
+                </FormControl>
+              )}
             />
 
             <CustomFormField
@@ -419,6 +461,58 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
 
         <SubmitButton isLoading={isLoading}>Submit and Continue</SubmitButton>
       </form>
+
+      {/* Success Modal */}
+      <Dialog 
+        open={showSuccessModal} 
+        onOpenChange={(open) => {
+          setShowSuccessModal(open);
+          // Redirect when modal is closed
+          if (!open) {
+            router.push(`/patients/${user.$id}/dashboard`);
+          }
+        }}
+      >
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-bold text-primary">Registration Successful!</DialogTitle>
+            <DialogDescription className="text-center">
+              <div className="mt-2 flex flex-col items-center justify-center">
+                <div className="rounded-full bg-green-100 p-3">
+                  <svg
+                    className="h-6 w-6 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M5 13l4 4L19 7"
+                    ></path>
+                  </svg>
+                </div>
+                <p className="mt-4 text-center text-sm text-gray-500">
+                  Please log in with your Google account to access your patient dashboard.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-center mt-4">
+            <Button 
+              className="bg-primary text-white hover:bg-primary-dark"
+              onClick={() => {
+                setShowSuccessModal(false);
+                router.push(`/patients/${user.$id}/dashboard`);
+              }}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 };

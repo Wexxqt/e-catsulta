@@ -38,6 +38,7 @@ export const PatientFormValidation = z.object({
     .string()
     .regex(
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/,
+      "Please enter your date of birth in MM/DD/YYYY format (e.g., 04/14/2000)"
     ),
   gender: z.enum(["Male", "Female", "Other"]),
   address: z
