@@ -35,20 +35,20 @@ export default function AuthCallback() {
           console.log('Fetched patient data:', patient);
           
           if (mounted) {
+            // Redirect directly to dashboard/register based on patient existence
             if (patient) {
-              console.log('Patient exists, redirecting to patient dashboard');
               router.push(`/patients/${session.$id}/dashboard`);
             } else {
-              console.log('New patient, redirecting to register');
               router.push(`/patients/${session.$id}/register`);
             }
           }
         } catch (dbError) {
           console.error('Database error:', dbError);
-          // If there's an error checking the patient, assume they need to register
+          // If there's an error checking the patient, still go to OTP verification
           if (mounted) {
-            console.log('Error checking patient status, redirecting to register');
-            router.push(`/patients/${session.$id}/register`);
+            const userEmail = session.email;
+            console.log('Error checking patient status, redirecting to OTP verification');
+            router.push(`/auth/verify-otp?userId=${session.$id}&email=${encodeURIComponent(userEmail)}&exists=false`);
           }
         }
       } catch (error) {

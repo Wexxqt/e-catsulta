@@ -16,7 +16,6 @@ import { UserFormValidation } from "@/lib/validation";
 import "react-phone-number-input/style.css";
 import CustomFormField, { FormFieldType } from "../CustomFormField";
 import SubmitButton from "../SubmitButton";
-import SocialLogin from "../SocialLogin";
 
 export const PatientForm = () => {
   const router = useRouter();
@@ -151,28 +150,30 @@ export const PatientForm = () => {
           <p className="text-dark-700">Get started with your medical appointment.</p>
         </section>
         
-        {/* Login option for existing users */}
+        {/* Login option for existing users - only Google login */}
         <div className="bg-dark-300 p-4 rounded-lg border border-dark-500 mb-6">
           <h2 className="text-16-medium text-light-200 mb-2">Already have an account?</h2>
           
-          <Button 
-            type="button"
-            className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
-            onClick={handleGoogleLogin}
-            disabled={isGoogleLoading}
-          >
-            {isGoogleLoading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Image
-                src="/assets/icons/google.svg"
-                alt="Google"
-                width={20}
-                height={20}
-              />
-            )}
-            Log in with Google
-          </Button>
+          <div className="flex flex-col gap-3">
+            <Button 
+              type="button"
+              className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Image
+                  src="/assets/icons/google.svg"
+                  alt="Google"
+                  width={20}
+                  height={20}
+                />
+              )}
+              Log in with Google
+            </Button>
+          </div>
         </div>
         
         {/* Error message - make it more prominent when it's likely an existing account */}

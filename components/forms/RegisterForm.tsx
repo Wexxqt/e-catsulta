@@ -99,7 +99,15 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
     }
 
     try {
-      
+      // Validate required fields
+      if (!values.identificationType || !values.identificationNumber) {
+        throw new Error("Please provide your identification type and number");
+      }
+
+      if (!values.privacyConsent) {
+        throw new Error("Please accept the privacy policy to continue");
+      }
+
       const patient = {
         userId: user.$id,
         name: values.name,
@@ -135,18 +143,21 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         
         // Show success modal instead of alert
         setShowSuccessModal(true);
-        
-        // No automatic redirect - will happen when user clicks the button
       } else {
         // If newPatient is null or undefined, something went wrong
-        alert("Registration could not be completed. Please try again.");
+        throw new Error("Registration could not be completed. Please try again.");
       }
     } catch (error) {
       console.error("Error during registration:", error);
-      alert("An error occurred while submitting the form. Please try again.");
+      // Show more specific error messages
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   // Add a handler to track the ID number length

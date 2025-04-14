@@ -109,21 +109,26 @@ export const registerPatient = async ({
       
       // Upload each file
       for (let i = 0; i < blobFiles.length; i++) {
-        const inputFile = InputFile.fromBlob(
-          blobFiles[i],
-          fileNames[i]
-        );
+        try {
+          const inputFile = InputFile.fromBlob(
+            blobFiles[i],
+            fileNames[i]
+          );
 
-        const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
-        const fileUrl = `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
-        
-        fileIds.push(file.$id);
-        fileUrls.push(fileUrl);
-        
-        // Set the first file as the primary one for backward compatibility
-        if (i === 0) {
-          primaryFileId = file.$id;
-          primaryFileUrl = fileUrl;
+          const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+          const fileUrl = `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+          
+          fileIds.push(file.$id);
+          fileUrls.push(fileUrl);
+          
+          // Set the first file as the primary one for backward compatibility
+          if (i === 0) {
+            primaryFileId = file.$id;
+            primaryFileUrl = fileUrl;
+          }
+        } catch (fileError) {
+          console.error("Error uploading file:", fileError);
+          throw new Error("Failed to upload identification document. Please try again.");
         }
       }
     }
@@ -148,6 +153,18 @@ export const registerPatient = async ({
     return parseStringify(newPatient);
   } catch (error) {
     console.error("An error occurred while creating a new patient:", error);
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        patientData: {
+          userId: patient.userId,
+          name: patient.name,
+          email: patient.email
+        }
+      });
+    }
     // Return null explicitly so we can check for this in the component
     return null;
   }
