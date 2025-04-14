@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, FileText, User2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -220,12 +220,14 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
 // Updated modal component with student number
 const PatientDetailModal = ({ patient }: { patient: any }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [notes, setNotes] = useState<PatientNote[]>([]);
+  const [activeTab, setActiveTab] = useState("info");
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
   const [newNote, setNewNote] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [isDeletingNote, setIsDeletingNote] = useState<string | null>(null);
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -290,7 +292,7 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
       return;
     }
 
-    setIsSubmitting(true);
+    setSubmitting(true);
     try {
       // Get doctor information from localStorage
       const doctorKey = localStorage.getItem("doctorAccessKey");
@@ -316,7 +318,7 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
       console.error("Error submitting note:", error);
       setError("Failed to add note");
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -348,14 +350,12 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
   return (
     <>
       <button
-        className="doctor-action-icon"
+        className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white transition-colors"
         onClick={() => setIsOpen(true)}
         title="View Patient Details"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-        </svg>
+        <User2 size={18} className="stroke-current" />
+        <span className="text-xs font-medium">Profile</span>
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -623,10 +623,10 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
                 />
                 <Button
                   onClick={handleSubmitNote}
-                  disabled={isSubmitting || !newNote.trim()}
+                  disabled={submitting || !newNote.trim()}
                   className="w-full bg-blue-600 text-white hover:bg-blue-700"
                 >
-                  {isSubmitting ? "Adding Note..." : "Add Note"}
+                  {submitting ? "Adding Note..." : "Add Note"}
                 </Button>
               </div>
 

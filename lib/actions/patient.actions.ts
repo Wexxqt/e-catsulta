@@ -132,7 +132,7 @@ export const registerPatient = async ({
             );
 
             const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
-            const fileUrl = `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+            const fileUrl = `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
             
             fileIds.push(file.$id);
             fileUrls.push(fileUrl);
@@ -349,7 +349,7 @@ export const updatePatient = async (patientId: string, updatedData: Partial<Pati
         const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
         
         // Create a properly formatted URL with public access
-        const avatarUrl = `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+        const avatarUrl = `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
         
         // Update the patient document with the new avatar ID and URL
         await databases.updateDocument(
@@ -380,7 +380,7 @@ export const updatePatient = async (patientId: string, updatedData: Partial<Pati
         const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
         
         // Create a properly formatted URL with public access
-        const identificationDocumentUrl = `${ENDPOINT}/v1/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+        const identificationDocumentUrl = `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
         
         // Update the patient document with the new file ID and URL
         await databases.updateDocument(
@@ -448,6 +448,74 @@ export const deletePatient = async (patientId: string, userId: string) => {
   } catch (error) {
     console.error("Error deleting patient:", error);
     return { success: false, error: String(error) };
+  }
+};
+
+// Get All Patients for Admin
+export const getAllPatients = async ({
+  searchQuery = "",
+  category = "",
+  limit = 50,
+  page = 1,
+}: {
+  searchQuery?: string;
+  category?: string;
+  limit?: number;
+  page?: number;
+}) => {
+  try {
+    const queries: any[] = [];
+    
+    // Add category filter if specified
+    if (category) {
+      queries.push(Query.equal("category", category));
+    }
+    
+    // Add search query if specified - try a different approach
+    if (searchQuery && searchQuery.trim() !== "") {
+      // First try: Instead of using Query.search which might be problematic, 
+      // let's use Query.startsWith which is more reliable
+      queries.push(
+        Query.startsWith("name", searchQuery.trim())
+      );
+      
+      // If this doesn't work as expected, try Query.equal for exact matches
+    }
+    
+    // Add pagination
+    const offset = (page - 1) * limit;
+    queries.push(Query.limit(limit));
+    queries.push(Query.offset(offset));
+    
+    console.log("Search query params:", { searchQuery, category, page, limit });
+    console.log("Executing search with queries:", JSON.stringify(queries));
+    
+    // Fetch patients from the database
+    const patients = await databases.listDocuments(
+      DATABASE_ID!,
+      PATIENT_COLLECTION_ID!,
+      queries
+    );
+    
+    // Count total patients for pagination
+    let totalPatients = patients.total;
+    
+    console.log(`Found ${totalPatients} patients matching criteria`);
+    
+    return {
+      patients: patients.documents,
+      totalPatients,
+      totalPages: Math.ceil(totalPatients / limit),
+      currentPage: page,
+    };
+  } catch (error) {
+    console.error("Error fetching patients:", error);
+    return {
+      patients: [],
+      totalPatients: 0,
+      totalPages: 0,
+      currentPage: page,
+    };
   }
 };
 

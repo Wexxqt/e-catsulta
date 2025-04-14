@@ -10,6 +10,7 @@ import {
   DATABASE_ID,
   databases,
   messaging,
+  PATIENT_COLLECTION_ID,
 } from "../appwrite.config";
 import { formatDateTime, parseStringify } from "../utils";
 
@@ -61,54 +62,82 @@ export const createAppointment = async (
 //  GET RECENT APPOINTMENTS
 export const getRecentAppointmentList = async () => {
   try {
+    // Fetch appointments
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
-      [Query.orderDesc("$createdAt")]
+      [
+        Query.orderDesc("$createdAt"),
+        Query.limit(10),
+      ]
     );
 
-    // Filter out archived appointments AND sanitize the data
-    const filteredDocuments = appointments.documents
-      .filter((doc: any) => !doc.archived)
-      .map((doc: any) => validateAppointmentData(doc))
-      .filter((doc) => doc !== null); // Remove any null results
+    // Count appointments by status
+    const [scheduledCount, pendingCount, cancelledCount] = await Promise.all([
+      databases.listDocuments(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        [Query.equal("status", "scheduled")]
+      ).then(res => res.total),
+      
+      databases.listDocuments(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        [Query.equal("status", "pending")]
+      ).then(res => res.total),
+      
+      databases.listDocuments(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        [Query.equal("status", "cancelled")]
+      ).then(res => res.total)
+    ]);
 
-    const initialCounts = {
-      scheduledCount: 0,
-      pendingCount: 0,
-      cancelledCount: 0,
-    };
+    // Get today's date (start and end)
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
 
-    const counts = (filteredDocuments as Appointment[]).reduce(
-      (acc, appointment) => {
-        switch (appointment.status) {
-          case "scheduled":
-            acc.scheduledCount++;
-            break;
-          case "pending":
-            acc.pendingCount++;
-            break;
-          case "cancelled":
-            acc.cancelledCount++;
-            break;
-        }
-        return acc;
-      },
-      initialCounts
+    // Count today's appointments
+    const todayAppointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [
+        Query.greaterThanEqual("schedule", startOfDay),
+        Query.lessThanEqual("schedule", endOfDay),
+        Query.equal("status", "scheduled")
+      ]
     );
+    const todayCount = todayAppointments.total;
 
-    const data = {
-      totalCount: filteredDocuments.length,
-      ...counts,
-      documents: filteredDocuments,
+    // Count patients by category
+    const [studentCount, employeeCount] = await Promise.all([
+      databases.listDocuments(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        [Query.equal("category", "Student")]
+      ).then(res => res.total),
+      
+      databases.listDocuments(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        [Query.equal("category", "Employee")]
+      ).then(res => res.total)
+    ]);
+
+    return {
+      scheduledCount,
+      pendingCount,
+      cancelledCount,
+      todayCount,
+      studentCount,
+      employeeCount,
+      totalCount: appointments.total,
+      documents: appointments.documents,
     };
-
-    return parseStringify(data);
   } catch (error) {
-    console.error(
-      "An error occurred while retrieving the recent appointments:",
-      error
-    );
+    console.error("Error fetching appointments:", error);
+    throw error;
   }
 };
 
@@ -314,5 +343,188 @@ export const clearDoctorAppointmentHistory = async (doctorName: string, preserve
   } catch (error) {
     console.error("Error clearing doctor appointment history:", error);
     return { success: false, error: String(error) };
+  }
+};
+
+// Add this new function for chart data
+export const getAppointmentChartData = async (timeRange = 7) => {
+  try {
+    // Calculate the start date based on timeRange (7 or 30 days)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - timeRange);
+    
+    // Format dates for query
+    const startISO = startDate.toISOString();
+    const endISO = endDate.toISOString();
+    
+    // Fetch appointments within date range
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [
+        Query.greaterThanEqual("schedule", startISO),
+        Query.lessThanEqual("schedule", endISO),
+        Query.limit(1000), // Increase limit to get all data
+      ]
+    );
+    
+    // Process the data for chart
+    interface CountMap {
+      [key: string]: number;
+    }
+    
+    const medicalCounts: CountMap = {}; // Track medical appointments by date
+    const dentalCounts: CountMap = {}; // Track dental appointments by date
+    const dateLabels: string[] = []; // Store all unique dates
+    
+    // Generate all dates in the range for consistent data
+    for (let i = 0; i < timeRange; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      dateLabels.push(dateStr);
+      medicalCounts[dateStr] = 0;
+      dentalCounts[dateStr] = 0;
+    }
+    
+    // Count appointments by date and category
+    appointments.documents.forEach((appointment: any) => {
+      // Extract the date part only (YYYY-MM-DD)
+      const appointmentDate = new Date(appointment.schedule).toISOString().split('T')[0];
+      
+      // Skip if not in our date range
+      if (!dateLabels.includes(appointmentDate)) return;
+      
+      // Check appointment category (medical or dental)
+      if (appointment.primaryPhysician && appointment.primaryPhysician.includes("Abundo")) {
+        // Dr. Abundo is Medical
+        medicalCounts[appointmentDate] = (medicalCounts[appointmentDate] || 0) + 1;
+      } else if (appointment.primaryPhysician && appointment.primaryPhysician.includes("De Castro")) {
+        // Dr. De Castro is Dental
+        dentalCounts[appointmentDate] = (dentalCounts[appointmentDate] || 0) + 1;
+      }
+    });
+    
+    // Format data for chart
+    interface ChartDataPoint {
+      date: string;
+      Medical: number;
+      Dental: number;
+      Total: number;
+    }
+    
+    const chartData: ChartDataPoint[] = dateLabels.map(date => ({
+      date,
+      Medical: medicalCounts[date] || 0,
+      Dental: dentalCounts[date] || 0,
+      Total: (medicalCounts[date] || 0) + (dentalCounts[date] || 0)
+    }));
+    
+    return {
+      chartData,
+      totalMedical: Object.values(medicalCounts).reduce((sum: number, count: number) => sum + count, 0),
+      totalDental: Object.values(dentalCounts).reduce((sum: number, count: number) => sum + count, 0),
+    };
+  } catch (error) {
+    console.error("Error fetching appointment chart data:", error);
+    throw error;
+  }
+};
+
+// Get All Appointments for Admin
+export const getAllAppointments = async ({
+  searchQuery = "",
+  status = "",
+  doctor = "",
+  startDate = "",
+  endDate = "",
+  sortField = "schedule",
+  sortOrder = "desc",
+  limit = 50,
+  page = 1,
+}: {
+  searchQuery?: string;
+  status?: string;
+  doctor?: string;
+  startDate?: string;
+  endDate?: string;
+  sortField?: string;
+  sortOrder?: "asc" | "desc";
+  limit?: number;
+  page?: number;
+}) => {
+  try {
+    const queries: any[] = [];
+    
+    // Add status filter if specified
+    if (status) {
+      queries.push(Query.equal("status", status));
+    }
+    
+    // Add doctor filter if specified
+    if (doctor) {
+      queries.push(Query.equal("primaryPhysician", doctor));
+    }
+    
+    // Add date range filter if specified
+    if (startDate) {
+      queries.push(Query.greaterThanEqual("schedule", startDate));
+    }
+    if (endDate) {
+      queries.push(Query.lessThanEqual("schedule", endDate));
+    }
+    
+    // Add search query if specified
+    if (searchQuery && searchQuery.trim() !== "") {
+      // Note: For Appwrite, ideally we'd search in the patient name,
+      // but since that's within a nested object, we're limited.
+      // This would be better handled by a custom API or advanced search.
+      queries.push(Query.search("note", searchQuery));
+    }
+    
+    // Add sorting (default to sorting by schedule date)
+    if (sortField && sortOrder) {
+      if (sortField === "schedule" || sortField === "$createdAt") {
+        queries.push(sortOrder === "asc" ? Query.orderAsc(sortField) : Query.orderDesc(sortField));
+      }
+    }
+    
+    // Add pagination
+    const offset = (page - 1) * limit;
+    queries.push(Query.limit(limit));
+    queries.push(Query.offset(offset));
+    
+    console.log("Appointment queries:", JSON.stringify(queries));
+    
+    // Fetch appointments from the database
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      queries
+    );
+    
+    // Validate appointment data to handle deleted patients
+    const validatedAppointments = appointments.documents
+      .map((doc: any) => validateAppointmentData(doc))
+      .filter((doc) => doc !== null);
+    
+    // Count total appointments for pagination (without pagination limit)
+    let totalCount = appointments.total;
+    
+    return {
+      appointments: validatedAppointments,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+    };
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
+    return {
+      appointments: [],
+      totalCount: 0,
+      totalPages: 0,
+      currentPage: page,
+    };
   }
 };

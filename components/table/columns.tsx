@@ -1,15 +1,18 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
+import Image from "next/image";
+import { useState } from "react";
+import { Clipboard, Check } from "lucide-react";
 
 import { Doctors } from "@/constants";
 import { formatDateTime, getGravatarUrl } from "@/lib/utils";
-import Image from "next/image";
 import { Appointment } from "@/types/appwrite.types";
 
-import { AppointmentModal } from "../AppointmentModal";
-import { StatusBadge } from "../StatusBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StatusBadge } from "../StatusBadge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // Helper function to safely handle potentially deleted patient data
 const safePatientAccess = (appointment: Appointment) => {
@@ -35,11 +38,88 @@ const safePatientAccess = (appointment: Appointment) => {
   }
 };
 
+// Function to generate appointment code
+const generateAppointmentCode = (appointment: Appointment) => {
+  if (appointment.appointmentCode) {
+    return appointment.appointmentCode;
+  }
+  
+  // Generate a code based on patient ID and appointment ID
+  // Format: First 3 chars of patient ID + Last 4 chars of appointment ID
+  const patientId = appointment.patient?.$id || appointment.userId || 'UNKNOWN';
+  const appointmentId = appointment.$id || 'UNKNOWN';
+  
+  const prefix = patientId.substring(0, 3).toUpperCase();
+  const suffix = appointmentId.substring(appointmentId.length - 4).toUpperCase();
+  
+  return `ECM-${prefix}${suffix}`;
+};
+
+// Appointment Code Modal Component
+const AppointmentCodeModal = ({ appointment }: { appointment: Appointment }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const code = generateAppointmentCode(appointment);
+  
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  
+  return (
+    <>
+      <button 
+        onClick={() => setIsOpen(true)}
+        className="flex items-center justify-center bg-blue-500/15 hover:bg-blue-500/30 text-blue-500 rounded-md px-2.5 py-1.5 transition-colors"
+        title="View Appointment Code"
+      >
+        <Clipboard size={18} className="mr-1.5" />
+        <span className="text-xs font-medium">Code</span>
+      </button>
+      
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Appointment Code</DialogTitle>
+          </DialogHeader>
+          <div className="py-6">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="text-2xl font-bold text-blue-500">{code}</div>
+              <p className="text-sm text-gray-400 text-center">
+                This is a unique code for this appointment. 
+                Patient can use this code for check-in.
+              </p>
+              <Button 
+                onClick={copyToClipboard} 
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                {copied ? (
+                  <>
+                    <Check size={16} className="text-green-500" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Clipboard size={16} />
+                    Copy Code
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 export const columns: ColumnDef<Appointment>[] = [
   {
     header: "#",
     cell: ({ row }) => {
-      return <p className="text-14-medium ">{row.index + 1}</p>;
+      return <p className="text-14-medium">{row.index + 1}</p>;
     },
   },
   {
@@ -101,7 +181,7 @@ export const columns: ColumnDef<Appointment>[] = [
 
       return (
         <div className="flex items-center gap-3">
-        <Image
+          <Image
           src={doctor?.image || "/assets/images/default-doctor.png"}
           alt="doctor"
           width={100}
@@ -114,26 +194,11 @@ export const columns: ColumnDef<Appointment>[] = [
     },
   },
   {
-    id: "actions",
-    header: () => <div className="pl-4">Actions</div>,
+    accessorKey: "appointmentCode",
+    header: "Code",
     cell: ({ row }) => {
       const appointment = row.original;
-      const patient = safePatientAccess(appointment);
-
-      return (
-        <div className="flex gap-1">
-          {appointment.status !== "cancelled" && (
-            <AppointmentModal
-              patientId={patient.$id}
-              userId={appointment.userId}
-              appointment={appointment}
-              type="cancel"
-              title="Cancel Appointment"
-              description="Are you sure you want to cancel your appointment?"
-            />
-          )}
-        </div>
-      );
+      return <AppointmentCodeModal appointment={appointment} />;
     },
   },
 ];

@@ -7,7 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { redirect } from "next/navigation";
 import { useEffect } from "react";
 
@@ -104,13 +104,15 @@ export function DataTable<TData, TValue>({
           disabled={!table.getCanPreviousPage()}
           className="shad-gray-btn"
         >
-          <Image
-            src="/assets/icons/arrow.svg"
-            width={24}
-            height={24}
-            alt="arrow"
-          />
+          <ChevronLeft size={16} />
+          <span className="sr-only">Previous Page</span>
         </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-white">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
+          </span>
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -118,13 +120,8 @@ export function DataTable<TData, TValue>({
           disabled={!table.getCanNextPage()}
           className="shad-gray-btn"
         >
-          <Image
-            src="/assets/icons/arrow.svg"
-            width={24}
-            height={24}
-            alt="arrow "
-            className="rotate-180"
-          />
+          <ChevronRight size={16} />
+          <span className="sr-only">Next Page</span>
         </Button>
       </div>
     </div>
