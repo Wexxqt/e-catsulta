@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import RegisterForm from "@/components/forms/RegisterForm";
 import { getPatient, getUser } from "@/lib/actions/patient.actions";
-import { DeviceOptimizer } from "@/lib/deviceOptimizer";
+import { DeviceOptimizer } from "@/components/deviceOptimizer";
 import { OptimizedImage } from "@/components/OptimizedImage";
 
 const Register = async ({ params: { userId } }: SearchParamProps) => {

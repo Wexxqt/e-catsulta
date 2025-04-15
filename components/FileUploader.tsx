@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import NextImage from "next/image";
 import React, { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { X } from "lucide-react";
@@ -91,7 +91,7 @@ export const FileUploader = ({
       const reader = new FileReader();
       
       reader.onload = (event) => {
-        const img = new Image();
+        const img = new window.Image() as HTMLImageElement;
         img.onload = () => {
           // Create a small canvas for the preview
           const canvas = document.createElement('canvas');
@@ -142,69 +142,116 @@ export const FileUploader = ({
     }
     
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          // For very large images, scale them down
-          const maxDimension = 1200; // Max width/height
-          
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > maxDimension || height > maxDimension) {
-            if (width > height) {
-              height = Math.round((height * maxDimension) / width);
-              width = maxDimension;
-            } else {
-              width = Math.round((width * maxDimension) / height);
-              height = maxDimension;
-            }
-          }
-          
-          // Create canvas for compression
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(file); // Fallback to original
-            return;
-          }
-          
-          // Draw image at reduced size
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // Convert to blob with compression
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
+      try {
+        const reader = new FileReader();
+        
+        // Set timeout to prevent hanging process
+        const timeoutId = setTimeout(() => {
+          console.log("Image compression timed out, using original file");
+          resolve(file); // Fallback to original on timeout
+        }, 10000); // 10 second timeout
+        
+        reader.onload = (event) => {
+          try {
+            const img = new window.Image() as HTMLImageElement;
+            
+            img.onload = () => {
+              try {
+                clearTimeout(timeoutId);
+                
+                // For very large images, scale them down more aggressively on low-end devices
+                const maxDimension = isLowEnd ? 800 : 1200; // Lower max width/height for low-end devices
+                
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxDimension || height > maxDimension) {
+                  if (width > height) {
+                    height = Math.round((height * maxDimension) / width);
+                    width = maxDimension;
+                  } else {
+                    width = Math.round((width * maxDimension) / height);
+                    height = maxDimension;
+                  }
+                }
+                
+                // Create canvas for compression
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                  console.log("Cannot get canvas context, using original file");
+                  resolve(file); // Fallback to original
+                  return;
+                }
+                
+                // Draw image at reduced size
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Use lower quality for low-end devices
+                const quality = isLowEnd ? 0.5 : 0.7;
+                
+                // Convert to blob with compression
+                canvas.toBlob(
+                  (blob) => {
+                    if (!blob) {
+                      console.log("Failed to create blob, using original file");
+                      resolve(file); // Fallback to original
+                      return;
+                    }
+                    
+                    // Create new file with same name but compressed
+                    const compressedFile = new File([blob], file.name, {
+                      type: 'image/jpeg',
+                      lastModified: Date.now(),
+                    });
+                    
+                    // If compression doesn't reduce size significantly, use original
+                    if (compressedFile.size > file.size * 0.8) {
+                      console.log(`Compression ineffective for ${file.name}, using original`);
+                      resolve(file);
+                      return;
+                    }
+                    
+                    console.log(`Compressed ${file.name} from ${Math.round(file.size/1024)}KB to ${Math.round(compressedFile.size/1024)}KB`);
+                    resolve(compressedFile);
+                  },
+                  'image/jpeg', 
+                  quality
+                );
+              } catch (err) {
+                console.error("Error in image processing:", err);
                 resolve(file); // Fallback to original
-                return;
               }
-              
-              // Create new file with same name but compressed
-              const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-              });
-              
-              console.log(`Compressed ${file.name} from ${Math.round(file.size/1024)}KB to ${Math.round(compressedFile.size/1024)}KB`);
-              resolve(compressedFile);
-            },
-            'image/jpeg', 
-            0.7 // Quality (0.7 = 70% quality, good balance)
-          );
+            };
+            
+            img.onerror = () => {
+              console.log("Image loading error, using original file"); 
+              clearTimeout(timeoutId);
+              resolve(file); // Fallback to original
+            };
+            
+            img.src = event.target?.result as string;
+          } catch (err) {
+            console.error("Error in reader onload handler:", err);
+            clearTimeout(timeoutId);
+            resolve(file); // Fallback to original
+          }
         };
         
-        img.onerror = () => resolve(file); // Fallback to original
-        img.src = event.target?.result as string;
-      };
-      
-      reader.onerror = () => resolve(file); // Fallback to original
-      reader.readAsDataURL(file);
+        reader.onerror = () => {
+          console.log("FileReader error, using original file");
+          clearTimeout(timeoutId);
+          resolve(file); // Fallback to original
+        }
+        
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error("Critical error in compressImage:", err);
+        resolve(file); // Fallback to original
+      }
     });
   };
 
@@ -282,7 +329,7 @@ export const FileUploader = ({
           </div>
         ) : (
           <>
-            <Image
+            <NextImage
               src="/assets/icons/upload.svg"
               width={40}
               height={40}
@@ -329,7 +376,7 @@ export const FileUploader = ({
                   </div>
                 ) : (
                   // For normal devices, use Image component
-                  <Image
+                  <NextImage
                     src={previews[index] || convertFileToUrl(file)}
                     width={400}
                     height={200}
@@ -367,8 +414,14 @@ export const FileUploader = ({
       {files && files.length === 1 && maxFiles > 1 && (
         <p className="text-sm text-amber-500 mt-1">
           {isLowEnd ? 
-            "Please upload your ID document." : 
-            "Please upload both front and back of your ID."}
+            "Please upload at least one clear ID document." : 
+            "Please upload both the front and back of your ID for verification."}
+        </p>
+      )}
+      
+      {files && files.length === 2 && maxFiles >= 2 && (
+        <p className="text-sm text-green-500 mt-1">
+          Perfect! Both sides of your ID are uploaded.
         </p>
       )}
     </div>

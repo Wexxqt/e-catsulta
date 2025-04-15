@@ -58,9 +58,14 @@ const RequestSuccess = ({ searchParams, params }: any) => {
         );
         setDoctor(docInfo);
         
-        // Generate appointment code
-        const code = generateAppointmentCode(appointmentId, appointmentData.patient.$id);
-        setAppointmentCode(code);
+        // Use the stored appointment code directly if available
+        if (appointmentData.appointmentCode) {
+          setAppointmentCode(appointmentData.appointmentCode);
+        } else {
+          // Only generate if not already stored
+          const code = generateAppointmentCode(appointmentId, appointmentData.patient.$id);
+          setAppointmentCode(code);
+        }
       } catch (error) {
         console.error("Authentication error:", error);
         router.push("/");

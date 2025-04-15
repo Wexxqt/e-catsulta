@@ -55,6 +55,7 @@ export interface PatientNote extends Models.Document {
   note: string;
   createdAt: string;
   updatedAt: string;
+  archived?: boolean;
 }
 
 // Add these to your types/appwrite.types.ts file

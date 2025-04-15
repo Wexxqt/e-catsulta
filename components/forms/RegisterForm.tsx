@@ -115,62 +115,65 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       let hasFiles = false;
       
       if (values.identificationDocument && values.identificationDocument.length > 0) {
-        // Check if running on a low-end or mobile device
-        const isLowEndOrMobile = typeof window !== 'undefined' && (
-          window.navigator.userAgent.includes('iPhone') || 
-          window.navigator.userAgent.includes('Android') ||
-          (window as any).isLowEndDevice === true
-        );
-        
-        // Detect iPhone 6 and similar older devices specifically
-        const isOlderIPhone = typeof window !== 'undefined' && (
-          /iPhone\s(5|6|7|8|SE)/i.test(window.navigator.userAgent)
-        );
-        
-        // Validate file size and type
-        const MAX_FILE_SIZE = isLowEndOrMobile ? 15 * 1024 * 1024 : 50 * 1024 * 1024; // 15MB for mobile, 50MB for desktop
-        const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-        
-        for (const file of values.identificationDocument) {
-          if (file.size > MAX_FILE_SIZE) {
-            throw new Error(`File ${file.name} is too large. ${isLowEndOrMobile ? "Maximum size is 15MB on mobile devices." : "Maximum size is 50MB."}`);
+        try {
+          // Check if running on a low-end or mobile device
+          const isLowEndOrMobile = typeof window !== 'undefined' && (
+            window.navigator.userAgent.includes('iPhone') || 
+            window.navigator.userAgent.includes('Android') ||
+            (window as any).isLowEndDevice === true
+          );
+          
+          // Detect iPhone 6 and similar older devices specifically
+          const isOlderIPhone = typeof window !== 'undefined' && (
+            /iPhone\s(5|6|7|8|SE)/i.test(window.navigator.userAgent)
+          );
+          
+          // Validate file size and type
+          const MAX_FILE_SIZE = isLowEndOrMobile ? 15 * 1024 * 1024 : 50 * 1024 * 1024; // 15MB for mobile, 50MB for desktop
+          const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+          
+          for (const file of values.identificationDocument) {
+            if (file.size > MAX_FILE_SIZE) {
+              throw new Error(`File ${file.name} is too large. ${isLowEndOrMobile ? "Maximum size is 15MB on mobile devices." : "Maximum size is 50MB."}`);
+            }
+            
+            if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+              throw new Error(`File ${file.name} has an invalid type. Please upload JPEG, PNG, or PDF files only.`);
+            }
+          }
+
+          // Create new FormData with simplified approach
+          formData = new FormData();
+          hasFiles = true;
+          
+          // Support up to 2 files for ID (front and back)
+          const fileCount = Math.min(values.identificationDocument.length, 2);
+          
+          for (let i = 0; i < fileCount; i++) {
+            const currentFile = values.identificationDocument[i];
+            
+            // Add each file with a simple, consistent key format
+            formData.append(`file${i}`, currentFile);
+            formData.append(`fileName${i}`, currentFile.name);
+            formData.append(`fileType${i}`, currentFile.type);
+            formData.append(`fileSize${i}`, String(currentFile.size));
           }
           
-          if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-            throw new Error(`File ${file.name} has an invalid type. Please upload JPEG, PNG, or PDF files only.`);
-          }
-        }
-
-        formData = new FormData();
-        hasFiles = true;
-        
-        try {
-          // Add all files to FormData with reduced size for mobile
-          if (isOlderIPhone) {
-            // For older iPhones, use a single file approach to reduce memory usage
-            const mainFile = values.identificationDocument[0];
-            const blobFile = new Blob([mainFile], { type: mainFile.type });
-            formData!.append("blobFile", blobFile);
-            formData!.append("fileName", mainFile.name);
-            
-            // If there's a second file, add it as well, but we'll be more cautious
-            if (values.identificationDocument.length > 1) {
-              const secondFile = values.identificationDocument[1];
-              const secondBlob = new Blob([secondFile], { type: secondFile.type });
-              formData!.append("blobFile2", secondBlob);
-              formData!.append("fileName2", secondFile.name);
-            }
-          } else {
-            // For more capable devices, process normally
-            values.identificationDocument.forEach((file, index) => {
-              const blobFile = new Blob([file], { type: file.type });
-              formData!.append(`blobFile${index}`, blobFile);
-              formData!.append(`fileName${index}`, file.name);
-            });
-          }
+          // Store the number of files
+          formData.append("fileCount", String(fileCount));
+          
+          // Inform the server about device type
+          formData.append("deviceType", isLowEndOrMobile ? "mobile" : "desktop");
+          formData.append("isOlderDevice", isOlderIPhone ? "true" : "false");
+          
+          console.log("Files prepared for upload:", fileCount);
         } catch (fileError) {
           console.error("File processing error:", fileError);
-          throw new Error("Unable to process your documents. Please try uploading smaller or fewer files.");
+          if (fileError instanceof Error) {
+            throw fileError; // Re-throw specific file errors
+          } else {
+            throw new Error("Unable to process your documents. Please try uploading smaller or fewer files.");
+          }
         }
       }
 
@@ -199,17 +202,38 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       // Attempt registration with retry for mobile devices
       let newPatient = null;
       let retryCount = 0;
-      const maxRetries = 2;
+      const maxRetries = 3; // Increased from 2 for better reliability
       
       while (!newPatient && retryCount <= maxRetries) {
         try {
-          newPatient = await registerPatient(patient);
+          // Add a small delay before first retry to allow any transient issues to resolve
+          if (retryCount > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            console.log(`Registration attempt ${retryCount} starting after delay...`);
+          }
+          
+          // For mobile devices, use a more conservative approach on retries
+          const isLowEndOrMobile = typeof window !== 'undefined' && (
+            window.navigator.userAgent.includes('iPhone') || 
+            window.navigator.userAgent.includes('Android') ||
+            (window as any).isLowEndDevice === true
+          );
+          
+          // Try to register without file first if we've already had an error
+          if (retryCount >= 1) {
+            console.log("Retrying registration without file upload...");
+            newPatient = await registerPatient({
+              ...patient,
+              identificationDocument: undefined // Skip document upload on retry
+            });
+          } else {
+            // Standard registration attempt with file
+            newPatient = await registerPatient(patient);
+          }
           
           if (!newPatient && retryCount < maxRetries) {
             retryCount++;
             console.log(`Registration attempt ${retryCount} failed, retrying...`);
-            // Wait a moment before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
           }
           
@@ -224,8 +248,10 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
           }
           retryCount++;
           console.log(`Registration attempt ${retryCount} failed with error, retrying...`, innerError);
-          // Wait a moment before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Use exponential backoff for retries (wait longer with each retry)
+          const delayMs = 1000 * Math.pow(2, retryCount - 1);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
 
@@ -248,16 +274,21 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       // Show more specific error messages
       if (error instanceof Error) {
         // Check for specific network or server errors
-        if (error.message.includes("network") || error.message.includes("5") || error.message.includes("timeout")) {
-          setErrorMessage("Network error. Please check your connection and try again.");
+        if (error.message.includes("network") || error.message.includes("connection") || error.message.includes("timeout")) {
+          setErrorMessage("Network error. Please check your connection and try again when you have a stable internet connection.");
         } else if (error.message.includes("file") || error.message.includes("document") || error.message.includes("upload")) {
-          setErrorMessage("There was an issue with your document upload. Please try using smaller files or fewer documents.");
+          setErrorMessage("There was an issue with your document upload. You can try registering without uploading documents, and upload them later from your dashboard.");
+        } else if (error.message.includes("storage") || error.message.includes("quota") || error.message.includes("exceeded")) {
+          setErrorMessage("Storage issue detected. Please try using a smaller file size for your documents or try again later.");
+        } else if (error.message.includes("multiple attempts")) {
+          setErrorMessage("Registration could not be completed after multiple attempts. Try again without uploading documents, and you can add them later from your dashboard.");
         } else {
           setErrorMessage(error.message);
         }
       } else {
-        setErrorMessage("An unexpected error occurred. Please try again.");
+        setErrorMessage("An unexpected error occurred. Please try again with a stable internet connection or without uploading documents.");
       }
+      // Show option to proceed without documents
       setShowErrorModal(true);
     } finally {
       setIsLoading(false);
@@ -652,13 +683,79 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
               </div>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex justify-center mt-4">
+          <DialogFooter className="flex flex-col sm:flex-row justify-center gap-2 mt-4">
             <Button 
               className="bg-primary text-white hover:bg-primary-dark"
               onClick={() => setShowErrorModal(false)}
             >
               OK
             </Button>
+            {(errorMessage && 
+              (errorMessage.includes("document") || 
+               errorMessage.includes("upload") || 
+               errorMessage.includes("file") || 
+               errorMessage.includes("multiple attempts"))) && (
+              <Button
+                variant="outline"
+                className="border-primary text-primary hover:bg-primary-light"
+                onClick={async () => {
+                  setShowErrorModal(false);
+                  setIsLoading(true);
+                  
+                  try {
+                    // Get current form values but proceed without documents
+                    const values = form.getValues();
+                    const patientData = {
+                      userId: user.$id,
+                      name: values.name,
+                      email: values.email,
+                      phone: values.phone,
+                      birthDate: new Date(values.birthDate),
+                      gender: values.gender as Gender,
+                      address: values.address, 
+                      category: values.category ?? "",
+                      emergencyContactName: values.emergencyContactName,
+                      emergencyContactNumber: values.emergencyContactNumber,
+                      signsSymptoms: values.signsSymptoms || "",
+                      allergies: values.allergies,
+                      currentMedication: values.currentMedication,
+                      familyMedicalHistory: values.familyMedicalHistory,
+                      pastMedicalHistory: values.pastMedicalHistory,
+                      identificationType: values.identificationType,
+                      identificationNumber: values.identificationNumber,
+                      identificationDocument: undefined, // Skip documents
+                      privacyConsent: values.privacyConsent,
+                    };
+                    
+                    // Register without documents
+                    const newPatient = await registerPatient(patientData);
+                    
+                    if (newPatient) {
+                      // Ensure we have the user ID for redirection
+                      const userIdForRedirect = user.$id;
+                      console.log("User ID for redirection:", userIdForRedirect);
+                      console.log("Redirecting to:", `/patients/${userIdForRedirect}/dashboard`);
+                      
+                      // Show success modal
+                      setShowSuccessModal(true);
+                    } else {
+                      throw new Error("Registration could not be completed. Please try again later.");
+                    }
+                  } catch (err) {
+                    if (err instanceof Error) {
+                      setErrorMessage(err.message);
+                    } else {
+                      setErrorMessage("Failed to register. Please try again later.");
+                    }
+                    setShowErrorModal(true);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              >
+                Try Without Documents
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

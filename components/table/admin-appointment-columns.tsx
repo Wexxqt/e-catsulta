@@ -78,15 +78,19 @@ const generateAppointmentCode = (appointment: Appointment) => {
     return appointment.appointmentCode;
   }
   
-  // Generate a code based on patient ID and appointment ID
-  // Format: First 3 chars of patient ID + Last 4 chars of appointment ID
-  const patientId = appointment.patient?.$id || appointment.userId || 'UNKNOWN';
-  const appointmentId = appointment.$id || 'UNKNOWN';
-  
-  const prefix = patientId.substring(0, 3).toUpperCase();
-  const suffix = appointmentId.substring(appointmentId.length - 4).toUpperCase();
-  
-  return `ECM-${prefix}${suffix}`;
+  try {
+    // Import actual implementation from utils
+    const { generateAppointmentCode } = require('@/lib/utils');
+    
+    // Use the actual implementation from utils
+    const patientId = appointment.patient?.$id || appointment.userId || 'UNKNOWN';
+    const appointmentId = appointment.$id || 'UNKNOWN';
+    
+    return generateAppointmentCode(appointmentId, patientId);
+  } catch (error) {
+    // Fallback to a basic format
+    return `TEMP-${appointment.$id?.substring(0, 6) || 'UNKNOWN'}`;
+  }
 };
 
 // Appointment Code Modal

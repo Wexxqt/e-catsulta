@@ -1,11 +1,11 @@
 "use server";
 
 import { ID, Query } from "node-appwrite";
-import { databases, DATABASE_ID } from "../appwrite.config";
+import { databases, DATABASE_ID, PATIENT_NOTES_COLLECTION_ID } from "../appwrite.config";
 import { parseStringify } from "../utils";
 import { revalidatePath } from "next/cache";
 
-const { PATIENT_NOTES_COLLECTION_ID } = process.env;
+// No longer need to define PATIENT_NOTES_COLLECTION_ID here since we import it
 
 export const createPatientNote = async (note: {
   patientId: string;
@@ -13,8 +13,16 @@ export const createPatientNote = async (note: {
   note: string;
 }) => {
   try {
+    if (!DATABASE_ID) {
+      throw new Error("Database ID is not defined");
+    }
+    
+    if (!PATIENT_NOTES_COLLECTION_ID) {
+      throw new Error("Patient notes collection ID is not defined");
+    }
+    
     const newNote = await databases.createDocument(
-      DATABASE_ID,
+      DATABASE_ID!,
       PATIENT_NOTES_COLLECTION_ID!,
       ID.unique(),
       {
@@ -33,13 +41,32 @@ export const createPatientNote = async (note: {
 
 export const getPatientNotes = async (patientId: string) => {
   try {
+    if (!DATABASE_ID) {
+      console.error("Database ID is not defined");
+      return [];
+    }
+    
+    if (!PATIENT_NOTES_COLLECTION_ID) {
+      console.error("Patient notes collection ID is not defined");
+      return [];
+    }
+    
+    console.log("Fetching patient notes with:", {
+      databaseId: DATABASE_ID,
+      collectionId: PATIENT_NOTES_COLLECTION_ID,
+      patientId
+    });
+    
     const notes = await databases.listDocuments(
-      DATABASE_ID,
+      DATABASE_ID!,
       PATIENT_NOTES_COLLECTION_ID!,
       [Query.equal("patientId", patientId), Query.orderDesc("createdAt")]
     );
 
-    return parseStringify(notes.documents);
+    // Filter out archived notes
+    const activeNotes = notes.documents.filter((note: any) => !note.archived);
+
+    return parseStringify(activeNotes);
   } catch (error) {
     console.error("Error fetching patient notes:", error);
     return [];
@@ -49,24 +76,35 @@ export const getPatientNotes = async (patientId: string) => {
 // CLEAR PATIENT NOTES HISTORY
 export const clearPatientNotesHistory = async (patientId: string) => {
   try {
+    if (!DATABASE_ID) {
+      throw new Error("Database ID is not defined");
+    }
+    
+    if (!PATIENT_NOTES_COLLECTION_ID) {
+      throw new Error("Patient notes collection ID is not defined");
+    }
+    
     // First, get all notes for this patient
     const notes = await databases.listDocuments(
-      DATABASE_ID,
+      DATABASE_ID!,
       PATIENT_NOTES_COLLECTION_ID!,
       [Query.equal("patientId", patientId)]
     );
 
-    // Delete each note
-    const deletePromises = notes.documents.map(note => 
-      databases.deleteDocument(
-        DATABASE_ID,
+    // Instead of deleting, mark each note as archived
+    const updatePromises = notes.documents.map(note => 
+      databases.updateDocument(
+        DATABASE_ID!,
         PATIENT_NOTES_COLLECTION_ID!,
-        note.$id
+        note.$id,
+        { 
+          archived: true // This hides from patient view but preserves the record
+        }
       )
     );
 
-    // Wait for all deletions to complete
-    await Promise.all(deletePromises);
+    // Wait for all updates to complete
+    await Promise.all(updatePromises);
     
     // Revalidate the patient dashboard path
     revalidatePath(`/patients/${patientId}/dashboard`);
@@ -81,8 +119,16 @@ export const clearPatientNotesHistory = async (patientId: string) => {
 // DELETE SPECIFIC NOTE
 export const deletePatientNote = async (noteId: string) => {
   try {
+    if (!DATABASE_ID) {
+      throw new Error("Database ID is not defined");
+    }
+    
+    if (!PATIENT_NOTES_COLLECTION_ID) {
+      throw new Error("Patient notes collection ID is not defined");
+    }
+    
     await databases.deleteDocument(
-      DATABASE_ID,
+      DATABASE_ID!,
       PATIENT_NOTES_COLLECTION_ID!,
       noteId
     );

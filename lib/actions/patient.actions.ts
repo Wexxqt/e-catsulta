@@ -114,43 +114,131 @@ export const registerPatient = async ({
         'get' in identificationDocument) {
       
       try {
-        // Get all files from FormData
-        const blobFiles = identificationDocument.getAll("blobFile") as Blob[];
-        const fileNames = identificationDocument.getAll("fileName") as string[];
+        console.log("Processing file upload in registerPatient");
         
-        if (!blobFiles.length || !fileNames.length) {
-          console.error("File data is missing from FormData");
-          throw new Error("Invalid file data. Please try uploading your documents again.");
-        }
+        // Check if we're using the new multi-file format
+        const fileCountStr = identificationDocument.get("fileCount") as string;
+        const fileCount = fileCountStr ? parseInt(fileCountStr, 10) : 0;
         
-        // Upload each file
-        for (let i = 0; i < blobFiles.length; i++) {
-          try {
-            const inputFile = InputFile.fromBlob(
-              blobFiles[i],
-              fileNames[i]
-            );
-
-            const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
-            const fileUrl = `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+        console.log("File count from request:", fileCount);
+        
+        // Process using the appropriate method
+        if (fileCount > 0) {
+          // Use the new multi-file format
+          console.log("Using new multi-file format");
+          
+          // Process each file
+          for (let i = 0; i < fileCount; i++) {
+            const fileObject = identificationDocument.get(`file${i}`) as Blob;
+            const fileName = identificationDocument.get(`fileName${i}`) as string;
             
-            fileIds.push(file.$id);
-            fileUrls.push(fileUrl);
+            // Verify we have both parts
+            if (!fileObject || !fileName) {
+              console.log(`Missing data for file ${i}`);
+              continue;
+            }
             
-            // Set the first file as the primary one for backward compatibility
-            if (i === 0) {
+            console.log(`Processing file ${i}:`, fileName);
+            
+            try {
+              const inputFile = InputFile.fromBlob(fileObject, fileName);
+              
+              const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+              const fileUrl = `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+              
+              fileIds.push(file.$id);
+              fileUrls.push(fileUrl);
+              
+              // Set the first file as the primary one for backward compatibility
+              if (i === 0) {
+                primaryFileId = file.$id;
+                primaryFileUrl = fileUrl;
+              }
+              
+              console.log(`File ${i} uploaded successfully:`, file.$id);
+            } catch (fileError) {
+              console.error(`Error uploading file ${i}:`, fileError);
+              // Continue with other files instead of completely failing
+            }
+          }
+        } else {
+          // Check for the single file format first
+          const singleFile = identificationDocument.get("file") as Blob;
+          const singleFileName = identificationDocument.get("fileName") as string;
+          
+          if (singleFile && singleFileName) {
+            // We have a single file in the new format
+            console.log("Processing single file upload");
+            
+            try {
+              const inputFile = InputFile.fromBlob(singleFile, singleFileName);
+              
+              const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+              const fileUrl = `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+              
+              fileIds.push(file.$id);
+              fileUrls.push(fileUrl);
               primaryFileId = file.$id;
               primaryFileUrl = fileUrl;
+              
+              console.log("Single file uploaded successfully:", file.$id);
+            } catch (fileError) {
+              console.error("Error uploading single file:", fileError);
+              throw new Error("Failed to upload identification document. Please try again.");
             }
-          } catch (fileError) {
-            console.error("Error uploading file:", fileError);
-            throw new Error("Failed to upload identification document. Please try again.");
+          } else {
+            // Try the legacy format as last resort
+            console.log("Trying legacy file format (blobFile)");
+            const blobFiles = identificationDocument.getAll("blobFile") as Blob[];
+            const fileNames = identificationDocument.getAll("fileName") as string[];
+            
+            if (blobFiles.length && fileNames.length) {
+              console.log("Found files using legacy format:", blobFiles.length);
+              
+              // Upload each file
+              for (let i = 0; i < blobFiles.length; i++) {
+                try {
+                  const inputFile = InputFile.fromBlob(
+                    blobFiles[i],
+                    fileNames[i]
+                  );
+  
+                  const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+                  const fileUrl = `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
+                  
+                  fileIds.push(file.$id);
+                  fileUrls.push(fileUrl);
+                  
+                  // Set the first file as the primary one for backward compatibility
+                  if (i === 0) {
+                    primaryFileId = file.$id;
+                    primaryFileUrl = fileUrl;
+                  }
+                } catch (fileError) {
+                  console.error("Error uploading legacy format file:", fileError);
+                  // Continue with next file instead of failing completely
+                }
+              }
+            } else {
+              console.error("No valid file data found in any format");
+              throw new Error("No valid file data found. Please try uploading your documents again.");
+            }
           }
+        }
+        
+        // Verify we got at least some files
+        if (fileIds.length === 0) {
+          console.warn("No files were successfully uploaded");
+          // Continue registration without files instead of failing completely
+        } else {
+          console.log(`Successfully uploaded ${fileIds.length} files`);
         }
       } catch (formDataError) {
         console.error("Error processing form data:", formDataError);
         throw new Error("Problem with the uploaded files. Please try again with different files.");
       }
+    } else {
+      console.log("No identification document provided or not in FormData format");
     }
 
     // Prepare document data with error handling

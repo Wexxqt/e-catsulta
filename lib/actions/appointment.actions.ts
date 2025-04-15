@@ -12,7 +12,7 @@ import {
   messaging,
   PATIENT_COLLECTION_ID,
 } from "../appwrite.config";
-import { formatDateTime, parseStringify } from "../utils";
+import { formatDateTime, parseStringify, generateAppointmentCode } from "../utils";
 
 /**
  * Validates and sanitizes appointment data to prevent errors from deleted patients
@@ -45,11 +45,17 @@ export const createAppointment = async (
   appointment: CreateAppointmentParams
 ) => {
   try {
+    // Generate appointment code
+    const appointmentCode = generateAppointmentCode(ID.unique(), appointment.userId);
+    
     const newAppointment = await databases.createDocument(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
       ID.unique(),
-      appointment
+      {
+        ...appointment,
+        appointmentCode
+      }
     );
 
     revalidatePath("/admin");
@@ -196,8 +202,23 @@ export const getAppointment = async (appointmentId: string) => {
       APPOINTMENT_COLLECTION_ID!,
       appointmentId
     );
+    
+    // If appointment doesn't have a code, generate one and save it to database
+    const typedAppointment = appointment as any;
+    if (!typedAppointment.appointmentCode) {
+      const newCode = generateAppointmentCode(appointmentId, typedAppointment.userId || '');
+      typedAppointment.appointmentCode = newCode;
+      
+      // Save the generated code to the database
+      await databases.updateDocument(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        appointmentId,
+        { appointmentCode: newCode }
+      );
+    }
 
-    return parseStringify(validateAppointmentData(appointment));
+    return parseStringify(validateAppointmentData(typedAppointment));
   } catch (error) {
     console.error(
       "An error occurred while retrieving the existing patient:",
@@ -247,8 +268,9 @@ export const getPatientAppointments = async (patientId: string) => {
       ]
     );
 
-    // Sanitize the data
+    // Filter out archived appointments AND sanitize the data
     const validatedAppointments = appointments.documents
+      .filter((doc: any) => !doc.archived) // Exclude archived appointments
       .map((doc: any) => validateAppointmentData(doc))
       .filter((doc) => doc !== null); // Remove any null results
 
@@ -272,17 +294,20 @@ export const clearPatientAppointmentHistory = async (patientId: string) => {
       [Query.equal("userId", patientId)]
     );
 
-    // Delete each appointment
-    const deletePromises = appointments.documents.map(appointment => 
-      databases.deleteDocument(
+    // Instead of deleting, mark each appointment as archived
+    const updatePromises = appointments.documents.map(appointment => 
+      databases.updateDocument(
         DATABASE_ID!,
         APPOINTMENT_COLLECTION_ID!,
-        appointment.$id
+        appointment.$id,
+        { 
+          archived: true // This hides from patient view but preserves the record
+        }
       )
     );
 
-    // Wait for all deletions to complete
-    await Promise.all(deletePromises);
+    // Wait for all updates to complete
+    await Promise.all(updatePromises);
     
     // Revalidate the patient dashboard path
     revalidatePath(`/patients/${patientId}/dashboard`);

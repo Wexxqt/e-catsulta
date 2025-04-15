@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { format, parse } from "date-fns";
-import { ChevronDown, ChevronUp, Search, Calendar, User, Plus, Clock, Trash2, Edit, Pencil, Users, X, Filter, Check, LogOut, Eye } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Calendar, User, Plus, Clock, Trash2, Edit, Pencil, Users, X, Filter, Check, LogOut, Eye, Clipboard } from "lucide-react";
 import ReactDatePicker from "react-datepicker";
 import Image from "next/image";
 
@@ -1152,14 +1152,15 @@ const PatientDashboard = () => {
                         disabled={clearingHistory}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Clear History
+                        Hide History
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="shad-alert-dialog">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-light-200">Clear Appointment History</AlertDialogTitle>
+                        <AlertDialogTitle className="text-light-200">Hide Appointment History</AlertDialogTitle>
                         <AlertDialogDescription className="text-dark-700">
-                          Are you sure you want to clear your appointment history? This action cannot be undone.
+                          This will hide all your appointments from your dashboard view. Your appointment records will still 
+                          be available to your doctor and clinic staff. This action clears your view only.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -1168,7 +1169,7 @@ const PatientDashboard = () => {
                           onClick={handleClearHistory}
                           className="bg-red-700 text-white hover:bg-red-800"
                         >
-                          {clearingHistory ? "Clearing..." : "Clear History"}
+                          {clearingHistory ? "Clearing..." : "Hide Appointments"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1269,6 +1270,25 @@ const PatientDashboard = () => {
                               </div>
                               
                               <div>
+                                <p className="text-14-regular text-dark-600">Appointment Code</p>
+                                <p className="text-14-medium font-mono bg-blue-950/30 text-blue-400 p-3 rounded-md mt-1 border border-blue-500/30 flex items-center justify-between">
+                                  <span className="tracking-wider">{selectedAppointment.appointmentCode || "No code available"}</span>
+                                  {selectedAppointment.appointmentCode && (
+                                    <button 
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(selectedAppointment.appointmentCode);
+                                        // Add visual feedback (could be improved with a proper toast)
+                                        alert("Appointment code copied to clipboard!");
+                                      }}
+                                      className="ml-2 text-xs bg-blue-500/20 hover:bg-blue-500/30 transition-colors p-1 rounded"
+                                    >
+                                      <Clipboard className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </p>
+                              </div>
+                              
+                              <div>
                                 <p className="text-14-regular text-dark-600">Doctor</p>
                                 <p className="text-16-medium text-light-200">{selectedAppointment.primaryPhysician}</p>
                               </div>
@@ -1345,32 +1365,35 @@ const PatientDashboard = () => {
                                   <div className="grid grid-cols-1 gap-5">
                                     <div>
                                       <p className="text-14-regular text-dark-600">Date & Time</p>
-                                      <p className="text-14-medium text-light-200">
+                                      <p className="text-16-medium text-light-200">
                                         {formatDateTime(selectedAppointment.schedule).dateTime}
                                       </p>
                                       
-                                      {/* Calendar view for desktop - moved inside date section */}
+                                      {/* Calendar view for mobile - moved below date & time */}
                                       <div className="appointment-calendar mt-2 bg-dark-300 p-3 rounded-lg">
-                                        <ReactDatePicker
-                                          selected={new Date(selectedAppointment.schedule)}
-                                          onChange={() => {}} // Read-only
-                                          inline
-                                          disabled={true}
-                                          readOnly={true}
-                                          dayClassName={() => "cursor-default"}
-                                          showMonthDropdown={false}
-                                          showYearDropdown={false}
-                                          renderCustomHeader={({ date }) => (
-                                            <div className="text-center px-2 py-1">
-                                              <div className="text-14-medium text-light-200">
-                                                {date.toLocaleString("default", {
-                                                  month: "long",
-                                                  year: "numeric",
-                                                })}
+                                        <p className="text-14-regular text-dark-600 mb-2 text-center">Appointment Date</p>
+                                        <div className="flex justify-center">
+                                          <ReactDatePicker
+                                            selected={new Date(selectedAppointment.schedule)}
+                                            onChange={() => {}} // Read-only
+                                            inline
+                                            disabled={true}
+                                            readOnly={true}
+                                            dayClassName={() => "cursor-default"}
+                                            showMonthDropdown={false}
+                                            showYearDropdown={false}
+                                            renderCustomHeader={({ date }) => (
+                                              <div className="text-center px-2 py-1">
+                                                <div className="text-14-medium text-light-200">
+                                                  {date.toLocaleString("default", {
+                                                    month: "long",
+                                                    year: "numeric",
+                                                  })}
+                                                </div>
                                               </div>
-                                            </div>
-                                          )}
-                                        />
+                                            )}
+                                          />
+                                        </div>
                                         
                                         {/* Time indicator below calendar */}
                                         <div className="flex items-center justify-center mt-2 text-light-200 bg-dark-400 py-2 px-4 rounded-lg">
@@ -1383,8 +1406,27 @@ const PatientDashboard = () => {
                                     </div>
                                     
                                     <div>
+                                      <p className="text-14-regular text-dark-600">Appointment Code</p>
+                                      <p className="text-14-medium font-mono bg-blue-950/30 text-blue-400 p-3 rounded-md mt-1 border border-blue-500/30 flex items-center justify-between">
+                                        <span className="tracking-wider">{selectedAppointment.appointmentCode || "No code available"}</span>
+                                        {selectedAppointment.appointmentCode && (
+                                          <button 
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(selectedAppointment.appointmentCode);
+                                              // Add visual feedback (could be improved with a proper toast)
+                                              alert("Appointment code copied to clipboard!");
+                                            }}
+                                            className="ml-2 text-xs bg-blue-500/20 hover:bg-blue-500/30 transition-colors p-1 rounded"
+                                          >
+                                            <Clipboard className="h-3.5 w-3.5" />
+                                          </button>
+                                        )}
+                                      </p>
+                                    </div>
+                                    
+                                    <div>
                                       <p className="text-14-regular text-dark-600">Doctor</p>
-                                      <p className="text-14-medium text-light-200">{selectedAppointment.primaryPhysician}</p>
+                                      <p className="text-16-medium text-light-200">{selectedAppointment.primaryPhysician}</p>
                                     </div>
                                     
                                     <div>
@@ -1443,14 +1485,15 @@ const PatientDashboard = () => {
                         disabled={clearingNotes}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Clear Notes
+                        Hide Notes
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="shad-alert-dialog">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-light-200">Clear Doctor Notes</AlertDialogTitle>
+                        <AlertDialogTitle className="text-light-200">Hide Doctor Notes</AlertDialogTitle>
                         <AlertDialogDescription className="text-dark-700">
-                          Are you sure you want to clear your doctor notes history? This action cannot be undone.
+                          This will hide all doctor notes from your dashboard view. Your medical notes will still 
+                          be available to your doctor and clinic staff. This action clears your view only.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -1459,7 +1502,7 @@ const PatientDashboard = () => {
                           onClick={handleClearNotesHistory}
                           className="bg-red-700 text-white hover:bg-red-800"
                         >
-                          {clearingNotes ? "Clearing..." : "Clear Notes"}
+                          {clearingNotes ? "Clearing..." : "Hide Notes"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
