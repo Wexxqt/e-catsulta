@@ -70,7 +70,7 @@ const StaffDashboard = () => {
     }
   }, [searchParams]);
 
-  const verifyAppointment = async (codeToVerify?: string) => {
+  const verifyAppointment = async (codeToVerify?: any) => {
     const rawCodeValue = codeToVerify || searchCode;
     
     if (!rawCodeValue) {
@@ -85,15 +85,34 @@ const StaffDashboard = () => {
       // Extract a clean code value
       let codeValue = '';
       
-      // If the input is an object, try to extract the text property or convert to string
-      if (typeof rawCodeValue === 'object' && rawCodeValue !== null) {
+      // Handle array results from QR scanner (ZXing format)
+      if (Array.isArray(rawCodeValue)) {
+        console.log("Input is an array:", rawCodeValue);
+        
+        // Get the first result if available
+        const firstResult = rawCodeValue[0];
+        if (firstResult && typeof firstResult === 'object') {
+          // ZXing format has rawValue property
+          if (firstResult.rawValue) {
+            codeValue = firstResult.rawValue;
+          } else if (firstResult.text) {
+            codeValue = firstResult.text;
+          } else {
+            codeValue = JSON.stringify(firstResult);
+          }
+        } else {
+          codeValue = String(rawCodeValue);
+        }
+      }
+      // If the input is an object, try to extract the text property
+      else if (typeof rawCodeValue === 'object' && rawCodeValue !== null) {
         console.log("Input is an object:", rawCodeValue);
         
-        if (rawCodeValue.text) {
+        if ('text' in rawCodeValue) {
           codeValue = rawCodeValue.text;
-        } else if (rawCodeValue.data) {
+        } else if ('data' in rawCodeValue) {
           codeValue = rawCodeValue.data;
-        } else if (rawCodeValue.rawValue) {
+        } else if ('rawValue' in rawCodeValue) {
           codeValue = rawCodeValue.rawValue;
         } else {
           // Last resort - stringify it
@@ -105,7 +124,7 @@ const StaffDashboard = () => {
       
       // Try to extract code from URL if needed
       if (codeValue.includes('code=')) {
-        const codeMatch = codeValue.match(/code=([^&]+)/);
+        const codeMatch = codeValue.match(/code=([^&"\s]+)/);
         if (codeMatch && codeMatch[1]) {
           codeValue = codeMatch[1];
           console.log('Extracted code from URL parameter:', codeValue);

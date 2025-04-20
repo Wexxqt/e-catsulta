@@ -42,32 +42,34 @@ const QrScannerWrapper = ({ onScan }: QrScannerWrapperProps) => {
         height: { ideal: 720 }
       };
 
+  // Handle scanner results in a unified way
+  const handleQrResult = (result: any) => {
+    console.log('Raw scanner result:', result);
+    
+    // Don't process undefined/null results
+    if (!result) return;
+    
+    // Pass the result to the parent component
+    onScan(result);
+  };
+
   try {
     // The Scanner component might have different props in different versions
     return (
       <div className="w-full h-full">
         {/* Use a div wrapper to handle any errors from the scanner */}
         <div style={{ width: '100%', height: '100%' }}>
-          {/* @ts-ignore - Ignoring type issues since Scanner has inconsistent typings */}
+          {/* @ts-ignore - We use @ts-ignore because the library has inconsistent types */}
           <Scanner
-            // @ts-ignore - The onScan prop has different types in different versions
-            onScan={(result) => {
-              console.log('QR Scanner onScan result:', result);
-              if (result) onScan(result);
-            }}
-            // @ts-ignore - The onDecode prop has different types in different versions
-            onDecode={(result) => {
-              console.log('QR Scanner onDecode result:', result);
-              if (result) onScan(result);
-            }}
-            // @ts-ignore - The onResult prop has different types in different versions
-            onResult={(result) => {
-              console.log('QR Scanner onResult result:', result);
-              if (result) onScan(result);
-            }}
+            // @ts-ignore
+            onScan={handleQrResult}
+            // @ts-ignore
+            onDecode={handleQrResult}
+            // @ts-ignore
+            onResult={handleQrResult}
             onError={handleScannerError}
-            delay={500}
-            scanDelay={500}
+            delay={300}
+            scanDelay={300}
             style={{ width: '100%', height: '100%' }}
             containerStyle={{ width: '100%', height: '100%' }}
             videoConstraints={videoConstraints}

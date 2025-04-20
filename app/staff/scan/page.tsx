@@ -80,27 +80,43 @@ const QRScannerPage = () => {
   const handleScan = (result: any) => {
     if (!result) return;
     
-    // Normalize the result - scanner might return object or string
+    console.log('Raw QR scan result:', result);
+    
+    // Normalize the result - scanner might return object, array, or string
     let resultText: string;
     
-    if (typeof result === 'string') {
-      resultText = result;
-    } else if (result && typeof result === 'object') {
-      // Try to extract text from common QR scanner result formats
+    // Handle array of results (common with ZXing-based scanners)
+    if (Array.isArray(result)) {
+      console.log('Scan result is an array');
+      if (result.length > 0 && result[0].rawValue) {
+        resultText = result[0].rawValue;
+      } else {
+        resultText = JSON.stringify(result);
+      }
+    }
+    // Handle object result
+    else if (typeof result === 'object' && result !== null) {
+      console.log('Scan result is an object');
       if (result.text) {
         resultText = result.text;
       } else if (result.data) {
         resultText = result.data;
-      } else if (result.code) {
-        resultText = result.code;
+      } else if (result.rawValue) {
+        resultText = result.rawValue;
       } else {
         // If we can't find a standard field, stringify the object
         console.warn('Unrecognized QR code result format:', result);
         resultText = JSON.stringify(result);
       }
-    } else {
+    } 
+    // Handle string result
+    else if (typeof result === 'string') {
+      resultText = result;
+    } 
+    // Fallback for any other type
+    else {
       console.error('Unexpected QR result type:', typeof result);
-      return;
+      resultText = String(result);
     }
     
     setScannedData(resultText);
@@ -114,7 +130,7 @@ const QRScannerPage = () => {
     try {
       // First check if it contains a code parameter directly
       if (resultText.includes('code=')) {
-        const codeMatch = resultText.match(/code=([^&]+)/);
+        const codeMatch = resultText.match(/code=([^&"\s]+)/);
         if (codeMatch && codeMatch[1]) {
           codeToUse = codeMatch[1];
           console.log('Extracted code from parameter string:', codeToUse);
