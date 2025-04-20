@@ -85,9 +85,19 @@ const QRScannerPage = () => {
       // Extract code from URL if the scanned data is a URL
       let codeToUse = result;
       
+      console.log('Scanned data:', result);
+      
       try {
-        // Check if result is a URL
-        if (result.startsWith('http') || result.includes('verify?code=')) {
+        // First check if it contains a code parameter directly
+        if (result.includes('code=')) {
+          const codeMatch = result.match(/code=([^&]+)/);
+          if (codeMatch && codeMatch[1]) {
+            codeToUse = codeMatch[1];
+            console.log('Extracted code from parameter string:', codeToUse);
+          }
+        } 
+        // Then try to parse as URL if it looks like a URL
+        else if (result.startsWith('http') || result.startsWith('https') || result.includes('://')) {
           const url = new URL(result);
           const codeParam = url.searchParams.get('code');
           if (codeParam) {
@@ -95,8 +105,16 @@ const QRScannerPage = () => {
             console.log('Extracted code from URL:', codeToUse);
           }
         }
+        // If it matches the appointment code format directly (XXX-XXXXXX-XXX), use it as is
+        else if (/^[A-Z0-9]{3}-\d{6}-[A-Z0-9]{3}$/.test(result)) {
+          console.log('Scanned data is already in appointment code format');
+        }
+        else {
+          console.log('Using raw scanned data, does not match expected formats');
+        }
       } catch (error) {
-        console.log('Not a URL, using raw scanned data');
+        console.error('Error parsing URL:', error);
+        console.log('Using raw scanned data');
       }
       
       // Redirect with the code

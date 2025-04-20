@@ -82,13 +82,17 @@ const StaffDashboard = () => {
       setSearchLoading(true);
       setSearchError("");
       
+      console.log("Attempting to verify appointment with code:", codeValue);
+      
       const appointment = await getAppointmentByCode(codeValue);
       
       if (!appointment) {
+        console.log("No appointment found for code:", codeValue);
         setSearchError("Appointment not found");
         return;
       }
       
+      console.log("Appointment found:", appointment.appointmentCode);
       setVerifiedAppointment(appointment);
       
       // Find doctor info
@@ -142,7 +146,7 @@ const StaffDashboard = () => {
           
           <Button 
             variant="outline" 
-            size="xs"
+            size="sm"
             className="w-16 sm:w-20 h-8 text-xs font-medium"
             onClick={handleLogout}
           >
