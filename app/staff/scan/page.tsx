@@ -82,8 +82,25 @@ const QRScannerPage = () => {
       setScannedData(result);
       setScanning(false);
       
+      // Extract code from URL if the scanned data is a URL
+      let codeToUse = result;
+      
+      try {
+        // Check if result is a URL
+        if (result.startsWith('http') || result.includes('verify?code=')) {
+          const url = new URL(result);
+          const codeParam = url.searchParams.get('code');
+          if (codeParam) {
+            codeToUse = codeParam;
+            console.log('Extracted code from URL:', codeToUse);
+          }
+        }
+      } catch (error) {
+        console.log('Not a URL, using raw scanned data');
+      }
+      
       // Redirect with the code
-      router.push(`/staff?code=${encodeURIComponent(result)}`);
+      router.push(`/staff?code=${encodeURIComponent(codeToUse)}`);
     }
   };
 
