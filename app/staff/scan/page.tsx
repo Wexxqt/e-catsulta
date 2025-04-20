@@ -41,16 +41,35 @@ const QRScannerPage = () => {
       return;
     }
 
-    // Check for camera permission
+    // Check for camera permission with more flexible constraints
     if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      // Try with more flexible constraints
+      navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: { ideal: "environment" } 
+        } 
+      })
         .then(() => {
           setCameraPermission(true);
         })
         .catch((err) => {
           console.error('Camera permission error:', err);
-          setCameraPermission(false);
-          setError('Camera access denied. Please allow camera access to scan QR codes.');
+          // If first attempt fails, try a fallback with any camera
+          if (err.name === 'OverconstrainedError') {
+            console.log('Trying fallback camera constraints');
+            navigator.mediaDevices.getUserMedia({ video: true })
+              .then(() => {
+                setCameraPermission(true);
+              })
+              .catch((fallbackErr) => {
+                console.error('Fallback camera permission error:', fallbackErr);
+                setCameraPermission(false);
+                setError('Camera access denied. Please allow camera access to scan QR codes.');
+              });
+          } else {
+            setCameraPermission(false);
+            setError('Camera access denied. Please allow camera access to scan QR codes.');
+          }
         });
     } else {
       setCameraPermission(false);
