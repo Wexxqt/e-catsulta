@@ -77,49 +77,72 @@ const QRScannerPage = () => {
     }
   }, []);
 
-  const handleScan = (result: string) => {
-    if (result) {
-      setScannedData(result);
-      setScanning(false);
-      
-      // Extract code from URL if the scanned data is a URL
-      let codeToUse = result;
-      
-      console.log('Scanned data:', result);
-      
-      try {
-        // First check if it contains a code parameter directly
-        if (result.includes('code=')) {
-          const codeMatch = result.match(/code=([^&]+)/);
-          if (codeMatch && codeMatch[1]) {
-            codeToUse = codeMatch[1];
-            console.log('Extracted code from parameter string:', codeToUse);
-          }
-        } 
-        // Then try to parse as URL if it looks like a URL
-        else if (result.startsWith('http') || result.startsWith('https') || result.includes('://')) {
-          const url = new URL(result);
-          const codeParam = url.searchParams.get('code');
-          if (codeParam) {
-            codeToUse = codeParam;
-            console.log('Extracted code from URL:', codeToUse);
-          }
-        }
-        // If it matches the appointment code format directly (XXX-XXXXXX-XXX), use it as is
-        else if (/^[A-Z0-9]{3}-\d{6}-[A-Z0-9]{3}$/.test(result)) {
-          console.log('Scanned data is already in appointment code format');
-        }
-        else {
-          console.log('Using raw scanned data, does not match expected formats');
-        }
-      } catch (error) {
-        console.error('Error parsing URL:', error);
-        console.log('Using raw scanned data');
+  const handleScan = (result: any) => {
+    if (!result) return;
+    
+    // Normalize the result - scanner might return object or string
+    let resultText: string;
+    
+    if (typeof result === 'string') {
+      resultText = result;
+    } else if (result && typeof result === 'object') {
+      // Try to extract text from common QR scanner result formats
+      if (result.text) {
+        resultText = result.text;
+      } else if (result.data) {
+        resultText = result.data;
+      } else if (result.code) {
+        resultText = result.code;
+      } else {
+        // If we can't find a standard field, stringify the object
+        console.warn('Unrecognized QR code result format:', result);
+        resultText = JSON.stringify(result);
       }
-      
-      // Redirect with the code
-      router.push(`/staff?code=${encodeURIComponent(codeToUse)}`);
+    } else {
+      console.error('Unexpected QR result type:', typeof result);
+      return;
     }
+    
+    setScannedData(resultText);
+    setScanning(false);
+    
+    console.log('Scanned data (normalized):', resultText);
+    
+    // Extract code from URL if the scanned data is a URL
+    let codeToUse = resultText;
+    
+    try {
+      // First check if it contains a code parameter directly
+      if (resultText.includes('code=')) {
+        const codeMatch = resultText.match(/code=([^&]+)/);
+        if (codeMatch && codeMatch[1]) {
+          codeToUse = codeMatch[1];
+          console.log('Extracted code from parameter string:', codeToUse);
+        }
+      } 
+      // Then try to parse as URL if it looks like a URL
+      else if (resultText.startsWith('http') || resultText.startsWith('https') || resultText.includes('://')) {
+        const url = new URL(resultText);
+        const codeParam = url.searchParams.get('code');
+        if (codeParam) {
+          codeToUse = codeParam;
+          console.log('Extracted code from URL:', codeToUse);
+        }
+      }
+      // If it matches the appointment code format directly (XXX-XXXXXX-XXX), use it as is
+      else if (/^[A-Z0-9]{3}-\d{6}-[A-Z0-9]{3}$/.test(resultText)) {
+        console.log('Scanned data is already in appointment code format');
+      }
+      else {
+        console.log('Using raw scanned data, does not match expected formats');
+      }
+    } catch (error) {
+      console.error('Error parsing URL:', error);
+      console.log('Using raw scanned data');
+    }
+    
+    // Redirect with the code
+    router.push(`/staff?code=${encodeURIComponent(codeToUse)}`);
   };
 
   const restartScanner = () => {

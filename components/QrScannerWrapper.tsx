@@ -4,7 +4,15 @@ import { useEffect, useState } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 
 interface QrScannerWrapperProps {
-  onScan: (result: string) => void;
+  onScan: (result: any) => void;
+}
+
+// For typings
+interface IDetectedBarcode {
+  rawValue?: string;
+  text?: string;
+  format?: string;
+  cornerPoints?: number[][];
 }
 
 const QrScannerWrapper = ({ onScan }: QrScannerWrapperProps) => {
@@ -40,18 +48,22 @@ const QrScannerWrapper = ({ onScan }: QrScannerWrapperProps) => {
       <div className="w-full h-full">
         {/* Use a div wrapper to handle any errors from the scanner */}
         <div style={{ width: '100%', height: '100%' }}>
-          {/* @ts-ignore - Ignoring type issues since we need to adapt to different versions */}
+          {/* @ts-ignore - Ignoring type issues since Scanner has inconsistent typings */}
           <Scanner
-            onScan={onScan}
-            onDecode={onScan}
-            onResult={(result: any) => {
-              if (result && result.text) {
-                onScan(result.text);
-              } else if (typeof result === 'string') {
-                onScan(result);
-              } else if (result) {
-                onScan(JSON.stringify(result));
-              }
+            // @ts-ignore - The onScan prop has different types in different versions
+            onScan={(result) => {
+              console.log('QR Scanner onScan result:', result);
+              if (result) onScan(result);
+            }}
+            // @ts-ignore - The onDecode prop has different types in different versions
+            onDecode={(result) => {
+              console.log('QR Scanner onDecode result:', result);
+              if (result) onScan(result);
+            }}
+            // @ts-ignore - The onResult prop has different types in different versions
+            onResult={(result) => {
+              console.log('QR Scanner onResult result:', result);
+              if (result) onScan(result);
             }}
             onError={handleScannerError}
             delay={500}

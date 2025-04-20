@@ -71,9 +71,9 @@ const StaffDashboard = () => {
   }, [searchParams]);
 
   const verifyAppointment = async (codeToVerify?: string) => {
-    const codeValue = codeToVerify || searchCode;
+    const rawCodeValue = codeToVerify || searchCode;
     
-    if (!codeValue.trim()) {
+    if (!rawCodeValue) {
       setSearchError("Please enter an appointment code");
       return;
     }
@@ -81,6 +81,36 @@ const StaffDashboard = () => {
     try {
       setSearchLoading(true);
       setSearchError("");
+      
+      // Extract a clean code value
+      let codeValue = '';
+      
+      // If the input is an object, try to extract the text property or convert to string
+      if (typeof rawCodeValue === 'object' && rawCodeValue !== null) {
+        console.log("Input is an object:", rawCodeValue);
+        
+        if (rawCodeValue.text) {
+          codeValue = rawCodeValue.text;
+        } else if (rawCodeValue.data) {
+          codeValue = rawCodeValue.data;
+        } else if (rawCodeValue.rawValue) {
+          codeValue = rawCodeValue.rawValue;
+        } else {
+          // Last resort - stringify it
+          codeValue = JSON.stringify(rawCodeValue);
+        }
+      } else {
+        codeValue = String(rawCodeValue).trim();
+      }
+      
+      // Try to extract code from URL if needed
+      if (codeValue.includes('code=')) {
+        const codeMatch = codeValue.match(/code=([^&]+)/);
+        if (codeMatch && codeMatch[1]) {
+          codeValue = codeMatch[1];
+          console.log('Extracted code from URL parameter:', codeValue);
+        }
+      }
       
       console.log("Attempting to verify appointment with code:", codeValue);
       
