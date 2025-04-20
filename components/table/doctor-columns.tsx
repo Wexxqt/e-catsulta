@@ -4,7 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Trash2, FileText, User2 } from "lucide-react";
+import { Trash2, FileText, User2, CreditCard } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,8 @@ import { Doctors } from "@/constants";
 // Extended Appointment type for the patient management view
 interface ExtendedAppointment extends Appointment {
   appointmentCount?: number;
+  patientNotes?: string;
+  comments?: string;
 }
 
 // Component for rendering the reason cell with proper state management
@@ -40,11 +42,11 @@ const AppointmentReasonCell = ({ appointment }: { appointment: ExtendedAppointme
   
   return (
     <div className="max-w-[200px]">
-      {appointment.reason ? (
+      {appointment.reason || appointment.note ? (
         <button 
           onClick={() => setShowFullReason(true)}
           className="doctor-table-icon"
-          title="View Reason"
+          title="View Reason & Notes"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
@@ -59,10 +61,27 @@ const AppointmentReasonCell = ({ appointment }: { appointment: ExtendedAppointme
         <Dialog open={showFullReason} onOpenChange={setShowFullReason}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Appointment Reason</DialogTitle>
+              <DialogTitle>Appointment Details</DialogTitle>
             </DialogHeader>
-            <div className="mt-2 whitespace-pre-wrap">
-              {appointment.reason || 'No reason provided'}
+            
+            {/* Reason Section */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-16-semibold">Reason for Appointment</h3>
+                <div className="mt-2 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                  {appointment.reason || 'No reason provided'}
+                </div>
+              </div>
+              
+              {/* Patient Notes/Comments Section */}
+              {appointment.note && (
+                <div>
+                  <h3 className="text-16-semibold">Patient Notes</h3>
+                  <div className="mt-2 whitespace-pre-wrap bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
+                    {appointment.note}
+                  </div>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -232,6 +251,8 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
   const [submitting, setSubmitting] = useState(false);
   const [isDeletingNote, setIsDeletingNote] = useState<string | null>(null);
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
+  const [activeDocument, setActiveDocument] = useState("");
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -386,6 +407,16 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
                 </div>
               </div>
               
+              {/* Patient ID */}
+              <div className="flex justify-center mb-4">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900 rounded-md">
+                  <CreditCard className="text-blue-600 dark:text-blue-400" size={18} />
+                  <p className="text-blue-700 dark:text-blue-300 font-medium">
+                    ID: {patient.identificationNumber || patient.idNumber || patient.nationalId || patient.studentId || patient.employeeId || 'Not available'}
+                  </p>
+                </div>
+              </div>
+              
               <div className="doctor-detail-grid">
                 <div>
                   <p className="doctor-detail-label">Full Name</p>
@@ -422,106 +453,6 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
                   <p className="doctor-detail-label">Address</p>
                   <p className="doctor-detail-value">{patient.address || 'Not specified'}</p>
                 </div>
-              </div>
-            </div>
-
-            {/* Identification */}
-            <div className="doctor-detail-section">
-              <h3 className="doctor-detail-header">Identification</h3>
-              <div className="doctor-detail-grid">
-                <div>
-                  <p className="doctor-detail-label">ID Type</p>
-                  <p className="doctor-detail-value-bold">
-                    {patient.identificationType ? 
-                      patient.identificationType.charAt(0).toUpperCase() + patient.identificationType.slice(1) : 
-                      'Not specified'}
-                  </p>
-                </div>
-                <div>
-                  <p className="doctor-detail-label">ID Number</p>
-                  <p className="doctor-detail-value">{patient.identificationNumber || 'Not specified'}</p>
-                </div>
-                {(patient.identificationDocumentId || patient.identificationDocumentIds) && (
-                  <div className="col-span-2">
-                    <p className="doctor-detail-label">ID Document</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      {/* Primary document button */}
-                      {patient.identificationDocumentId && (
-                        <button 
-                          onClick={async () => {
-                            try {
-                              const response = await fetch(`/api/documents/${patient.identificationDocumentId}`);
-                              if (!response.ok) {
-                                throw new Error('Failed to get document URL');
-                              }
-                              const data = await response.json();
-                              
-                              // Open the URL in a new tab
-                              window.open(data.url, '_blank');
-                            } catch (error) {
-                              console.error('Error viewing document:', error);
-                              alert('Unable to view document. Please try again later.');
-                            }
-                          }}
-                          className="doctor-document-button"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                            <polyline points="15 3 21 3 21 9"></polyline>
-                            <line x1="10" y1="14" x2="21" y2="3"></line>
-                          </svg>
-                          {patient.identificationDocumentIds ? "View Front of ID" : "View ID Document"}
-                        </button>
-                      )}
-                      
-                      {/* Additional documents if available */}
-                      {patient.identificationDocumentIds && (
-                        <>
-                          {(() => {
-                            try {
-                              const docIds = JSON.parse(patient.identificationDocumentIds);
-                              // Skip the first document if it's already shown above
-                              if (docIds.length > 1 && docIds[1]) {
-                                return (
-                                  <button 
-                                    onClick={async () => {
-                                      try {
-                                        const response = await fetch(`/api/documents/${docIds[1]}`);
-                                        if (!response.ok) {
-                                          throw new Error('Failed to get document URL');
-                                        }
-                                        const data = await response.json();
-                                        
-                                        // Open the URL in a new tab
-                                        window.open(data.url, '_blank');
-                                      } catch (error) {
-                                        console.error('Error viewing document:', error);
-                                        alert('Unable to view document. Please try again later.');
-                                      }
-                                    }}
-                                    className="doctor-document-button"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                                      <polyline points="15 3 21 3 21 9"></polyline>
-                                      <line x1="10" y1="14" x2="21" y2="3"></line>
-                                    </svg>
-                                    View Back of ID
-                                  </button>
-                                );
-                              }
-                              return null;
-                            } catch (e) {
-                              console.error("Error parsing document IDs:", e);
-                              return null;
-                            }
-                          })()}
-                        </>
-                      )}
-                      <span className="text-xs text-gray-500">(Opens in new tab)</span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -659,7 +590,7 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               className="bg-red-600 text-white hover:bg-red-700"
                               onClick={() => handleDeleteNote(note.$id)}

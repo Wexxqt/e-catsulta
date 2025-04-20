@@ -277,7 +277,11 @@
   }
 
   .shad-danger-btn {
-    @apply bg-red-700 text-white !important;
+    @apply bg-red-700 text-white transition-colors duration-200 !important;
+  }
+
+  .shad-danger-btn:hover {
+    @apply bg-red-800 !important;
   }
 
   .shad-gray-btn {
@@ -813,6 +817,34 @@
   .low-end-form select,
   .low-end-form textarea {
     max-height: 44px; /* Cap height to improve performance */
+  }
+}
+
+/* Low-quality images - reduce effects */
+.low-quality-images img {
+  filter: none !important;
+}
+
+/* ==== RESPONSIVE OTP STYLE */
+.responsiveOtpSlot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid;
+  border-color: rgba(74, 79, 85, 0.5);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.responsiveOtpSlot:focus-within {
+  border-color: #6ddd11;
+  box-shadow: 0 0 0 1px rgba(109, 221, 17, 0.3);
+}
+
+@media (max-width: 640px) {
+  .responsiveOtpSlot {
+    padding: 0;
+    font-size: 18px;
   }
 }
 

@@ -74,13 +74,34 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
   // Fetch real booked appointments when doctor changes or dialog opens
   useEffect(() => {
     if (doctorId) {
+      // First try to load doctor's availability from localStorage (saved settings)
       const doctor = Doctors.find(doc => doc.name === doctorId);
       if (doctor) {
+        // Check for saved settings in localStorage
+        const savedSettings = localStorage.getItem(`doctorAvailability_${doctor.id}`);
+        let doctorAvailability;
+        
+        if (savedSettings) {
+          try {
+            // Use saved availability settings if available
+            doctorAvailability = JSON.parse(savedSettings);
+            console.log("Using saved availability settings for", doctorId, doctorAvailability);
+          } catch (err) {
+            console.error("Error parsing saved availability settings:", err);
+            // Fall back to default availability from constants
+            doctorAvailability = doctor.availability;
+          }
+        } else {
+          // No saved settings, use defaults from constants
+          doctorAvailability = doctor.availability;
+        }
+        
+        // Set the availability state
         setAvailability({
-          days: doctor.availability.days,
-          startTime: doctor.availability.startTime,
-          endTime: doctor.availability.endTime,
-          holidays: doctor.availability.holidays || [],
+          days: doctorAvailability.days || [1, 2, 3, 4, 5],
+          startTime: doctorAvailability.startTime || 8,
+          endTime: doctorAvailability.endTime || 17,
+          holidays: doctorAvailability.holidays || [],
         });
 
         // Only reset when doctor changes, not when dialog opens
@@ -92,8 +113,15 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
           }
         }
         
-        // Generate available time slots
-        generateTimeSlots(doctor);
+        // Generate available time slots using the actual availability
+        generateTimeSlots({
+          availability: {
+            days: doctorAvailability.days || [1, 2, 3, 4, 5],
+            startTime: doctorAvailability.startTime || 8,
+            endTime: doctorAvailability.endTime || 17,
+            holidays: doctorAvailability.holidays || [],
+          }
+        });
         
         // Fetch real booked appointments
         fetchBookedAppointments(doctorId);
@@ -150,9 +178,10 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
   // Generate available time slots for the selected doctor
   const generateTimeSlots = (doctor: any) => {
     const times: Date[] = [];
+    const availability = doctor.availability;
     
     // Create time slots in 30-minute increments
-    for (let hour = doctor.availability.startTime; hour < doctor.availability.endTime; hour++) {
+    for (let hour = availability.startTime; hour < availability.endTime; hour++) {
       // Skip lunch time (12:00 PM to 1:00 PM)
       if (hour !== 12) {
         times.push(new Date(0, 0, 0, hour, 0));

@@ -18,15 +18,7 @@ export interface Patient extends Models.Document {
   pastMedicalHistory: string | undefined;
   identificationType: string;
   identificationNumber: string;
-  identificationDocument: FormData | undefined;
-
-  // Primary ID document (first one uploaded)
-  identificationDocumentId: string;
-  identificationDocumentUrl: string;
   
-  // Additional fields for multiple ID documents (JSON strings of arrays)
-  identificationDocumentIds?: string; // JSON string of file IDs array
-  identificationDocumentUrls?: string; // JSON string of file URLs array
   // Profile picture from OAuth provider (e.g. Google)
   profilePictureUrl?: string;
   avatarDocument: FormData | undefined;
@@ -56,6 +48,14 @@ export interface PatientNote extends Models.Document {
   createdAt: string;
   updatedAt: string;
   archived?: boolean;
+}
+
+// New interface for passkey documents
+export interface Passkey extends Models.Document {
+  idNumber: string;
+  passkey: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Add these to your types/appwrite.types.ts file

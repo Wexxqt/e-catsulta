@@ -7,7 +7,18 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    domains: ['www.gravatar.com', 'cloud.appwrite.io'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'www.gravatar.com',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cloud.appwrite.io',
+        pathname: '**',
+      },
+    ],
   }
 };
 

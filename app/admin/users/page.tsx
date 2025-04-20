@@ -612,20 +612,18 @@ const PatientDetailsDialog = ({ isOpen, setIsOpen, patient }: { isOpen: boolean;
               Complete information about {patient.name}
             </DialogDescription>
           </div>
-          {activeTab !== 'documents' && (
-            <Button 
-              onClick={() => editMode ? saveChanges() : setEditMode(true)} 
-              variant="ghost" 
-              className="h-9 text-sm"
-              disabled={loading}
-            >
-              {editMode ? (
-                <><Save className="h-4 w-4 mr-2" /> Save</>
-              ) : (
-                <><Edit className="h-4 w-4 mr-2" /> Edit</>
-              )}
-            </Button>
-          )}
+          <Button 
+            onClick={() => editMode ? saveChanges() : setEditMode(true)} 
+            variant="ghost" 
+            className="h-9 text-sm"
+            disabled={loading}
+          >
+            {editMode ? (
+              <><Save className="h-4 w-4 mr-2" /> Save</>
+            ) : (
+              <><Edit className="h-4 w-4 mr-2" /> Edit</>
+            )}
+          </Button>
         </div>
       </DialogHeader>
       
@@ -654,15 +652,6 @@ const PatientDetailsDialog = ({ isOpen, setIsOpen, patient }: { isOpen: boolean;
           }}
         >
           Medical History
-        </button>
-        <button 
-          className={`px-4 py-2 ${activeTab === 'documents' ? 'text-primary border-b-2 border-primary' : 'text-gray-400'}`}
-          onClick={() => {
-            setActiveTab('documents');
-            setEditMode(false);
-          }}
-        >
-          Documents
         </button>
       </div>
       
@@ -840,87 +829,6 @@ const PatientDetailsDialog = ({ isOpen, setIsOpen, patient }: { isOpen: boolean;
               ) : (
                 <p className="text-gray-400 text-sm py-2">No doctor notes available for this patient.</p>
               )}
-            </div>
-          </div>
-        )}
-        
-        {activeTab === 'documents' && (
-          <div className="space-y-6">
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-white mb-3 border-b border-dark-400 pb-2 flex items-center">
-                <FileText className="h-4 w-4 mr-2" />
-                Identification Documents
-              </h3>
-              
-              {(() => {
-                // Handle multiple documents from JSON string array
-                let docUrls: string[] = [];
-                
-                // First check for multiple documents
-                if (patient.identificationDocumentUrls) {
-                  try {
-                    docUrls = JSON.parse(patient.identificationDocumentUrls);
-                  } catch (e) {
-                    console.error('Error parsing document URLs:', e);
-                  }
-                }
-                
-                // If no multiple documents found, use the single document URL
-                if (docUrls.length === 0 && patient.identificationDocumentUrl) {
-                  docUrls = [patient.identificationDocumentUrl];
-                }
-                
-                if (docUrls.length > 0) {
-                  return (
-                    <div className="space-y-4">
-                      {docUrls.map((url, index) => (
-                        <div key={index} className="border border-dark-400 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <div className="bg-dark-400 p-2 rounded">
-                                <FileText className="h-5 w-5 text-primary" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-white">ID Document {docUrls.length > 1 ? `#${index + 1}` : ''}</p>
-                                <p className="text-xs text-gray-400">{patient.identificationType || "Identification Document"}</p>
-                              </div>
-                            </div>
-                            <a 
-                              href={sanitizeAppwriteUrl(url)} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-primary text-xs hover:underline bg-dark-400 px-3 py-1.5 rounded-md flex items-center"
-                            >
-                              <Eye className="h-3.5 w-3.5 mr-1.5" />
-                              View Document
-                            </a>
-                          </div>
-                          
-                          <div className="bg-dark-400 rounded-md overflow-hidden border border-dark-500">
-                            {url.endsWith('.pdf') ? (
-                              <div className="flex flex-col items-center justify-center p-6 gap-2">
-                                <FileText className="h-10 w-10 text-gray-400" />
-                                <p className="text-xs text-gray-400">PDF Document</p>
-                              </div>
-                            ) : (
-                              <div className="relative w-full h-40 bg-dark-500 rounded-md overflow-hidden">
-                                <Image 
-                                  src={sanitizeAppwriteUrl(url)}
-                                  alt={`Identification Document ${index + 1}`} 
-                                  className="object-contain"
-                                  fill
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                } else {
-                  return <p className="text-gray-400 text-sm py-2">No identification documents uploaded.</p>;
-                }
-              })()}
             </div>
           </div>
         )}

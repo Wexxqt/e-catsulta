@@ -528,7 +528,7 @@ const PatientDashboard = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleLogout}
                 className="bg-red-700 text-white hover:bg-red-800"
@@ -1164,7 +1164,7 @@ const PatientDashboard = () => {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
                         <AlertDialogAction 
                           onClick={handleClearHistory}
                           className="bg-red-700 text-white hover:bg-red-800"
@@ -1497,7 +1497,7 @@ const PatientDashboard = () => {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
                         <AlertDialogAction 
                           onClick={handleClearNotesHistory}
                           className="bg-red-700 text-white hover:bg-red-800"
@@ -1567,7 +1567,7 @@ const PatientDashboard = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleLogout}
                 className="bg-red-700 text-white hover:bg-red-800"

@@ -204,7 +204,7 @@ const CancelAppointmentModal = ({
         </div>
         
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isLoading} className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={(e) => {
               e.preventDefault();

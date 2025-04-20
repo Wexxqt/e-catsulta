@@ -14,16 +14,14 @@ import { SelectItem } from "@/components/ui/select";
 import {
   Category,
   GenderOptions,
-  IdentificationTypes,
   PatientFormDefaultValues,
 } from "@/constants";
-import { registerPatient } from "@/lib/actions/patient.actions";
+import { registerPatient, verifyPatientPasskey } from "@/lib/actions/patient.actions";
 import { PatientFormValidation } from "@/lib/validation";
 
 import "react-datepicker/dist/react-datepicker.css";
 import "react-phone-number-input/style.css";
 import CustomFormField, { FormFieldType } from "../CustomFormField";
-import { FileUploader } from "../FileUploader";
 import SubmitButton from "../SubmitButton";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +34,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 interface ExtendedUser extends User {
   gender: "Male" | "Female" | "Other";
@@ -49,6 +52,10 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showPasskeyModal, setShowPasskeyModal] = useState(false);
+  const [passkey, setPasskey] = useState("");
+  const [passkeyError, setPasskeyError] = useState("");
+  const [formValues, setFormValues] = useState<any>(null);
 
   // Format date as user types (automatically add /)
   const formatDateInput = (value: string) => {
@@ -79,14 +86,36 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof PatientFormValidation>) => {
+  const handlePasskeyValidation = async () => {
+    setIsLoading(true);
+    setPasskeyError("");
+
+    try {
+      // Verify the passkey against the ID number
+      const isValid = await verifyPatientPasskey(formValues.identificationNumber, passkey);
+      
+      if (isValid) {
+        // Continue with registration if passkey is valid
+        await completeRegistration(formValues);
+      } else {
+        setPasskeyError("Invalid passkey. Please check and try again.");
+      }
+    } catch (error) {
+      console.error("Passkey validation error:", error);
+      setPasskeyError(error instanceof Error ? error.message : "Failed to validate passkey");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const completeRegistration = async (values: z.infer<typeof PatientFormValidation>) => {
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
       // Validate required fields
-      if (!values.identificationType || !values.identificationNumber) {
-        throw new Error("Please provide your identification type and number");
+      if (!values.identificationNumber) {
+        throw new Error("Please provide your identification number");
       }
 
       if (!values.privacyConsent) {
@@ -110,73 +139,6 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         throw new Error("Please enter your date of birth in MM/DD/YYYY format (e.g., 04/14/2000)");
       }
       
-      // Store file info in form data
-      let formData: FormData | undefined;
-      let hasFiles = false;
-      
-      if (values.identificationDocument && values.identificationDocument.length > 0) {
-        try {
-          // Check if running on a low-end or mobile device
-          const isLowEndOrMobile = typeof window !== 'undefined' && (
-            window.navigator.userAgent.includes('iPhone') || 
-            window.navigator.userAgent.includes('Android') ||
-            (window as any).isLowEndDevice === true
-          );
-          
-          // Detect iPhone 6 and similar older devices specifically
-          const isOlderIPhone = typeof window !== 'undefined' && (
-            /iPhone\s(5|6|7|8|SE)/i.test(window.navigator.userAgent)
-          );
-          
-          // Validate file size and type
-          const MAX_FILE_SIZE = isLowEndOrMobile ? 15 * 1024 * 1024 : 50 * 1024 * 1024; // 15MB for mobile, 50MB for desktop
-          const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-          
-          for (const file of values.identificationDocument) {
-            if (file.size > MAX_FILE_SIZE) {
-              throw new Error(`File ${file.name} is too large. ${isLowEndOrMobile ? "Maximum size is 15MB on mobile devices." : "Maximum size is 50MB."}`);
-            }
-            
-            if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-              throw new Error(`File ${file.name} has an invalid type. Please upload JPEG, PNG, or PDF files only.`);
-            }
-          }
-
-          // Create new FormData with simplified approach
-          formData = new FormData();
-          hasFiles = true;
-          
-          // Support up to 2 files for ID (front and back)
-          const fileCount = Math.min(values.identificationDocument.length, 2);
-          
-          for (let i = 0; i < fileCount; i++) {
-            const currentFile = values.identificationDocument[i];
-            
-            // Add each file with a simple, consistent key format
-            formData.append(`file${i}`, currentFile);
-            formData.append(`fileName${i}`, currentFile.name);
-            formData.append(`fileType${i}`, currentFile.type);
-            formData.append(`fileSize${i}`, String(currentFile.size));
-          }
-          
-          // Store the number of files
-          formData.append("fileCount", String(fileCount));
-          
-          // Inform the server about device type
-          formData.append("deviceType", isLowEndOrMobile ? "mobile" : "desktop");
-          formData.append("isOlderDevice", isOlderIPhone ? "true" : "false");
-          
-          console.log("Files prepared for upload:", fileCount);
-        } catch (fileError) {
-          console.error("File processing error:", fileError);
-          if (fileError instanceof Error) {
-            throw fileError; // Re-throw specific file errors
-          } else {
-            throw new Error("Unable to process your documents. Please try uploading smaller or fewer files.");
-          }
-        }
-      }
-
       const patient = {
         userId: user.$id,
         name: values.name,
@@ -193,9 +155,8 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         currentMedication: values.currentMedication,
         familyMedicalHistory: values.familyMedicalHistory,
         pastMedicalHistory: values.pastMedicalHistory,
-        identificationType: values.identificationType,
+        identificationType: "Student ID", // Default value
         identificationNumber: values.identificationNumber,
-        identificationDocument: hasFiles ? formData : undefined,
         privacyConsent: values.privacyConsent,
       };
 
@@ -219,17 +180,8 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
             (window as any).isLowEndDevice === true
           );
           
-          // Try to register without file first if we've already had an error
-          if (retryCount >= 1) {
-            console.log("Retrying registration without file upload...");
-            newPatient = await registerPatient({
-              ...patient,
-              identificationDocument: undefined // Skip document upload on retry
-            });
-          } else {
-            // Standard registration attempt with file
-            newPatient = await registerPatient(patient);
-          }
+          // Standard registration attempt
+          newPatient = await registerPatient(patient);
           
           if (!newPatient && retryCount < maxRetries) {
             retryCount++;
@@ -276,19 +228,36 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         // Check for specific network or server errors
         if (error.message.includes("network") || error.message.includes("connection") || error.message.includes("timeout")) {
           setErrorMessage("Network error. Please check your connection and try again when you have a stable internet connection.");
-        } else if (error.message.includes("file") || error.message.includes("document") || error.message.includes("upload")) {
-          setErrorMessage("There was an issue with your document upload. You can try registering without uploading documents, and upload them later from your dashboard.");
-        } else if (error.message.includes("storage") || error.message.includes("quota") || error.message.includes("exceeded")) {
-          setErrorMessage("Storage issue detected. Please try using a smaller file size for your documents or try again later.");
-        } else if (error.message.includes("multiple attempts")) {
-          setErrorMessage("Registration could not be completed after multiple attempts. Try again without uploading documents, and you can add them later from your dashboard.");
         } else {
           setErrorMessage(error.message);
         }
       } else {
-        setErrorMessage("An unexpected error occurred. Please try again with a stable internet connection or without uploading documents.");
+        setErrorMessage("An unexpected error occurred. Please try again with a stable internet connection.");
       }
       // Show option to proceed without documents
+      setShowErrorModal(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onSubmit = async (values: z.infer<typeof PatientFormValidation>) => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      // Store the form values for later use
+      setFormValues(values);
+      
+      // Show passkey modal for verification
+      setShowPasskeyModal(true);
+    } catch (error) {
+      console.error("Form submission error:", error);
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("An unexpected error occurred. Please try again.");
+      }
       setShowErrorModal(true);
     } finally {
       setIsLoading(false);
@@ -508,20 +477,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
             <h2 className="sub-header">Identification and Verification</h2>
           </div>
 
-          <CustomFormField
-            fieldType={FormFieldType.SELECT}
-            control={form.control}
-            name="identificationType"
-            label="Identification Type *"
-            placeholder="Select ID type"
-          >
-            {IdentificationTypes.map((type, i) => (
-              <SelectItem key={type + i} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </CustomFormField>
-
+          {/* Only keep the ID Number field */}
           <CustomFormField
             fieldType={FormFieldType.SKELETON}
             control={form.control}
@@ -548,32 +504,6 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
                       {idNumberLength}/10 characters
                     </span>
                   </div>
-                </div>
-              </FormControl>
-            )}
-          />
-
-          <CustomFormField
-            fieldType={FormFieldType.SKELETON}
-            control={form.control}
-            name="identificationDocument"
-            label="Scanned Copy of Identification Document *"
-            renderSkeleton={(field) => (
-              <FormControl>
-                <div>
-                  <FileUploader 
-                    files={field.value || []} 
-                    onChange={field.onChange} 
-                    maxSizeInMB={typeof window !== 'undefined' && window.navigator.userAgent.includes('iPhone') ? 15 : 50}
-                    maxFiles={typeof window !== 'undefined' && 
-                             (/iPhone\s(5|6|7|8|SE)/i.test(window.navigator.userAgent)) ? 1 : 2}
-                  />
-                  <p className="text-12-regular text-dark-600 mt-1">
-                    {typeof window !== 'undefined' && 
-                     (/iPhone\s(5|6|7|8|SE)/i.test(window.navigator.userAgent)) 
-                      ? "Please upload a clear scan or photo of your school/employee ID. Maximum file size: 15MB." 
-                      : "Please upload clear scans or photos of both front and back of your school/employee ID. Maximum file size: 50MB per image."}
-                  </p>
                 </div>
               </FormControl>
             )}
@@ -611,6 +541,68 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
 
         <SubmitButton isLoading={isLoading}>Submit and Continue</SubmitButton>
       </form>
+
+      {/* Passkey Verification Modal */}
+      <Dialog 
+        open={showPasskeyModal} 
+        onOpenChange={(open) => {
+          setShowPasskeyModal(open);
+          if (!open) {
+            setPasskey("");
+            setPasskeyError("");
+          }
+        }}
+      >
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-bold text-primary">Verify Your Identity</DialogTitle>
+            <DialogDescription className="text-center">
+              Please enter the 6-digit passkey associated with your ID number.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="my-6">
+            <InputOTP
+              maxLength={6}
+              value={passkey}
+              onChange={(value) => setPasskey(value)}
+            >
+              <InputOTPGroup className="shad-otp">
+                <InputOTPSlot className="shad-otp-slot" index={0} />
+                <InputOTPSlot className="shad-otp-slot" index={1} />
+                <InputOTPSlot className="shad-otp-slot" index={2} />
+                <InputOTPSlot className="shad-otp-slot" index={3} />
+                <InputOTPSlot className="shad-otp-slot" index={4} />
+                <InputOTPSlot className="shad-otp-slot" index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+            
+            {passkeyError && (
+              <p className="text-center text-red-500 mt-3 text-sm">
+                {passkeyError}
+              </p>
+            )}
+          </div>
+          
+          <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button 
+              variant="outline"
+              onClick={() => setShowPasskeyModal(false)}
+              className="sm:w-1/3"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button"
+              className="bg-primary text-white hover:bg-primary-dark sm:w-1/3"
+              onClick={handlePasskeyValidation}
+              disabled={passkey.length < 6 || isLoading}
+            >
+              {isLoading ? "Verifying..." : "Verify"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Modal */}
       <Dialog 
@@ -683,79 +675,13 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
               </div>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row justify-center gap-2 mt-4">
+          <DialogFooter className="flex justify-center mt-4">
             <Button 
               className="bg-primary text-white hover:bg-primary-dark"
               onClick={() => setShowErrorModal(false)}
             >
               OK
             </Button>
-            {(errorMessage && 
-              (errorMessage.includes("document") || 
-               errorMessage.includes("upload") || 
-               errorMessage.includes("file") || 
-               errorMessage.includes("multiple attempts"))) && (
-              <Button
-                variant="outline"
-                className="border-primary text-primary hover:bg-primary-light"
-                onClick={async () => {
-                  setShowErrorModal(false);
-                  setIsLoading(true);
-                  
-                  try {
-                    // Get current form values but proceed without documents
-                    const values = form.getValues();
-                    const patientData = {
-                      userId: user.$id,
-                      name: values.name,
-                      email: values.email,
-                      phone: values.phone,
-                      birthDate: new Date(values.birthDate),
-                      gender: values.gender as Gender,
-                      address: values.address, 
-                      category: values.category ?? "",
-                      emergencyContactName: values.emergencyContactName,
-                      emergencyContactNumber: values.emergencyContactNumber,
-                      signsSymptoms: values.signsSymptoms || "",
-                      allergies: values.allergies,
-                      currentMedication: values.currentMedication,
-                      familyMedicalHistory: values.familyMedicalHistory,
-                      pastMedicalHistory: values.pastMedicalHistory,
-                      identificationType: values.identificationType,
-                      identificationNumber: values.identificationNumber,
-                      identificationDocument: undefined, // Skip documents
-                      privacyConsent: values.privacyConsent,
-                    };
-                    
-                    // Register without documents
-                    const newPatient = await registerPatient(patientData);
-                    
-                    if (newPatient) {
-                      // Ensure we have the user ID for redirection
-                      const userIdForRedirect = user.$id;
-                      console.log("User ID for redirection:", userIdForRedirect);
-                      console.log("Redirecting to:", `/patients/${userIdForRedirect}/dashboard`);
-                      
-                      // Show success modal
-                      setShowSuccessModal(true);
-                    } else {
-                      throw new Error("Registration could not be completed. Please try again later.");
-                    }
-                  } catch (err) {
-                    if (err instanceof Error) {
-                      setErrorMessage(err.message);
-                    } else {
-                      setErrorMessage("Failed to register. Please try again later.");
-                    }
-                    setShowErrorModal(true);
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-              >
-                Try Without Documents
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

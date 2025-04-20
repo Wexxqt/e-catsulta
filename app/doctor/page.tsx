@@ -70,20 +70,28 @@ import { zodResolver } from "@hookform/resolvers/zod";
 // Add import for the AppointmentCalendar component
 import AppointmentCalendar from "@/components/AppointmentCalendar";
 
-const certFormSchema = z.object({
-  patientName: z.string().min(1, "Patient name is required"),
-  diagnosis: z.string().min(1, "Diagnosis is required"),
-  recommendation: z.string().min(1, "Recommendation is required"),
-  fromDate: z.date(),
-  toDate: z.date(),
-  notes: z.string().optional(),
-});
+interface AppointmentState {
+  documents: Appointment[];
+  scheduledCount: number;
+  pendingCount: number;
+  cancelledCount: number;
+  totalCount: number;
+}
 
-type CertFormValues = z.infer<typeof certFormSchema>;
+interface AppointmentListResponse {
+  documents: any[];
+  scheduledCount: number;
+  pendingCount: number;
+  cancelledCount: number;
+  todayCount: number;
+  studentCount: number;
+  employeeCount: number;
+  totalCount: number;
+}
 
 const DoctorDashboard = () => {
   const [allAppointments, setAllAppointments] = useState([]);
-  const [filteredAppointments, setFilteredAppointments] = useState({
+  const [filteredAppointments, setFilteredAppointments] = useState<AppointmentState>({
     documents: [],
     scheduledCount: 0,
     pendingCount: 0,
@@ -108,8 +116,7 @@ const DoctorDashboard = () => {
     holidays: [] as Date[]
   });
   
-  // Medical certificate state
-  const [showCertModal, setShowCertModal] = useState(false);
+  // Patient state
   const [patientSearch, setPatientSearch] = useState("");
   const [patientSearchResults, setPatientSearchResults] = useState<Patient[]>([]);
   const [uniquePatients, setUniquePatients] = useState<{[patientId: string]: Appointment}>({});
@@ -119,19 +126,6 @@ const DoctorDashboard = () => {
   const [clearingHistory, setClearingHistory] = useState(false);
   
   const router = useRouter();
-  const certificateRef = useRef<HTMLDivElement>(null);
-
-  const certForm = useForm<CertFormValues>({
-    resolver: zodResolver(certFormSchema),
-    defaultValues: {
-      patientName: "",
-      diagnosis: "",
-      recommendation: "",
-      fromDate: new Date(),
-      toDate: new Date(),
-      notes: "",
-    },
-  });
 
   // Check authentication on component mount
   useEffect(() => {
@@ -171,6 +165,13 @@ const DoctorDashboard = () => {
     }
   }, []);
 
+  // Watch for passkey changes and auto-submit when length is correct
+  useEffect(() => {
+    if (passkey.length === 6) {
+      validatePasskey();
+    }
+  }, [passkey]);
+
   // Add useEffect for tab switching
   useEffect(() => {
     // If we're on the patients tab with no data OR clear history was just performed
@@ -186,19 +187,20 @@ const DoctorDashboard = () => {
     
     setLoading(true);
     try {
-      const appointments = await getRecentAppointmentList();
+      const appointments = await getRecentAppointmentList() as AppointmentListResponse;
       
-      if (appointments) {
+      if (appointments && appointments.documents) {
         // Filter appointments for the current doctor and exclude archived
-        const doctorAppointments = appointments.documents.filter(
-          (appointment: Appointment) => 
-            appointment.primaryPhysician === doctorName && 
-            !appointment.archived
-        );
+        const doctorAppointments = appointments.documents
+          .filter((doc: any) => 
+            doc.primaryPhysician === doctorName && 
+            !doc.archived
+          ) as Appointment[];
         
         // Count appointments by status
         const counts = doctorAppointments.reduce(
-          (acc: any, appointment: Appointment) => {
+          (acc: {scheduledCount: number, pendingCount: number, cancelledCount: number}, 
+           appointment: Appointment) => {
             switch (appointment.status) {
               case "scheduled":
                 acc.scheduledCount++;
@@ -217,9 +219,8 @@ const DoctorDashboard = () => {
 
         // For the patient management tab, we need ALL appointments including archived ones
         // to create a complete patient list
-        const allDoctorAppointments = appointments.documents.filter(
-          (appointment: Appointment) => appointment.primaryPhysician === doctorName
-        );
+        const allDoctorAppointments = appointments.documents
+          .filter((doc: any) => doc.primaryPhysician === doctorName) as Appointment[];
         
         // Create unique patients object from ALL appointments
         const uniquePatientsObj: {[patientId: string]: Appointment} = {};
@@ -338,59 +339,94 @@ const DoctorDashboard = () => {
 
   // Save availability settings
   const saveAvailabilitySettings = async () => {
-    // In a real app, this would save to the database
-    // For now, we'll just update the local state
-    const doctor = Doctors.find(doc => doc.name === currentDoctor);
-    if (doctor) {
-      doctor.availability = availabilitySettings;
-      alert("Availability settings updated successfully!");
-    }
-  };
-
-  // Generate medical certificate
-  const generateCertificate = async (data: CertFormValues) => {
-    // In a real app, this would save to the database
-    setShowCertModal(false);
-    
-    // Print certificate
-    if (certificateRef.current) {
-      const content = certificateRef.current;
-      const printWindow = window.open('', '_blank');
+    try {
+      const doctorName = localStorage.getItem("doctorName");
+      if (!doctorName) {
+        throw new Error("Doctor not authenticated");
+      }
       
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Medical Certificate - ${data.patientName}</title>
-              <style>
-                body { font-family: Arial, sans-serif; padding: 20px; }
-                .header { text-align: center; margin-bottom: 20px; }
-                .logo { width: 100px; height: auto; }
-                h1 { color: #24AE7C; }
-                .content { margin-bottom: 20px; }
-                .footer { margin-top: 50px; }
-                .signature { margin-top: 50px; text-align: right; }
-              </style>
-            </head>
-            <body>
-              ${content.innerHTML}
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
+      // Show loading state
+      const saveBtn = document.querySelector('.save-availability-btn');
+      if (saveBtn) {
+        saveBtn.textContent = 'Saving...';
+        saveBtn.setAttribute('disabled', 'true');
+      }
+      
+      // Find the doctor in the constants
+      const doctor = Doctors.find(doc => doc.name === doctorName);
+      if (!doctor) {
+        throw new Error("Doctor not found");
+      }
+      
+      // Create API request to update doctor availability
+      // In this case, we're using localStorage as intermediate storage
+      // since we don't have a proper backend implementation yet
+      
+      // Create a new availability object with the current settings
+      const updatedAvailability = {
+        days: availabilitySettings.days,
+        startTime: availabilitySettings.startTime,
+        endTime: availabilitySettings.endTime,
+        holidays: availabilitySettings.holidays || []
+      };
+      
+      // Save to localStorage 
+      localStorage.setItem(`doctorAvailability_${doctor.id}`, JSON.stringify(updatedAvailability));
+      
+      // Update the doctor object in memory
+      doctor.availability = updatedAvailability;
+      
+      // Success notification
+      alert("Availability settings updated successfully!");
+    } catch (error) {
+      console.error("Error saving availability settings:", error);
+      alert("Failed to save availability settings. Please try again.");
+    } finally {
+      // Reset button state
+      const saveBtn = document.querySelector('.save-availability-btn');
+      if (saveBtn) {
+        saveBtn.textContent = 'Save Availability Settings';
+        saveBtn.removeAttribute('disabled');
       }
     }
   };
 
-  // Watch for passkey changes and auto-submit when length is correct
+  // Add a useEffect to load saved availability settings from localStorage
   useEffect(() => {
-    if (passkey.length === 6) {
-      validatePasskey();
+    const loadSavedAvailability = () => {
+      const doctorName = localStorage.getItem("doctorName");
+      if (!doctorName) return;
+      
+      const doctor = Doctors.find(doc => doc.name === doctorName);
+      if (!doctor) return;
+      
+      // Check for saved settings in localStorage
+      const savedSettings = localStorage.getItem(`doctorAvailability_${doctor.id}`);
+      if (savedSettings) {
+        try {
+          const parsedSettings = JSON.parse(savedSettings);
+          setAvailabilitySettings({
+            days: parsedSettings.days || [1, 2, 3, 4, 5],
+            startTime: parsedSettings.startTime || 8,
+            endTime: parsedSettings.endTime || 17,
+            holidays: parsedSettings.holidays || []
+          });
+          
+          // Also update the doctor object with these settings
+          doctor.availability = parsedSettings;
+        } catch (err) {
+          console.error("Error parsing saved availability settings:", err);
+        }
+      } else if (doctor.availability) {
+        // Use the doctor's default availability from constants
+        setAvailabilitySettings(doctor.availability);
+      }
+    };
+    
+    if (currentDoctor) {
+      loadSavedAvailability();
     }
-  }, [passkey]);
+  }, [currentDoctor]);
 
   // Clear appointment history
   const clearAppointmentHistory = async () => {
@@ -536,149 +572,6 @@ const DoctorDashboard = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Medical Certificate Modal */}
-      <Dialog open={showCertModal} onOpenChange={setShowCertModal}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Generate Medical Certificate</DialogTitle>
-            <DialogDescription>
-              Fill in the details to generate a medical certificate for your patient.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...certForm}>
-            <form onSubmit={certForm.handleSubmit(generateCertificate)} className="space-y-4">
-              <FormField
-                control={certForm.control}
-                name="patientName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Patient Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter patient name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={certForm.control}
-                name="diagnosis"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Diagnosis</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter diagnosis" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={certForm.control}
-                name="recommendation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recommendation</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter recommendation" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={certForm.control}
-                  name="fromDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>From Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date" 
-                          value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} 
-                          onChange={(e) => field.onChange(new Date(e.target.value))} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={certForm.control}
-                  name="toDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>To Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date" 
-                          value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} 
-                          onChange={(e) => field.onChange(new Date(e.target.value))} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={certForm.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Additional Notes</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Additional notes (optional)" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button type="submit" className="shad-primary-btn">Generate Certificate</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-          
-          {/* Hidden certificate template for printing */}
-          <div className="hidden">
-            <div ref={certificateRef} className="p-8 bg-white">
-              <div className="header">
-                <h1 className="text-2xl font-bold mb-1">E-CatSulta Medical Clinic</h1>
-                <p className="text-sm text-gray-600 mb-6">123 Main Street, City, Country | Phone: (123) 456-7890</p>
-                <h2 className="text-xl font-bold mb-4">MEDICAL CERTIFICATE</h2>
-              </div>
-              
-              <div className="content space-y-4">
-                <p>This is to certify that <strong>{certForm.watch('patientName')}</strong> has been examined and diagnosed with <strong>{certForm.watch('diagnosis')}</strong>.</p>
-                
-                <p>Based on this diagnosis, it is recommended that the patient {certForm.watch('recommendation')}.</p>
-                
-                <p>This medical leave/recommendation is valid from <strong>{certForm.watch('fromDate') ? format(certForm.watch('fromDate'), 'MMMM d, yyyy') : ''}</strong> to <strong>{certForm.watch('toDate') ? format(certForm.watch('toDate'), 'MMMM d, yyyy') : ''}</strong>.</p>
-                
-                {certForm.watch('notes') && (
-                  <p><strong>Additional Notes:</strong> {certForm.watch('notes')}</p>
-                )}
-              </div>
-              
-              <div className="signature">
-                <p className="font-bold">Dr. {currentDoctor}</p>
-                <p className="text-sm text-gray-600">License No: #12345678</p>
-                <p className="text-sm text-gray-600">Date: {format(new Date(), 'MMMM d, yyyy')}</p>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Clear History Confirmation Dialog */}
       <AlertDialog open={showClearHistoryDialog} onOpenChange={setShowClearHistoryDialog}>
         <AlertDialogContent>
@@ -742,7 +635,7 @@ const DoctorDashboard = () => {
             
             {/* Navigation Tabs */}
             <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-1 md:grid-cols-5 mb-4">
+              <TabsList className="grid grid-cols-1 md:grid-cols-4 mb-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger 
                   value="patients" 
@@ -754,9 +647,8 @@ const DoctorDashboard = () => {
                 >
                   Patients
                 </TabsTrigger>
-                <TabsTrigger value="schedule">Schedule</TabsTrigger>
+                <TabsTrigger value="schedule">Calendar</TabsTrigger>
                 <TabsTrigger value="availability">Availability</TabsTrigger>
-                <TabsTrigger value="certificates">Certificates</TabsTrigger>
               </TabsList>
               
               {/* Overview Tab */}
@@ -959,7 +851,7 @@ const DoctorDashboard = () => {
                       <div className="pt-4">
                         <Button 
                           onClick={saveAvailabilitySettings}
-                          className="shad-primary-btn w-full sm:w-auto"
+                          className="save-availability-btn shad-primary-btn w-full sm:w-auto"
                         >
                           Save Availability Settings
                         </Button>
@@ -1027,39 +919,6 @@ const DoctorDashboard = () => {
                       </div>
                     </div>
                   </div>
-                </div>
-              </TabsContent>
-              
-              {/* Medical Certificates Tab */}
-              <TabsContent value="certificates" className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold">Medical Certificates</h2>
-                  <Button 
-                    onClick={() => setShowCertModal(true)}
-                    className="shad-primary-btn"
-                  >
-                    Generate New Certificate
-                  </Button>
-                </div>
-                
-                <div className="dashboard-card p-6 text-center">
-                  <div className="w-24 h-24 mx-auto mb-4 bg-green-50 rounded-full flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#24AE7C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                      <polyline points="14 2 14 8 20 8"></polyline>
-                      <line x1="16" y1="13" x2="8" y2="13"></line>
-                      <line x1="16" y1="17" x2="8" y2="17"></line>
-                      <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">Create Medical Certificates</h3>
-                  <p className="text-dark-600 mb-6">Generate professional medical certificates for your patients</p>
-                  <Button 
-                    onClick={() => setShowCertModal(true)}
-                    className="shad-primary-btn"
-                  >
-                    Generate New Certificate
-                  </Button>
                 </div>
               </TabsContent>
             </Tabs>

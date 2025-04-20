@@ -228,6 +228,46 @@ export const getAppointment = async (appointmentId: string) => {
   }
 };
 
+// GET APPOINTMENT BY CODE
+export const getAppointmentByCode = async (code: string) => {
+  try {
+    // Check if code is a valid appointment ID first (direct lookup)
+    try {
+      const directAppointment = await databases.getDocument(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        code
+      );
+      
+      if (directAppointment) {
+        return parseStringify(validateAppointmentData(directAppointment));
+      }
+    } catch (directError) {
+      // Not a direct ID, continue to search by code
+      console.log("Not a direct appointment ID, searching by code...");
+    }
+    
+    // Search for appointment with matching code
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [Query.equal("appointmentCode", code)]
+    );
+    
+    if (appointments.total === 0) {
+      console.log("No appointment found with code:", code);
+      return null;
+    }
+    
+    // Get the first matching appointment
+    const appointment = appointments.documents[0];
+    return parseStringify(validateAppointmentData(appointment));
+  } catch (error) {
+    console.error("Error finding appointment by code:", error);
+    return null;
+  }
+};
+
 // GET DOCTOR APPOINTMENTS 
 export const getDoctorAppointments = async (doctorName: string) => {
   try {

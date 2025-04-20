@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Account, Client } from "appwrite";
+import QRCode from "react-qr-code";
 
 import { Button } from "@/components/ui/button";
 import { Doctors } from "@/constants";
@@ -21,6 +22,7 @@ const RequestSuccess = ({ searchParams, params }: any) => {
   const [appointment, setAppointment] = useState<any>(null);
   const [doctor, setDoctor] = useState<any>(null);
   const [appointmentCode, setAppointmentCode] = useState<string>("");
+  const [verificationUrl, setVerificationUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const router = useRouter();
@@ -61,10 +63,16 @@ const RequestSuccess = ({ searchParams, params }: any) => {
         // Use the stored appointment code directly if available
         if (appointmentData.appointmentCode) {
           setAppointmentCode(appointmentData.appointmentCode);
+          // Create verification URL using the appointment code
+          const baseUrl = window.location.origin;
+          setVerificationUrl(`${baseUrl}/doctor/verify?code=${appointmentData.appointmentCode}`);
         } else {
           // Only generate if not already stored
           const code = generateAppointmentCode(appointmentId, appointmentData.patient.$id);
           setAppointmentCode(code);
+          // Create verification URL using the generated code
+          const baseUrl = window.location.origin;
+          setVerificationUrl(`${baseUrl}/doctor/verify?code=${code}`);
         }
       } catch (error) {
         console.error("Authentication error:", error);
@@ -116,6 +124,15 @@ const RequestSuccess = ({ searchParams, params }: any) => {
           </h2>
           
           <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
+            {/* QR Code - Now encoding a URL instead of just the code */}
+            <div className="mb-4 p-3 bg-white rounded-md inline-block">
+              <QRCode 
+                value={verificationUrl} 
+                size={180} 
+                level="M"
+                className="mx-auto"
+              />
+            </div>
             <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">
               Your Appointment Code
             </p>
@@ -157,7 +174,7 @@ const RequestSuccess = ({ searchParams, params }: any) => {
             <div>
               <p className="font-medium text-amber-800 dark:text-amber-300 text-sm">Appointment Verification</p>
               <p className="text-amber-700 dark:text-amber-400 text-sm mt-1">
-                Please save your appointment code for reference. Take a screenshot of the code and present it at the clinic to verify your booking.
+                Please save or take a screenshot of the QR code. When you arrive at the clinic, show the QR code to the receptionist who will scan it with their smartphone camera. If you don't have your phone, the text code can also be used as a backup.
               </p>
               <p className="text-amber-700 dark:text-amber-400 text-sm mt-2 border-t border-amber-200 dark:border-amber-700/50 pt-2">
                 You will receive an SMS notification if your appointment is cancelled.

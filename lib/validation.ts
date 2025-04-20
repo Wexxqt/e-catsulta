@@ -63,32 +63,9 @@ export const PatientFormValidation = z.object({
   currentMedication: z.string().optional(),
   familyMedicalHistory: z.string().optional(),
   pastMedicalHistory: z.string().optional(),
-  identificationType: z.string().min(1, "ID type is required"),
   identificationNumber: z.string()
     .min(1, "ID number is required")
     .max(10, "ID number cannot exceed 10 characters"),
-  identificationDocument: z.custom<File[]>()
-    .refine(
-      (files) => files && files.length > 0,
-      "An identification document is required"
-    )
-    .refine(
-      (files) => {
-        if (!files || files.length === 0) return true;
-        // Check if each file is under 50MB
-        const maxSize = 50 * 1024 * 1024; // 50MB in bytes
-        return Array.from(files).every(file => file.size <= maxSize);
-      },
-      "Document size must be less than 50MB"
-    )
-    .refine(
-      (files) => {
-        if (!files) return true;
-        // Recommend but don't require 2 files (front and back)
-        return files.length <= 2;
-      },
-      "Please upload at most 2 files (front and back of ID)"
-    ),
   signsSymptoms: z.string().optional(),
   treatmentConsent: z
     .boolean()
