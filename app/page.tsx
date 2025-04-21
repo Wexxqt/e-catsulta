@@ -28,11 +28,6 @@ const Home = ({ searchParams }: SearchParamProps) => {
               <p className="justify-items-end text-dark-600 xl:text-left">
                 © 2025 e-catsulta
               </p>
-              <div className="flex gap-3 text-sm">
-                <Link href="/?admin=true" className="text-blue-500 hover:underline">Admin</Link>
-                <Link href="/?doctor=true" className="text-blue-500 hover:underline">Doctor</Link>
-                <Link href="/?staff=true" className="text-blue-500 hover:underline">Staff</Link>
-              </div>
             </div>
           </div>
         </section>
