@@ -28,8 +28,11 @@ const Home = ({ searchParams }: SearchParamProps) => {
               <p className="justify-items-end text-dark-600 xl:text-left">
                 © 2025 e-catsulta
               </p>
+<<<<<<< HEAD
               <div className="flex gap-3 text-sm">
               </div>
+=======
+>>>>>>> bfc76d299fa42ae5afae406cd8ed77006c154d08
             </div>
           </div>
         </section>
