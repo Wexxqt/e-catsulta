@@ -340,10 +340,52 @@ const StaffDashboard = () => {
             </DialogClose>
             
             {verifiedAppointment && verifiedAppointment.status === "scheduled" && (
+              <>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/appointments/update-status', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          appointmentId: verifiedAppointment.$id,
+                          status: 'completed',
+                        }),
+                      });
+                      
+                      if (response.ok) {
+                        // Update the local state
+                        setVerifiedAppointment({
+                          ...verifiedAppointment,
+                          status: 'completed'
+                        });
+                      } else {
+                        console.error('Failed to update appointment status');
+                      }
+                    } catch (error) {
+                      console.error('Error updating appointment status:', error);
+                    }
+                  }}
+                  className="w-full sm:w-auto h-10 sm:h-11 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Mark as Completed
+                </Button>
               <div className="flex items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
                 <div className="rounded-full bg-green-100 h-3 w-3 animate-pulse"></div>
                 <span className="text-green-600 text-sm font-medium">
                   Verified ✓
+                  </span>
+                </div>
+              </>
+            )}
+            
+            {verifiedAppointment && verifiedAppointment.status === "completed" && (
+              <div className="flex items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
+                <div className="rounded-full bg-green-500 h-3 w-3"></div>
+                <span className="text-green-600 text-sm font-medium">
+                  Completed ✓
                 </span>
               </div>
             )}

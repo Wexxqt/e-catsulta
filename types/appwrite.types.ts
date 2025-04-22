@@ -61,7 +61,7 @@ export interface Passkey extends Models.Document {
 // Add these to your types/appwrite.types.ts file
 export type Gender = "Male" | "Female" | "Other" | "Prefer not to say";
 
-export type Status = "pending" | "scheduled" | "cancelled";
+export type Status = "pending" | "scheduled" | "cancelled" | "completed";
 
 export interface CreateAppointmentParams {
   patient: Patient;

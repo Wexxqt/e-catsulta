@@ -75,6 +75,7 @@ interface AppointmentState {
   scheduledCount: number;
   pendingCount: number;
   cancelledCount: number;
+  completedCount: number;
   totalCount: number;
 }
 
@@ -96,6 +97,7 @@ const DoctorDashboard = () => {
     scheduledCount: 0,
     pendingCount: 0,
     cancelledCount: 0,
+    completedCount: 0,
     totalCount: 0
   });
   const [loading, setLoading] = useState(true);
@@ -199,7 +201,7 @@ const DoctorDashboard = () => {
         
         // Count appointments by status
         const counts = doctorAppointments.reduce(
-          (acc: {scheduledCount: number, pendingCount: number, cancelledCount: number}, 
+          (acc: {scheduledCount: number, pendingCount: number, cancelledCount: number, completedCount: number}, 
            appointment: Appointment) => {
             switch (appointment.status) {
               case "scheduled":
@@ -211,10 +213,13 @@ const DoctorDashboard = () => {
               case "cancelled":
                 acc.cancelledCount++;
                 break;
+              case "completed":
+                acc.completedCount++;
+                break;
             }
             return acc;
           },
-          { scheduledCount: 0, pendingCount: 0, cancelledCount: 0 }
+          { scheduledCount: 0, pendingCount: 0, cancelledCount: 0, completedCount: 0 }
         );
 
         // For the patient management tab, we need ALL appointments including archived ones
@@ -244,6 +249,7 @@ const DoctorDashboard = () => {
           scheduledCount: counts.scheduledCount,
           pendingCount: counts.pendingCount,
           cancelledCount: counts.cancelledCount,
+          completedCount: counts.completedCount,
           totalCount: doctorAppointments.length
         });
       } else {
@@ -464,6 +470,7 @@ const DoctorDashboard = () => {
         scheduledCount: 0,
         pendingCount: 0,
         cancelledCount: 0,
+        completedCount: 0,
         totalCount: 0
       });
       
@@ -653,7 +660,7 @@ const DoctorDashboard = () => {
               
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6">
-              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <StatCard
                   type="appointments"
                   count={filteredAppointments.scheduledCount}
@@ -675,6 +682,12 @@ const DoctorDashboard = () => {
                       ).length : 0}
                     label="Today's appointments"
                     icon={"/assets/icons/today.svg"}
+                />
+                <StatCard
+                  type="completed"
+                  count={filteredAppointments.completedCount}
+                  label="Completed appointments"
+                  icon={"/assets/icons/check.svg"}
                 />
               </section>
 

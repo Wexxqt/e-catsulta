@@ -211,6 +211,7 @@ const AppointmentsPage = ({ searchParams }: AppointmentsPageProps) => {
                   <SelectItem value="scheduled">Scheduled</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
