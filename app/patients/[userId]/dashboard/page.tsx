@@ -3,20 +3,46 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { format, parse } from "date-fns";
-import { ChevronDown, ChevronUp, Search, Calendar, User, Plus, Clock, Trash2, Edit, Pencil, Users, X, Filter, Check, LogOut, Eye, Clipboard } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Search,
+  Calendar,
+  User,
+  Plus,
+  Clock,
+  Trash2,
+  Edit,
+  Pencil,
+  Users,
+  X,
+  Filter,
+  Check,
+  LogOut,
+  Eye,
+  Clipboard,
+} from "lucide-react";
 import ReactDatePicker from "react-datepicker";
 import Image from "next/image";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
@@ -28,13 +54,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
+import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger 
+  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -56,12 +82,12 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue, 
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Popover,
@@ -76,9 +102,19 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 
-import { getPatient, updatePatientPersonalInfo, updatePatientMedical } from "@/lib/actions/patient.actions";
-import { getPatientAppointments, clearPatientAppointmentHistory } from "@/lib/actions/appointment.actions";
-import { getPatientNotes, clearPatientNotesHistory } from "@/lib/actions/patient-notes.actions";
+import {
+  getPatient,
+  updatePatientPersonalInfo,
+  updatePatientMedical,
+} from "@/lib/actions/patient.actions";
+import {
+  getPatientAppointments,
+  clearPatientAppointmentHistory,
+} from "@/lib/actions/appointment.actions";
+import {
+  getPatientNotes,
+  clearPatientNotesHistory,
+} from "@/lib/actions/patient-notes.actions";
 import { formatDateTime, getGravatarUrl } from "@/lib/utils";
 import { Patient, Appointment, PatientNote } from "@/types/appwrite.types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -101,7 +137,6 @@ const personalInfoSchema = z.object({
   address: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactNumber: z.string().optional(),
-  identificationType: z.string().optional(),
   identificationNumber: z.string().optional(),
 });
 
@@ -121,7 +156,8 @@ const PatientDashboard = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [notes, setNotes] = useState<PatientNote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
   const [isMedicalInfoOpen, setIsMedicalInfoOpen] = useState(true);
   const [isNotesOpen, setIsNotesOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -132,14 +168,16 @@ const PatientDashboard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<string[]>([]);
-  const [openMobileTabs, setOpenMobileTabs] = useState<{[key: string]: boolean}>({});
+  const [openMobileTabs, setOpenMobileTabs] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [clearingNotes, setClearingNotes] = useState(false);
 
   // Function to toggle mobile tab accordions
   const toggleMobileTab = (id: string) => {
-    setOpenMobileTabs(prev => ({
+    setOpenMobileTabs((prev) => ({
       ...prev,
-      [id]: !prev[id]
+      [id]: !prev[id],
     }));
   };
 
@@ -147,7 +185,7 @@ const PatientDashboard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
+
         // Check if user is authenticated
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -155,20 +193,24 @@ const PatientDashboard = () => {
           window.location.href = "/";
           return;
         }
-        
+
         // Fetch patient data
         const patientData = await getPatient(userId as string);
         if (patientData) {
           setPatient(patientData as unknown as Patient);
 
           // Fetch patient appointments
-          const appointmentsData = await getPatientAppointments(userId as string);
+          const appointmentsData = await getPatientAppointments(
+            userId as string
+          );
           setAppointments(appointmentsData || []);
 
           // Extract unique doctor names from appointments
           if (appointmentsData && appointmentsData.length > 0) {
             const uniqueDoctorNames = Array.from(
-              new Set(appointmentsData.map((app: Appointment) => app.primaryPhysician))
+              new Set(
+                appointmentsData.map((app: Appointment) => app.primaryPhysician)
+              )
             ) as string[];
             setDoctors(uniqueDoctorNames);
           }
@@ -187,21 +229,21 @@ const PatientDashboard = () => {
     if (userId) {
       fetchData();
     }
-    
+
     // Also add an event listener to check auth when user navigates back to this page
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         const user = await getCurrentUser();
         if (!user) {
           window.location.href = "/";
         }
       }
     };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [userId]);
 
@@ -209,14 +251,14 @@ const PatientDashboard = () => {
   useEffect(() => {
     if (notes.length > 0) {
       // Make a copy to avoid modifying the original data
-      const processedNotes = notes.map(note => {
+      const processedNotes = notes.map((note) => {
         // For historical notes that have "current-doctor-id"
         if (note.doctorId === "current-doctor-id") {
           return { ...note, doctorId: "Your Doctor" };
         }
         return note;
       });
-      
+
       setNotes(processedNotes);
     }
   }, [notes.length]);
@@ -233,7 +275,6 @@ const PatientDashboard = () => {
       address: patient?.address || "",
       emergencyContactName: patient?.emergencyContactName || "",
       emergencyContactNumber: patient?.emergencyContactNumber || "",
-      identificationType: patient?.identificationType || "",
       identificationNumber: patient?.identificationNumber || "",
     },
   });
@@ -262,7 +303,6 @@ const PatientDashboard = () => {
         address: patient.address || "",
         emergencyContactName: patient.emergencyContactName || "",
         emergencyContactNumber: patient.emergencyContactNumber || "",
-        identificationType: patient.identificationType || "",
         identificationNumber: patient.identificationNumber || "",
       });
 
@@ -279,40 +319,43 @@ const PatientDashboard = () => {
   // Filter appointments based on search query and selected doctor
   const filteredAppointments = useMemo(() => {
     let filtered = appointments;
-    
+
     // First filter by selected doctor if any
     if (selectedDoctor) {
-      filtered = filtered.filter(appointment => 
-        appointment.primaryPhysician === selectedDoctor
+      filtered = filtered.filter(
+        (appointment) => appointment.primaryPhysician === selectedDoctor
       );
     }
-    
+
     // Then filter by search query if any
     if (searchQuery.trim()) {
       const lowerQuery = searchQuery.toLowerCase();
-      
+
       // Special keyword mapping to specific doctors
       if (lowerQuery === "medical") {
         // Show only Dr. Abegail's appointments
-        return filtered.filter(appointment => 
+        return filtered.filter((appointment) =>
           appointment.primaryPhysician.toLowerCase().includes("abegail")
         );
       } else if (lowerQuery === "dental") {
         // Show only Dr. Genevieve's appointments
-        return filtered.filter(appointment => 
+        return filtered.filter((appointment) =>
           appointment.primaryPhysician.toLowerCase().includes("genevieve")
         );
       }
-      
+
       // Standard text search
-      filtered = filtered.filter(appointment => 
-        appointment.primaryPhysician.toLowerCase().includes(lowerQuery) ||
-        formatDateTime(appointment.schedule).dateTime.toLowerCase().includes(lowerQuery) ||
-        appointment.reason.toLowerCase().includes(lowerQuery) ||
-        appointment.status.toLowerCase().includes(lowerQuery)
+      filtered = filtered.filter(
+        (appointment) =>
+          appointment.primaryPhysician.toLowerCase().includes(lowerQuery) ||
+          formatDateTime(appointment.schedule)
+            .dateTime.toLowerCase()
+            .includes(lowerQuery) ||
+          appointment.reason.toLowerCase().includes(lowerQuery) ||
+          appointment.status.toLowerCase().includes(lowerQuery)
       );
     }
-    
+
     return filtered;
   }, [appointments, searchQuery, selectedDoctor]);
 
@@ -334,7 +377,7 @@ const PatientDashboard = () => {
     try {
       setClearingHistory(true);
       const result = await clearPatientAppointmentHistory(userId as string);
-      
+
       if (result.success) {
         setAppointments([]);
         setSearchQuery("");
@@ -349,10 +392,12 @@ const PatientDashboard = () => {
   };
 
   // Handle personal info submit
-  const onPersonalInfoSubmit = async (data: z.infer<typeof personalInfoSchema>) => {
+  const onPersonalInfoSubmit = async (
+    data: z.infer<typeof personalInfoSchema>
+  ) => {
     if (!patient) return;
     setIsSubmitting(true);
-    
+
     try {
       const response = await updatePatientPersonalInfo({
         patientId: patient.$id,
@@ -360,14 +405,13 @@ const PatientDashboard = () => {
         email: data.email,
         phone: data.phone,
         birthDate: data.birthDate,
-        gender: data.gender.toLowerCase() as any,
+        gender: data.gender,
         address: data.address,
         emergencyContactName: data.emergencyContactName,
         emergencyContactNumber: data.emergencyContactNumber,
-        identificationType: data.identificationType,
-        identificationNumber: data.identificationNumber
+        identificationNumber: data.identificationNumber,
       });
-      
+
       if (response.status === "success") {
         // Refetch patient data to update the UI
         const patientData = await getPatient(userId as string);
@@ -386,10 +430,12 @@ const PatientDashboard = () => {
   };
 
   // Handle medical info submit
-  const onMedicalInfoSubmit = async (data: z.infer<typeof medicalInfoSchema>) => {
+  const onMedicalInfoSubmit = async (
+    data: z.infer<typeof medicalInfoSchema>
+  ) => {
     if (!patient) return;
     setIsSubmitting(true);
-    
+
     try {
       const response = await updatePatientMedical({
         patientId: patient.$id,
@@ -397,9 +443,9 @@ const PatientDashboard = () => {
         currentMedication: data.currentMedication,
         pastMedicalHistory: data.pastMedicalHistory,
         familyMedicalHistory: data.familyMedicalHistory,
-        signsSymptoms: data.signsSymptoms
+        signsSymptoms: data.signsSymptoms,
       });
-      
+
       if (response.status === "success") {
         // Refetch patient data to update the UI
         const patientData = await getPatient(userId as string);
@@ -426,23 +472,26 @@ const PatientDashboard = () => {
   const handleLogout = async () => {
     try {
       console.log("Attempting to logout...");
-      
+
       try {
         // Try to delete the session on the server
         await logout();
         console.log("Session deleted successfully");
       } catch (error) {
         // If server-side logout fails, just log it but continue with client-side logout
-        console.log("Server-side logout failed, continuing with client-side logout", error);
+        console.log(
+          "Server-side logout failed, continuing with client-side logout",
+          error
+        );
       }
-      
+
       // Clear any local storage or session storage data
       localStorage.clear();
       sessionStorage.clear();
-      
+
       // Always redirect to home page regardless of server-side logout success
       console.log("Redirecting to home page...");
-      
+
       // Replace the current history entry instead of adding a new one
       // This prevents users from navigating back to the dashboard using the browser back button
       window.location.replace("/");
@@ -456,11 +505,11 @@ const PatientDashboard = () => {
   // Function to handle clearing notes history
   const handleClearNotesHistory = async () => {
     if (!patient) return;
-    
+
     try {
       setClearingNotes(true);
       const result = await clearPatientNotesHistory(patient.$id);
-      
+
       if (result.success) {
         setNotes([]);
       } else {
@@ -476,7 +525,9 @@ const PatientDashboard = () => {
   if (loading) {
     return (
       <div className="flex-center min-h-screen">
-        <p className="text-16-medium text-light-200">Loading patient information...</p>
+        <p className="text-16-medium text-light-200">
+          Loading patient information...
+        </p>
       </div>
     );
   }
@@ -484,11 +535,10 @@ const PatientDashboard = () => {
   if (!patient) {
     return (
       <div className="flex-center flex-col min-h-screen">
-        <p className="text-16-medium text-light-200 mb-4">Patient information not found.</p>
-        <Button 
-          className="shad-primary-btn" 
-          onClick={() => router.push("/")}
-        >
+        <p className="text-16-medium text-light-200 mb-4">
+          Patient information not found.
+        </p>
+        <Button className="shad-primary-btn" onClick={() => router.push("/")}>
           Register as Patient
         </Button>
       </div>
@@ -496,23 +546,44 @@ const PatientDashboard = () => {
   }
 
   const medicalTabs = [
-    { id: "allergies", label: "Allergies", content: patient.allergies || "No known allergies" },
-    { id: "medication", label: "Medication", content: patient.currentMedication || "Not taking any medication" },
-    { id: "past-history", label: "Past History", content: patient.pastMedicalHistory || "No past medical history recorded" },
-    { id: "family-history", label: "Family History", content: patient.familyMedicalHistory || "No family medical history recorded" },
-    { id: "symptoms", label: "Symptoms", content: patient.signsSymptoms || "No signs or symptoms recorded" }
+    {
+      id: "allergies",
+      label: "Allergies",
+      content: patient.allergies || "No known allergies",
+    },
+    {
+      id: "medication",
+      label: "Medication",
+      content: patient.currentMedication || "Not taking any medication",
+    },
+    {
+      id: "past-history",
+      label: "Past History",
+      content: patient.pastMedicalHistory || "No past medical history recorded",
+    },
+    {
+      id: "family-history",
+      label: "Family History",
+      content:
+        patient.familyMedicalHistory || "No family medical history recorded",
+    },
+    {
+      id: "symptoms",
+      label: "Symptoms",
+      content: patient.signsSymptoms || "No signs or symptoms recorded",
+    },
   ];
 
   return (
     <div className="container mx-auto py-4 sm:py-6 lg:py-8 relative">
       {/* Calendar styles are now in globals.css */}
-      
+
       {/* Desktop Logout Button */}
       <div className="hidden sm:flex justify-end mb-4">
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               className="text-red-500 border-red-500 hover:bg-red-500/10 h-9"
             >
@@ -522,14 +593,18 @@ const PatientDashboard = () => {
           </AlertDialogTrigger>
           <AlertDialogContent className="shad-alert-dialog">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-light-200">Logout Confirmation</AlertDialogTitle>
+              <AlertDialogTitle className="text-light-200">
+                Logout Confirmation
+              </AlertDialogTitle>
               <AlertDialogDescription className="text-dark-700">
                 Are you sure you want to logout? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
                 onClick={handleLogout}
                 className="bg-red-700 text-white hover:bg-red-800"
               >
@@ -539,7 +614,7 @@ const PatientDashboard = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      
+
       <div className="dashboard-layout">
         {/* Patient Profile Section */}
         <div className="col-span-1 dashboard-card">
@@ -547,29 +622,36 @@ const PatientDashboard = () => {
             <div className="flex flex-1 items-center min-w-0 max-w-full overflow-hidden">
               <div className="relative mr-3 sm:mr-4 flex-shrink-0">
                 <Avatar className="h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 border-2 border-dark-500">
-                  <AvatarImage src={getGravatarUrl(patient.email, 200)} alt={patient.name} />
+                  <AvatarImage
+                    src={getGravatarUrl(patient.email, 200)}
+                    alt={patient.name}
+                  />
                   <AvatarFallback className="bg-gradient-to-br from-dark-300 to-dark-400">
                     {getInitials(patient.name)}
                   </AvatarFallback>
                 </Avatar>
               </div>
               <div className="flex flex-col min-w-0 max-w-[calc(100%-80px)] sm:max-w-[calc(100%-90px)] md:max-w-[calc(100%-100px)]">
-                <h1 className="text-16-semibold sm:text-18-bold text-light-200 truncate mb-0.5">{patient.name}</h1>
+                <h1 className="text-16-semibold sm:text-18-bold text-light-200 truncate mb-0.5">
+                  {patient.name}
+                </h1>
                 <p className="text-12-regular sm:text-14-regular text-dark-600 truncate">
-                  {patient.identificationType === "employee" 
-                    ? `Employee No. ${patient.identificationNumber || "N/A"}`
-                    : patient.identificationType === "student"
-                      ? `Student No. ${patient.identificationNumber || "N/A"}`
-                      : `ID: ${patient.$id.substring(0, 8)}`}
+                  {patient.identificationNumber &&
+                  patient.identificationNumber.length > 0
+                    ? `ID No. ${patient.identificationNumber}`
+                    : `ID: ${patient.$id.substring(0, 8)}`}
                 </p>
               </div>
             </div>
-            
-            <Dialog open={showPersonalInfoDialog} onOpenChange={setShowPersonalInfoDialog}>
+
+            <Dialog
+              open={showPersonalInfoDialog}
+              onOpenChange={setShowPersonalInfoDialog}
+            >
               <DialogTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="text-light-200 hover:bg-dark-500 group transition duration-200 flex-shrink-0 whitespace-nowrap"
                 >
                   <Pencil className="h-4 w-4 mr-2 group-hover:text-green-500" />
@@ -578,11 +660,18 @@ const PatientDashboard = () => {
               </DialogTrigger>
               <DialogContent className="shad-dialog sm:max-w-md md:max-w-lg lg:max-w-2xl w-[95%] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader className="mb-4 sm:mb-6">
-                  <DialogTitle className="text-16-semibold sm:text-18-bold text-light-200">Edit Personal Information</DialogTitle>
+                  <DialogTitle className="text-16-semibold sm:text-18-bold text-light-200">
+                    Edit Personal Information
+                  </DialogTitle>
                 </DialogHeader>
-                
+
                 <Form {...personalInfoForm}>
-                  <form onSubmit={personalInfoForm.handleSubmit(onPersonalInfoSubmit)} className="space-y-4 sm:space-y-6">
+                  <form
+                    onSubmit={personalInfoForm.handleSubmit(
+                      onPersonalInfoSubmit
+                    )}
+                    className="space-y-4 sm:space-y-6"
+                  >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       {/* Name */}
                       <FormField
@@ -590,12 +679,14 @@ const PatientDashboard = () => {
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-light-200 text-14-medium">Full Name</FormLabel>
+                            <FormLabel className="text-light-200 text-14-medium">
+                              Full Name
+                            </FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Enter your full name" 
+                              <Input
+                                placeholder="Enter your full name"
                                 className="bg-dark-300 border-dark-500 text-light-200 h-10 sm:h-11"
-                                {...field} 
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -609,12 +700,14 @@ const PatientDashboard = () => {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-light-200 text-14-medium">Email</FormLabel>
+                            <FormLabel className="text-light-200 text-14-medium">
+                              Email
+                            </FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Enter your email" 
+                              <Input
+                                placeholder="Enter your email"
                                 className="bg-dark-300 border-dark-500 text-light-200 h-10 sm:h-11"
-                                {...field} 
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -628,12 +721,14 @@ const PatientDashboard = () => {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-light-200 text-14-medium">Phone Number</FormLabel>
+                            <FormLabel className="text-light-200 text-14-medium">
+                              Phone Number
+                            </FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Enter your phone number" 
+                              <Input
+                                placeholder="Enter your phone number"
                                 className="bg-dark-300 border-dark-500 text-light-200 h-10 sm:h-11"
-                                {...field} 
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -647,12 +742,16 @@ const PatientDashboard = () => {
                         name="birthDate"
                         render={({ field }) => (
                           <FormItem className="mb-2 sm:mb-0">
-                            <FormLabel className="text-light-200 text-14-medium">Date of Birth</FormLabel>
+                            <FormLabel className="text-light-200 text-14-medium">
+                              Date of Birth
+                            </FormLabel>
                             <FormControl>
                               <div className="flex rounded-md border border-dark-500 bg-dark-300 h-10 sm:h-11 overflow-hidden">
                                 <ReactDatePicker
                                   selected={field.value}
-                                  onChange={(date: Date) => field.onChange(date)}
+                                  onChange={(date: Date) =>
+                                    field.onChange(date)
+                                  }
                                   className="bg-dark-300 text-light-200 w-full p-2 border-0 focus:outline-none"
                                   placeholderText="Select date of birth"
                                   dateFormat="MM/dd/yyyy"
@@ -677,9 +776,11 @@ const PatientDashboard = () => {
                         name="gender"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-light-200 text-14-medium">Gender</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
+                            <FormLabel className="text-light-200 text-14-medium">
+                              Gender
+                            </FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
                               defaultValue={field.value}
                             >
                               <FormControl>
@@ -691,56 +792,11 @@ const PatientDashboard = () => {
                                 <SelectItem value="Male">Male</SelectItem>
                                 <SelectItem value="Female">Female</SelectItem>
                                 <SelectItem value="Other">Other</SelectItem>
-                                <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                                <SelectItem value="Prefer not to say">
+                                  Prefer not to say
+                                </SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Identification */}
-                      <FormField
-                        control={personalInfoForm.control}
-                        name="identificationType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-light-200 text-14-medium">Identification Type</FormLabel>
-                            <FormControl>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="bg-dark-300 border-dark-500 text-light-200 h-10 sm:h-11">
-                                    <SelectValue placeholder="Select identification type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="bg-dark-400 border-dark-500 text-light-200">
-                                  <SelectItem value="employee">Employee</SelectItem>
-                                  <SelectItem value="student">Student</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Identification Number */}
-                      <FormField
-                        control={personalInfoForm.control}
-                        name="identificationNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-light-200 text-14-medium">Identification Number</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter identification number" 
-                                className="bg-dark-300 border-dark-500 text-light-200 h-10 sm:h-11"
-                                {...field} 
-                              />
-                            </FormControl>
                             <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
                           </FormItem>
                         )}
@@ -752,12 +808,14 @@ const PatientDashboard = () => {
                         name="address"
                         render={({ field }) => (
                           <FormItem className="col-span-1 sm:col-span-2">
-                            <FormLabel className="text-light-200 text-14-medium">Address</FormLabel>
+                            <FormLabel className="text-light-200 text-14-medium">
+                              Address
+                            </FormLabel>
                             <FormControl>
-                              <Textarea 
+                              <Textarea
                                 placeholder="Enter your address"
-                                className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]" 
-                                {...field} 
+                                className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]"
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -771,12 +829,14 @@ const PatientDashboard = () => {
                         name="emergencyContactName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-light-200 text-14-medium">Emergency Contact Name</FormLabel>
+                            <FormLabel className="text-light-200 text-14-medium">
+                              Emergency Contact Name
+                            </FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Enter emergency contact name" 
+                              <Input
+                                placeholder="Enter emergency contact name"
                                 className="bg-dark-300 border-dark-500 text-light-200 h-10 sm:h-11"
-                                {...field} 
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -790,12 +850,14 @@ const PatientDashboard = () => {
                         name="emergencyContactNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-light-200 text-14-medium">Emergency Contact Number</FormLabel>
+                            <FormLabel className="text-light-200 text-14-medium">
+                              Emergency Contact Number
+                            </FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Enter emergency contact number" 
+                              <Input
+                                placeholder="Enter emergency contact number"
                                 className="bg-dark-300 border-dark-500 text-light-200 h-10 sm:h-11"
-                                {...field} 
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -805,16 +867,16 @@ const PatientDashboard = () => {
                     </div>
 
                     <DialogFooter className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-2 sm:gap-4 sm:justify-end">
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         variant="outline"
                         className="border-dark-500 bg-dark-300 text-light-200 w-full sm:w-auto order-2 sm:order-1"
                         onClick={() => setShowPersonalInfoDialog(false)}
                       >
                         Cancel
                       </Button>
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         className="shad-primary-btn w-full sm:w-auto order-1 sm:order-2"
                         disabled={isSubmitting}
                       >
@@ -829,33 +891,44 @@ const PatientDashboard = () => {
 
           <div className="space-y-4">
             <div>
-              <h2 className="text-16-medium text-light-200 mb-2">Personal Information</h2>
+              <h2 className="text-16-medium text-light-200 mb-2">
+                Personal Information
+              </h2>
               <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                 <div className="col-span-full">
                   <p className="text-14-regular text-dark-600">Email</p>
-                  <p className="text-14-medium text-light-200 break-words">{patient.email}</p>
+                  <p className="text-14-medium text-light-200 break-words">
+                    {patient.email}
+                  </p>
                 </div>
                 <div>
                   <p className="text-14-regular text-dark-600">Phone</p>
-                  <p className="text-14-medium text-light-200">{patient.phone}</p>
+                  <p className="text-14-medium text-light-200">
+                    {patient.phone}
+                  </p>
                 </div>
                 <div>
                   <p className="text-14-regular text-dark-600">Date of Birth</p>
                   <p className="text-14-medium text-light-200">
-                    {patient.birthDate ? format(new Date(patient.birthDate), 'MM/dd/yyyy') : 'N/A'}
+                    {patient.birthDate
+                      ? format(new Date(patient.birthDate), "MM/dd/yyyy")
+                      : "N/A"}
                   </p>
                 </div>
                 <div>
                   <p className="text-14-regular text-dark-600">Gender</p>
                   <p className="text-14-medium text-light-200">
-                    {patient.gender ? 
-                      patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) 
-                      : 'N/A'}
+                    {patient.gender
+                      ? patient.gender.charAt(0).toUpperCase() +
+                        patient.gender.slice(1)
+                      : "N/A"}
                   </p>
                 </div>
                 <div className="col-span-full">
                   <p className="text-14-regular text-dark-600">Address</p>
-                  <p className="text-14-medium text-light-200">{patient.address}</p>
+                  <p className="text-14-medium text-light-200">
+                    {patient.address}
+                  </p>
                 </div>
               </div>
             </div>
@@ -863,15 +936,21 @@ const PatientDashboard = () => {
             <Separator className="bg-dark-500" />
 
             <div>
-              <h2 className="text-16-medium text-light-200 mb-2">Emergency Contact</h2>
+              <h2 className="text-16-medium text-light-200 mb-2">
+                Emergency Contact
+              </h2>
               <div className="space-y-2">
                 <div>
                   <p className="text-14-regular text-dark-600">Name</p>
-                  <p className="text-14-medium text-light-200">{patient.emergencyContactName}</p>
+                  <p className="text-14-medium text-light-200">
+                    {patient.emergencyContactName}
+                  </p>
                 </div>
                 <div>
                   <p className="text-14-regular text-dark-600">Phone</p>
-                  <p className="text-14-medium text-light-200">{patient.emergencyContactNumber}</p>
+                  <p className="text-14-medium text-light-200">
+                    {patient.emergencyContactNumber}
+                  </p>
                 </div>
               </div>
             </div>
@@ -880,39 +959,57 @@ const PatientDashboard = () => {
 
         {/* Medical History Section - Tabbed Interface */}
         <div className="dashboard-card-wide dashboard-card z-10">
-          <Collapsible 
-            open={isMedicalInfoOpen} 
+          <Collapsible
+            open={isMedicalInfoOpen}
             onOpenChange={setIsMedicalInfoOpen}
             className="w-full"
           >
             <div className="p-4 sm:p-6 flex justify-between items-center">
-              <h2 className="text-16-semibold text-light-200">Medical Information</h2>
+              <h2 className="text-16-semibold text-light-200">
+                Medical Information
+              </h2>
               <div className="flex items-center">
-                <Dialog open={showMedicalInfoDialog} onOpenChange={setShowMedicalInfoDialog}>
+                <Dialog
+                  open={showMedicalInfoDialog}
+                  onOpenChange={setShowMedicalInfoDialog}
+                >
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-light-200 hover:bg-dark-500 mr-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-light-200 hover:bg-dark-500 mr-2"
+                    >
                       <Pencil className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="shad-dialog sm:max-w-md md:max-w-lg lg:max-w-2xl w-[95%] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                     <DialogHeader className="mb-4 sm:mb-6">
-                      <DialogTitle className="text-16-semibold sm:text-18-bold text-light-200">Edit Medical Information</DialogTitle>
+                      <DialogTitle className="text-16-semibold sm:text-18-bold text-light-200">
+                        Edit Medical Information
+                      </DialogTitle>
                     </DialogHeader>
-                    
+
                     <Form {...medicalInfoForm}>
-                      <form onSubmit={medicalInfoForm.handleSubmit(onMedicalInfoSubmit)} className="space-y-4 sm:space-y-6">
+                      <form
+                        onSubmit={medicalInfoForm.handleSubmit(
+                          onMedicalInfoSubmit
+                        )}
+                        className="space-y-4 sm:space-y-6"
+                      >
                         <FormField
                           control={medicalInfoForm.control}
                           name="allergies"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-light-200 text-14-medium">Allergies</FormLabel>
+                              <FormLabel className="text-light-200 text-14-medium">
+                                Allergies
+                              </FormLabel>
                               <FormControl>
-                                <Textarea 
+                                <Textarea
                                   placeholder="Please list any allergies you have"
-                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]" 
-                                  {...field} 
+                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]"
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -925,12 +1022,14 @@ const PatientDashboard = () => {
                           name="currentMedication"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-light-200 text-14-medium">Current Medications</FormLabel>
+                              <FormLabel className="text-light-200 text-14-medium">
+                                Current Medications
+                              </FormLabel>
                               <FormControl>
-                                <Textarea 
+                                <Textarea
                                   placeholder="Please list any medications you are currently taking"
-                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]" 
-                                  {...field} 
+                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]"
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -943,12 +1042,14 @@ const PatientDashboard = () => {
                           name="pastMedicalHistory"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-light-200 text-14-medium">Past Medical History</FormLabel>
+                              <FormLabel className="text-light-200 text-14-medium">
+                                Past Medical History
+                              </FormLabel>
                               <FormControl>
-                                <Textarea 
+                                <Textarea
                                   placeholder="Please provide details about your medical history"
-                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]" 
-                                  {...field} 
+                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]"
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -961,12 +1062,14 @@ const PatientDashboard = () => {
                           name="familyMedicalHistory"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-light-200 text-14-medium">Family Medical History</FormLabel>
+                              <FormLabel className="text-light-200 text-14-medium">
+                                Family Medical History
+                              </FormLabel>
                               <FormControl>
-                                <Textarea 
+                                <Textarea
                                   placeholder="Please provide details about your family's medical history"
-                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]" 
-                                  {...field} 
+                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]"
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -979,12 +1082,14 @@ const PatientDashboard = () => {
                           name="signsSymptoms"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-light-200 text-14-medium">Signs & Symptoms</FormLabel>
+                              <FormLabel className="text-light-200 text-14-medium">
+                                Signs & Symptoms
+                              </FormLabel>
                               <FormControl>
-                                <Textarea 
+                                <Textarea
                                   placeholder="Please describe any current symptoms you are experiencing"
-                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]" 
-                                  {...field} 
+                                  className="resize-none bg-dark-300 border-dark-500 text-light-200 min-h-[70px] sm:min-h-[80px]"
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage className="text-red-500 text-12-regular sm:text-14-regular" />
@@ -993,16 +1098,16 @@ const PatientDashboard = () => {
                         />
 
                         <DialogFooter className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-2 sm:gap-4 sm:justify-end">
-                          <Button 
-                            type="button" 
+                          <Button
+                            type="button"
                             variant="outline"
                             className="border-dark-500 bg-dark-300 text-light-200 w-full sm:w-auto order-2 sm:order-1"
                             onClick={() => setShowMedicalInfoDialog(false)}
                           >
                             Cancel
                           </Button>
-                          <Button 
-                            type="submit" 
+                          <Button
+                            type="submit"
                             className="shad-primary-btn w-full sm:w-auto order-1 sm:order-2"
                             disabled={isSubmitting}
                           >
@@ -1015,53 +1120,64 @@ const PatientDashboard = () => {
                 </Dialog>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="p-0 h-7 w-7">
-                    {isMedicalInfoOpen ? 
-                      <ChevronUp className="h-5 w-5 text-light-200" /> : 
+                    {isMedicalInfoOpen ? (
+                      <ChevronUp className="h-5 w-5 text-light-200" />
+                    ) : (
                       <ChevronDown className="h-5 w-5 text-light-200" />
-                    }
+                    )}
                   </Button>
                 </CollapsibleTrigger>
               </div>
             </div>
-            
+
             <CollapsibleContent className="px-4 sm:px-6 pb-6">
               {/* Hidden on mobile, visible on larger screens */}
               <div className="hidden sm:block">
                 <Tabs defaultValue={medicalTabs[0].id} className="w-full">
                   <TabsList className="mb-2">
                     {medicalTabs.map((tab, index) => (
-                      <TabsTrigger 
-                        key={tab.id} 
+                      <TabsTrigger
+                        key={tab.id}
                         value={tab.id}
                         onClick={() => setSelectedTabIndex(index)}
-                        className={selectedTabIndex === index ? "bg-dark-500" : ""}
+                        className={
+                          selectedTabIndex === index ? "bg-dark-500" : ""
+                        }
                       >
                         {tab.label}
                       </TabsTrigger>
                     ))}
                   </TabsList>
-                  
+
                   {medicalTabs.map((tab) => (
-                    <TabsContent key={tab.id} value={tab.id} className="text-14-regular text-dark-700 mt-4">
+                    <TabsContent
+                      key={tab.id}
+                      value={tab.id}
+                      className="text-14-regular text-dark-700 mt-4"
+                    >
                       {tab.content}
                     </TabsContent>
                   ))}
                 </Tabs>
               </div>
-              
+
               {/* Mobile-friendly accordion layout */}
               <div className="block sm:hidden">
                 <div className="space-y-3">
                   {medicalTabs.map((tab, index) => (
-                    <Collapsible 
-                      key={tab.id} 
+                    <Collapsible
+                      key={tab.id}
                       className="border border-dark-500 rounded-md overflow-hidden"
                       open={openMobileTabs[tab.id]}
                       onOpenChange={() => toggleMobileTab(tab.id)}
                     >
                       <CollapsibleTrigger className="flex justify-between items-center w-full p-3 bg-dark-300 hover:bg-dark-500 transition-colors duration-200">
-                        <span className="text-14-medium text-light-200">{tab.label}</span>
-                        <div className={`rotate-chevron ${openMobileTabs[tab.id] ? 'open' : ''}`}>
+                        <span className="text-14-medium text-light-200">
+                          {tab.label}
+                        </span>
+                        <div
+                          className={`rotate-chevron ${openMobileTabs[tab.id] ? "open" : ""}`}
+                        >
                           <ChevronDown className="h-4 w-4 text-light-200" />
                         </div>
                       </CollapsibleTrigger>
@@ -1079,7 +1195,9 @@ const PatientDashboard = () => {
         {/* Appointment History Section */}
         <div className="dashboard-card-full dashboard-card relative z-10">
           <div className="dashboard-header">
-            <h2 className="text-16-semibold text-light-200">Appointment History</h2>
+            <h2 className="text-16-semibold text-light-200">
+              Appointment History
+            </h2>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="dashboard-search-container">
                 <div className="dashboard-search-input-wrapper">
@@ -1091,19 +1209,26 @@ const PatientDashboard = () => {
                     className="dashboard-search-input"
                   />
                 </div>
-                
+
                 {/* Doctor Filter Dropdown */}
                 {doctors.length > 0 && (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="dashboard-filter-btn">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="dashboard-filter-btn"
+                      >
                         <Filter className="h-4 w-4" />
-                        {selectedDoctor ? 'Doctor' : 'Filter by Doctor'}
+                        {selectedDoctor ? "Doctor" : "Filter by Doctor"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-56 bg-dark-400 border-dark-500 p-0 z-50">
                       <Command className="bg-dark-400">
-                        <CommandInput placeholder="Search doctor..." className="h-9 bg-dark-300 text-light-200" />
+                        <CommandInput
+                          placeholder="Search doctor..."
+                          className="h-9 bg-dark-300 text-light-200"
+                        />
                         <CommandEmpty>No doctor found.</CommandEmpty>
                         <CommandGroup className="max-h-[200px] overflow-auto">
                           {doctors.map((doctor) => (
@@ -1114,7 +1239,9 @@ const PatientDashboard = () => {
                             >
                               <User className="h-4 w-4" />
                               <span>{doctor}</span>
-                              {selectedDoctor === doctor && <Check className="h-4 w-4 ml-auto" />}
+                              {selectedDoctor === doctor && (
+                                <Check className="h-4 w-4 ml-auto" />
+                              )}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -1123,16 +1250,18 @@ const PatientDashboard = () => {
                   </Popover>
                 )}
               </div>
-              
+
               <div className="dashboard-actions-container">
                 {/* Doctor Filter Badge - shows when a doctor is selected */}
                 {selectedDoctor && (
                   <div className="dashboard-filter-badge">
                     <User className="h-3.5 w-3.5" />
-                    <span className="text-14-medium truncate max-w-[120px]">{selectedDoctor}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <span className="text-14-medium truncate max-w-[120px]">
+                      {selectedDoctor}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-5 w-5 p-0 rounded-full hover:bg-dark-500"
                       onClick={clearDoctorFilter}
                     >
@@ -1140,13 +1269,13 @@ const PatientDashboard = () => {
                     </Button>
                   </div>
                 )}
-                
+
                 {/* Clear History Button with Confirmation */}
                 {appointments.length > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         className="text-red-500 border-red-500 hover:bg-red-500/10 h-9"
                         disabled={clearingHistory}
@@ -1157,38 +1286,51 @@ const PatientDashboard = () => {
                     </AlertDialogTrigger>
                     <AlertDialogContent className="shad-alert-dialog">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-light-200">Hide Appointment History</AlertDialogTitle>
+                        <AlertDialogTitle className="text-light-200">
+                          Hide Appointment History
+                        </AlertDialogTitle>
                         <AlertDialogDescription className="text-dark-700">
-                          This will hide all your appointments from your dashboard view. Your appointment records will still 
-                          be available to your doctor and clinic staff. This action clears your view only.
+                          This will hide all your appointments from your
+                          dashboard view. Your appointment records will still be
+                          available to your doctor and clinic staff. This action
+                          clears your view only.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
+                        <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
                           onClick={handleClearHistory}
                           className="bg-red-700 text-white hover:bg-red-800"
                         >
-                          {clearingHistory ? "Clearing..." : "Hide Appointments"}
+                          {clearingHistory
+                            ? "Clearing..."
+                            : "Hide Appointments"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
-                
-                <Button className="shad-primary-btn h-9" onClick={handleNewAppointment}>New Appointment</Button>
+
+                <Button
+                  className="shad-primary-btn h-9"
+                  onClick={handleNewAppointment}
+                >
+                  New Appointment
+                </Button>
               </div>
             </div>
           </div>
-          
+
           {filteredAppointments.length === 0 ? (
             <p className="text-14-regular text-dark-600 text-center py-6 sm:py-8">
-              {appointments.length === 0 
-                ? loading 
+              {appointments.length === 0
+                ? loading
                   ? "Loading appointments..."
-                  : "No appointment history found." 
-                : selectedDoctor 
-                  ? `No appointments with Dr. ${selectedDoctor}.` 
+                  : "No appointment history found."
+                : selectedDoctor
+                  ? `No appointments with Dr. ${selectedDoctor}.`
                   : "No appointments match your search."}
             </p>
           ) : (
@@ -1196,22 +1338,26 @@ const PatientDashboard = () => {
               {/* Mobile Card View */}
               <div className="block sm:hidden space-y-4">
                 {filteredAppointments.map((appointment) => (
-                  <div 
-                    key={appointment.$id} 
+                  <div
+                    key={appointment.$id}
                     className="bg-dark-300 border border-dark-500 rounded-lg p-4 shadow-sm"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="text-16-medium text-light-200 mb-1">{appointment.primaryPhysician}</h3>
-                        <p className="text-14-regular text-dark-600">{formatDateTime(appointment.schedule).dateTime}</p>
+                        <h3 className="text-16-medium text-light-200 mb-1">
+                          {appointment.primaryPhysician}
+                        </h3>
+                        <p className="text-14-regular text-dark-600">
+                          {formatDateTime(appointment.schedule).dateTime}
+                        </p>
                       </div>
                       <StatusBadge status={appointment.status} />
                     </div>
-                    
+
                     <Sheet>
                       <SheetTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           className="w-full text-light-200 bg-dark-400 border-dark-500 hover:bg-dark-500"
                           onClick={() => setSelectedAppointment(appointment)}
@@ -1220,7 +1366,10 @@ const PatientDashboard = () => {
                           Details
                         </Button>
                       </SheetTrigger>
-                      <SheetContent side="bottom" className="h-[85vh] max-h-[85vh] overflow-y-auto pb-10">
+                      <SheetContent
+                        side="bottom"
+                        className="h-[85vh] max-h-[85vh] overflow-y-auto pb-10"
+                      >
                         <SheetHeader className="sticky top-0 bg-dark-400 pb-2 z-10">
                           <SheetTitle>Appointment Details</SheetTitle>
                         </SheetHeader>
@@ -1228,17 +1377,26 @@ const PatientDashboard = () => {
                           <div className="space-y-4 mt-4 px-1">
                             <div className="grid grid-cols-1 gap-5">
                               <div>
-                                <p className="text-14-regular text-dark-600">Date & Time</p>
-                                <p className="text-16-medium text-light-200">
-                                  {formatDateTime(selectedAppointment.schedule).dateTime}
+                                <p className="text-14-regular text-dark-600">
+                                  Date & Time
                                 </p>
-                                
+                                <p className="text-16-medium text-light-200">
+                                  {
+                                    formatDateTime(selectedAppointment.schedule)
+                                      .dateTime
+                                  }
+                                </p>
+
                                 {/* Calendar view for mobile - moved below date & time */}
                                 <div className="appointment-calendar mt-2 bg-dark-300 p-3 rounded-lg">
-                                  <p className="text-14-regular text-dark-600 mb-2 text-center">Appointment Date</p>
+                                  <p className="text-14-regular text-dark-600 mb-2 text-center">
+                                    Appointment Date
+                                  </p>
                                   <div className="flex justify-center">
                                     <ReactDatePicker
-                                      selected={new Date(selectedAppointment.schedule)}
+                                      selected={
+                                        new Date(selectedAppointment.schedule)
+                                      }
                                       onChange={() => {}} // Read-only
                                       inline
                                       disabled={true}
@@ -1258,27 +1416,43 @@ const PatientDashboard = () => {
                                       )}
                                     />
                                   </div>
-                                  
+
                                   {/* Time indicator below calendar */}
                                   <div className="flex items-center justify-center mt-2 text-light-200 bg-dark-400 py-2 px-4 rounded-lg">
                                     <Clock className="h-4 w-4 mr-2 text-green-500" />
                                     <span className="text-14-medium">
-                                      {format(new Date(selectedAppointment.schedule), 'h:mm a')}
+                                      {format(
+                                        new Date(selectedAppointment.schedule),
+                                        "h:mm a"
+                                      )}
                                     </span>
                                   </div>
                                 </div>
                               </div>
-                              
+
                               <div>
-                                <p className="text-14-regular text-dark-600">Appointment Code</p>
+                                <p className="text-14-regular text-dark-600">
+                                  Appointment Code
+                                </p>
                                 <p className="text-14-medium font-mono bg-blue-950/30 text-blue-400 p-3 rounded-md mt-1 border border-blue-500/30 flex items-center justify-between">
-                                  <span className="tracking-wider">{selectedAppointment.appointmentCode || "No code available"}</span>
+                                  <span className="tracking-wider">
+                                    {selectedAppointment.appointmentCode ||
+                                      "No code available"}
+                                  </span>
                                   {selectedAppointment.appointmentCode && (
-                                    <button 
+                                    <button
                                       onClick={() => {
-                                        navigator.clipboard.writeText(selectedAppointment.appointmentCode);
-                                        // Add visual feedback (could be improved with a proper toast)
-                                        alert("Appointment code copied to clipboard!");
+                                        if (
+                                          selectedAppointment.appointmentCode
+                                        ) {
+                                          navigator.clipboard.writeText(
+                                            selectedAppointment.appointmentCode
+                                          );
+                                          // Add visual feedback (could be improved with a proper toast)
+                                          alert(
+                                            "Appointment code copied to clipboard!"
+                                          );
+                                        }
                                       }}
                                       className="ml-2 text-xs bg-blue-500/20 hover:bg-blue-500/30 transition-colors p-1 rounded"
                                     >
@@ -1287,31 +1461,53 @@ const PatientDashboard = () => {
                                   )}
                                 </p>
                               </div>
-                              
+
                               <div>
-                                <p className="text-14-regular text-dark-600">Doctor</p>
-                                <p className="text-16-medium text-light-200">{selectedAppointment.primaryPhysician}</p>
+                                <p className="text-14-regular text-dark-600">
+                                  Doctor
+                                </p>
+                                <p className="text-16-medium text-light-200">
+                                  {selectedAppointment.primaryPhysician}
+                                </p>
                               </div>
-                              
+
                               <div>
-                                <p className="text-14-regular text-dark-600">Status</p>
-                                <StatusBadge status={selectedAppointment.status} />
+                                <p className="text-14-regular text-dark-600">
+                                  Status
+                                </p>
+                                <StatusBadge
+                                  status={selectedAppointment.status}
+                                />
                               </div>
-                              
+
                               <div>
-                                <p className="text-14-regular text-dark-600">Reason for Appointment</p>
-                                <p className="text-14-regular text-light-200">{selectedAppointment.reason || "No reason provided"}</p>
+                                <p className="text-14-regular text-dark-600">
+                                  Reason for Appointment
+                                </p>
+                                <p className="text-14-regular text-light-200">
+                                  {selectedAppointment.reason ||
+                                    "No reason provided"}
+                                </p>
                               </div>
-                              
+
                               <div>
-                                <p className="text-14-regular text-dark-600">Notes</p>
-                                <p className="text-14-regular text-light-200">{selectedAppointment.note || "No notes available"}</p>
+                                <p className="text-14-regular text-dark-600">
+                                  Notes
+                                </p>
+                                <p className="text-14-regular text-light-200">
+                                  {selectedAppointment.note ||
+                                    "No notes available"}
+                                </p>
                               </div>
-                              
+
                               {selectedAppointment.status === "cancelled" && (
                                 <div>
-                                  <p className="text-14-regular text-dark-600">Cancellation Reason</p>
-                                  <p className="text-14-regular text-light-200">{selectedAppointment.cancellationReason}</p>
+                                  <p className="text-14-regular text-dark-600">
+                                    Cancellation Reason
+                                  </p>
+                                  <p className="text-14-regular text-light-200">
+                                    {selectedAppointment.cancellationReason}
+                                  </p>
                                 </div>
                               )}
                             </div>
@@ -1328,93 +1524,141 @@ const PatientDashboard = () => {
                 <Table className="shad-table w-full">
                   <TableHeader>
                     <TableRow className="shad-table-row-header">
-                      <TableHead className="text-14-medium w-[180px]">Date & Time</TableHead>
+                      <TableHead className="text-14-medium w-[180px]">
+                        Date & Time
+                      </TableHead>
                       <TableHead className="text-14-medium">Doctor</TableHead>
                       <TableHead className="text-14-medium">Status</TableHead>
-                      <TableHead className="text-14-medium text-right">Details</TableHead>
+                      <TableHead className="text-14-medium text-right">
+                        Details
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredAppointments.map((appointment) => (
-                      <TableRow key={appointment.$id} className="shad-table-row hover:bg-dark-500">
+                      <TableRow
+                        key={appointment.$id}
+                        className="shad-table-row hover:bg-dark-500"
+                      >
                         <TableCell className="text-14-regular">
                           {formatDateTime(appointment.schedule).dateTime}
                         </TableCell>
-                        <TableCell className="text-14-regular">{appointment.primaryPhysician}</TableCell>
+                        <TableCell className="text-14-regular">
+                          {appointment.primaryPhysician}
+                        </TableCell>
                         <TableCell className="text-14-regular">
                           <StatusBadge status={appointment.status} />
                         </TableCell>
                         <TableCell className="text-14-regular text-right">
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 className="text-light-200 hover:bg-dark-500"
-                                onClick={() => setSelectedAppointment(appointment)}
+                                onClick={() =>
+                                  setSelectedAppointment(appointment)
+                                }
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="shad-dialog sm:max-w-md md:max-w-lg lg:max-w-xl w-[95%] max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
-                                <DialogTitle className="text-16-semibold text-light-200">Appointment Details</DialogTitle>
+                                <DialogTitle className="text-16-semibold text-light-200">
+                                  Appointment Details
+                                </DialogTitle>
                               </DialogHeader>
                               {selectedAppointment && (
                                 <div className="space-y-4 mt-4 px-1">
                                   <div className="grid grid-cols-1 gap-5">
                                     <div>
-                                      <p className="text-14-regular text-dark-600">Date & Time</p>
-                                      <p className="text-16-medium text-light-200">
-                                        {formatDateTime(selectedAppointment.schedule).dateTime}
+                                      <p className="text-14-regular text-dark-600">
+                                        Date & Time
                                       </p>
-                                      
+                                      <p className="text-16-medium text-light-200">
+                                        {
+                                          formatDateTime(
+                                            selectedAppointment.schedule
+                                          ).dateTime
+                                        }
+                                      </p>
+
                                       {/* Calendar view for mobile - moved below date & time */}
                                       <div className="appointment-calendar mt-2 bg-dark-300 p-3 rounded-lg">
-                                        <p className="text-14-regular text-dark-600 mb-2 text-center">Appointment Date</p>
+                                        <p className="text-14-regular text-dark-600 mb-2 text-center">
+                                          Appointment Date
+                                        </p>
                                         <div className="flex justify-center">
                                           <ReactDatePicker
-                                            selected={new Date(selectedAppointment.schedule)}
+                                            selected={
+                                              new Date(
+                                                selectedAppointment.schedule
+                                              )
+                                            }
                                             onChange={() => {}} // Read-only
                                             inline
                                             disabled={true}
                                             readOnly={true}
-                                            dayClassName={() => "cursor-default"}
+                                            dayClassName={() =>
+                                              "cursor-default"
+                                            }
                                             showMonthDropdown={false}
                                             showYearDropdown={false}
                                             renderCustomHeader={({ date }) => (
                                               <div className="text-center px-2 py-1">
                                                 <div className="text-14-medium text-light-200">
-                                                  {date.toLocaleString("default", {
-                                                    month: "long",
-                                                    year: "numeric",
-                                                  })}
+                                                  {date.toLocaleString(
+                                                    "default",
+                                                    {
+                                                      month: "long",
+                                                      year: "numeric",
+                                                    }
+                                                  )}
                                                 </div>
                                               </div>
                                             )}
                                           />
                                         </div>
-                                        
+
                                         {/* Time indicator below calendar */}
                                         <div className="flex items-center justify-center mt-2 text-light-200 bg-dark-400 py-2 px-4 rounded-lg">
                                           <Clock className="h-4 w-4 mr-2 text-green-500" />
                                           <span className="text-14-medium">
-                                            {format(new Date(selectedAppointment.schedule), 'h:mm a')}
+                                            {format(
+                                              new Date(
+                                                selectedAppointment.schedule
+                                              ),
+                                              "h:mm a"
+                                            )}
                                           </span>
                                         </div>
                                       </div>
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-14-regular text-dark-600">Appointment Code</p>
+                                      <p className="text-14-regular text-dark-600">
+                                        Appointment Code
+                                      </p>
                                       <p className="text-14-medium font-mono bg-blue-950/30 text-blue-400 p-3 rounded-md mt-1 border border-blue-500/30 flex items-center justify-between">
-                                        <span className="tracking-wider">{selectedAppointment.appointmentCode || "No code available"}</span>
+                                        <span className="tracking-wider">
+                                          {selectedAppointment.appointmentCode ||
+                                            "No code available"}
+                                        </span>
                                         {selectedAppointment.appointmentCode && (
-                                          <button 
+                                          <button
                                             onClick={() => {
-                                              navigator.clipboard.writeText(selectedAppointment.appointmentCode);
-                                              // Add visual feedback (could be improved with a proper toast)
-                                              alert("Appointment code copied to clipboard!");
+                                              if (
+                                                selectedAppointment.appointmentCode
+                                              ) {
+                                                navigator.clipboard.writeText(
+                                                  selectedAppointment.appointmentCode
+                                                );
+                                                // Add visual feedback (could be improved with a proper toast)
+                                                alert(
+                                                  "Appointment code copied to clipboard!"
+                                                );
+                                              }
                                             }}
                                             className="ml-2 text-xs bg-blue-500/20 hover:bg-blue-500/30 transition-colors p-1 rounded"
                                           >
@@ -1423,31 +1667,56 @@ const PatientDashboard = () => {
                                         )}
                                       </p>
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-14-regular text-dark-600">Doctor</p>
-                                      <p className="text-16-medium text-light-200">{selectedAppointment.primaryPhysician}</p>
+                                      <p className="text-14-regular text-dark-600">
+                                        Doctor
+                                      </p>
+                                      <p className="text-16-medium text-light-200">
+                                        {selectedAppointment.primaryPhysician}
+                                      </p>
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-14-regular text-dark-600">Status</p>
-                                      <StatusBadge status={selectedAppointment.status} />
+                                      <p className="text-14-regular text-dark-600">
+                                        Status
+                                      </p>
+                                      <StatusBadge
+                                        status={selectedAppointment.status}
+                                      />
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-14-regular text-dark-600">Reason for Appointment</p>
-                                      <p className="text-14-regular text-light-200">{selectedAppointment.reason || "No reason provided"}</p>
+                                      <p className="text-14-regular text-dark-600">
+                                        Reason for Appointment
+                                      </p>
+                                      <p className="text-14-regular text-light-200">
+                                        {selectedAppointment.reason ||
+                                          "No reason provided"}
+                                      </p>
                                     </div>
-                                    
+
                                     <div>
-                                      <p className="text-14-regular text-dark-600">Notes</p>
-                                      <p className="text-14-regular text-light-200">{selectedAppointment.note || "No notes available"}</p>
+                                      <p className="text-14-regular text-dark-600">
+                                        Notes
+                                      </p>
+                                      <p className="text-14-regular text-light-200">
+                                        {selectedAppointment.note ||
+                                          "No notes available"}
+                                      </p>
                                     </div>
-                                    
-                                    {selectedAppointment.status === "cancelled" && (
+
+                                    {selectedAppointment.status ===
+                                      "cancelled" && (
                                       <div>
-                                        <p className="text-14-regular text-dark-600">Cancellation Reason</p>
-                                        <p className="text-14-regular text-light-200">{selectedAppointment.cancellationReason}</p>
+                                        <p className="text-14-regular text-dark-600">
+                                          Cancellation Reason
+                                        </p>
+                                        <p className="text-14-regular text-light-200">
+                                          {
+                                            selectedAppointment.cancellationReason
+                                          }
+                                        </p>
                                       </div>
                                     )}
                                   </div>
@@ -1467,8 +1736,8 @@ const PatientDashboard = () => {
 
         {/* Doctor Notes Section - Collapsible */}
         <div className="dashboard-card-full dashboard-card relative z-10 mt-4 sm:mt-0">
-          <Collapsible 
-            open={isNotesOpen} 
+          <Collapsible
+            open={isNotesOpen}
             onOpenChange={setIsNotesOpen}
             className="w-full"
           >
@@ -1478,8 +1747,8 @@ const PatientDashboard = () => {
                 {notes.length > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         className="text-red-500 border-red-500 hover:bg-red-500/10 h-7"
                         disabled={clearingNotes}
@@ -1490,15 +1759,21 @@ const PatientDashboard = () => {
                     </AlertDialogTrigger>
                     <AlertDialogContent className="shad-alert-dialog">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-light-200">Hide Doctor Notes</AlertDialogTitle>
+                        <AlertDialogTitle className="text-light-200">
+                          Hide Doctor Notes
+                        </AlertDialogTitle>
                         <AlertDialogDescription className="text-dark-700">
-                          This will hide all doctor notes from your dashboard view. Your medical notes will still 
-                          be available to your doctor and clinic staff. This action clears your view only.
+                          This will hide all doctor notes from your dashboard
+                          view. Your medical notes will still be available to
+                          your doctor and clinic staff. This action clears your
+                          view only.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
+                        <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
                           onClick={handleClearNotesHistory}
                           className="bg-red-700 text-white hover:bg-red-800"
                         >
@@ -1510,35 +1785,46 @@ const PatientDashboard = () => {
                 )}
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="p-0 h-7 w-7">
-                    {isNotesOpen ? 
-                      <ChevronUp className="h-5 w-5 text-light-200" /> : 
+                    {isNotesOpen ? (
+                      <ChevronUp className="h-5 w-5 text-light-200" />
+                    ) : (
                       <ChevronDown className="h-5 w-5 text-light-200" />
-                    }
+                    )}
                   </Button>
                 </CollapsibleTrigger>
               </div>
             </div>
-            
+
             <CollapsibleContent className="px-4 sm:px-6 pb-6">
               {notes.length === 0 ? (
-                <p className="text-14-regular text-dark-600 text-center py-6">No doctor notes available.</p>
+                <p className="text-14-regular text-dark-600 text-center py-6">
+                  No doctor notes available.
+                </p>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
                   {notes.map((note) => (
-                    <div key={note.$id} className="p-3 sm:p-4 border border-dark-500 rounded-md bg-dark-300">
+                    <div
+                      key={note.$id}
+                      className="p-3 sm:p-4 border border-dark-500 rounded-md bg-dark-300"
+                    >
                       <div className="flex flex-col sm:flex-between sm:flex-row gap-1 sm:gap-0 mb-2">
                         <p className="text-14-medium text-light-200">
-                          {note.doctorId === "current-doctor-id" 
-                            ? "Doctor" 
-                            : note.doctorId.startsWith("Dr. ") 
-                              ? note.doctorId 
+                          {note.doctorId === "current-doctor-id"
+                            ? "Doctor"
+                            : note.doctorId.startsWith("Dr. ")
+                              ? note.doctorId
                               : `Dr. ${note.doctorId}`}
                         </p>
                         <p className="text-12-regular text-dark-600">
-                          {format(new Date(note.createdAt), 'MM/dd/yyyy hh:mm a')}
+                          {format(
+                            new Date(note.createdAt),
+                            "MM/dd/yyyy hh:mm a"
+                          )}
                         </p>
                       </div>
-                      <p className="text-14-regular text-dark-700">{note.note}</p>
+                      <p className="text-14-regular text-dark-700">
+                        {note.note}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -1553,22 +1839,24 @@ const PatientDashboard = () => {
         {/* Logout Button */}
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button 
-              className="dashboard-fab-button bg-red-500 hover:bg-red-600" 
-            >
+            <Button className="dashboard-fab-button bg-red-500 hover:bg-red-600">
               <LogOut className="h-6 w-6" />
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent className="shad-alert-dialog">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-light-200">Logout Confirmation</AlertDialogTitle>
+              <AlertDialogTitle className="text-light-200">
+                Logout Confirmation
+              </AlertDialogTitle>
               <AlertDialogDescription className="text-dark-700">
                 Are you sure you want to logout? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">Cancel</AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogCancel className="hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
                 onClick={handleLogout}
                 className="bg-red-700 text-white hover:bg-red-800"
               >
@@ -1579,8 +1867,8 @@ const PatientDashboard = () => {
         </AlertDialog>
 
         {/* New Appointment Button */}
-        <Button 
-          className="dashboard-fab-button bg-green-500 hover:bg-green-600" 
+        <Button
+          className="dashboard-fab-button bg-green-500 hover:bg-green-600"
           onClick={handleNewAppointment}
         >
           <Plus className="h-6 w-6" />

@@ -40,6 +40,7 @@ const formSchema = z.object({
   address: z.string().optional(),
   emergencyContactName: z.string().optional(),
   emergencyContactNumber: z.string().optional(),
+  identificationNumber: z.string().optional(),
 });
 
 type PersonalInfoFormProps = {
@@ -47,7 +48,10 @@ type PersonalInfoFormProps = {
   onSuccess?: () => void;
 };
 
-export default function PatientPersonalInfoForm({ patient, onSuccess }: PersonalInfoFormProps) {
+export default function PatientPersonalInfoForm({
+  patient,
+  onSuccess,
+}: PersonalInfoFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -63,6 +67,7 @@ export default function PatientPersonalInfoForm({ patient, onSuccess }: Personal
       address: patient.address || "",
       emergencyContactName: patient.emergencyContactName || "",
       emergencyContactNumber: patient.emergencyContactNumber || "",
+      identificationNumber: patient.identificationNumber || "",
     },
   });
 
@@ -125,7 +130,11 @@ export default function PatientPersonalInfoForm({ patient, onSuccess }: Personal
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="Enter your email" {...field} />
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -177,7 +186,10 @@ export default function PatientPersonalInfoForm({ patient, onSuccess }: Personal
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Gender</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
@@ -217,7 +229,10 @@ export default function PatientPersonalInfoForm({ patient, onSuccess }: Personal
               <FormItem>
                 <FormLabel>Emergency Contact Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter emergency contact name" {...field} />
+                  <Input
+                    placeholder="Enter emergency contact name"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -231,7 +246,10 @@ export default function PatientPersonalInfoForm({ patient, onSuccess }: Personal
               <FormItem>
                 <FormLabel>Emergency Contact Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter emergency contact number" {...field} />
+                  <Input
+                    placeholder="Enter emergency contact number"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -239,14 +257,26 @@ export default function PatientPersonalInfoForm({ patient, onSuccess }: Personal
           />
         </div>
 
-        <Button 
-          type="submit" 
-          className="w-full" 
-          disabled={isSubmitting}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="identificationNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Identification Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter identification number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? "Updating..." : "Update Personal Information"}
         </Button>
       </form>
     </Form>
   );
-} 
+}
