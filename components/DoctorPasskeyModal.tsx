@@ -92,6 +92,7 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
       // Get doctor passkey from environment variables
       let doctorPasskey = "";
 
+      /* cspell:disable-next-line */
       if (doctor.id === "dr-abundo") {
         doctorPasskey = process.env.NEXT_PUBLIC_DR_ABUNDO_PASSKEY || "";
       } else if (doctor.id === "dr-decastro") {
