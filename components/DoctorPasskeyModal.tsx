@@ -34,22 +34,26 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
   const [error, setError] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // For debugging
   const [debugInfo, setDebugInfo] = useState("");
 
   // Get the encrypted key from localStorage
-  const encryptedKey = typeof window !== "undefined" 
-    ? window.localStorage.getItem("doctorAccessKey") 
-    : null;
+  const encryptedKey =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("doctorAccessKey")
+      : null;
 
   useEffect(() => {
     // Check if we're on the doctor page and need to show the modal
     if (path === "/doctor") {
       // Check if we have a valid access key and doctor name
       const doctorName = localStorage.getItem("doctorName");
-      const hasValidKey = encryptedKey && doctorName && Doctors.some(doc => doc.name === doctorName);
-      
+      const hasValidKey =
+        encryptedKey &&
+        doctorName &&
+        Doctors.some((doc) => doc.name === doctorName);
+
       if (!hasValidKey) {
         // If no valid key or doctor name, show the modal
         setOpen(true);
@@ -70,13 +74,13 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
 
   const validatePasskey = async () => {
     if (isSubmitting) return;
-    
+
     if (!selectedDoctor) {
       setError("Please select a doctor first.");
       return;
     }
 
-    const doctor = Doctors.find(doc => doc.name === selectedDoctor);
+    const doctor = Doctors.find((doc) => doc.name === selectedDoctor);
     if (!doctor) {
       setError("Invalid doctor selection.");
       return;
@@ -85,23 +89,31 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
     setIsSubmitting(true);
 
     try {
-      // Simplified access to doctor passkeys
+      // Get doctor passkey from environment variables
       let doctorPasskey = "";
-      
-      // Temporary hard-coded passkeys for testing
+
       if (doctor.id === "dr-abundo") {
-        doctorPasskey = "123456"; // Replace with your actual passkey
+        doctorPasskey = process.env.NEXT_PUBLIC_DR_ABUNDO_PASSKEY || "";
       } else if (doctor.id === "dr-decastro") {
-        doctorPasskey = "654321"; // Replace with your actual passkey 
+        doctorPasskey = process.env.NEXT_PUBLIC_DR_DECASTRO_PASSKEY || "";
       }
-      
+
+      // Fallback to empty string if env variable is not defined
+      if (!doctorPasskey) {
+        console.error(`Passkey not configured for ${doctor.id}`);
+        setError(
+          "Doctor authentication is not properly configured. Please contact administrator."
+        );
+        return;
+      }
+
       if (passkey === doctorPasskey) {
         const encryptedKey = encryptKey(passkey);
         localStorage.setItem("doctorAccessKey", encryptedKey);
         localStorage.setItem("doctorName", selectedDoctor);
 
         setOpen(false);
-        
+
         // Call the onSuccess callback if provided
         if (onSuccess) {
           onSuccess();
@@ -129,14 +141,17 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
   }, [passkey]);
 
   return (
-    <AlertDialog open={open} onOpenChange={(isOpen) => {
-      // Only allow closing via the close button or successful authentication
-      if (!isOpen && !localStorage.getItem("doctorAccessKey")) {
-        setOpen(true);
-      } else {
-        setOpen(isOpen);
-      }
-    }}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        // Only allow closing via the close button or successful authentication
+        if (!isOpen && !localStorage.getItem("doctorAccessKey")) {
+          setOpen(true);
+        } else {
+          setOpen(isOpen);
+        }
+      }}
+    >
       <AlertDialogContent className="shad-alert-dialog">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-start justify-between">
@@ -151,14 +166,16 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
             />
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Please select your name and enter your passkey to access the dashboard.
+            Please select your name and enter your passkey to access the
+            dashboard.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-6">
           <div className="space-y-2">
-            <label htmlFor="doctor-select" className="text-sm font-medium text-gray-700">
-              
-            </label>
+            <label
+              htmlFor="doctor-select"
+              className="text-sm font-medium text-gray-700"
+            ></label>
             <select
               id="doctor-select"
               value={selectedDoctor}
