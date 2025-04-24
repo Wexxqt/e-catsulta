@@ -83,6 +83,7 @@ interface AppointmentState {
   pendingCount: number;
   cancelledCount: number;
   completedCount: number;
+  missedCount: number;
   totalCount: number;
 }
 
@@ -106,8 +107,15 @@ const DoctorDashboard = () => {
       pendingCount: 0,
       cancelledCount: 0,
       completedCount: 0,
+      missedCount: 0,
       totalCount: 0,
     });
+  const [allDoctorAppointments, setAllDoctorAppointments] = useState<
+    Appointment[]
+  >([]);
+  const [appointmentSearch, setAppointmentSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [loadingAllAppointments, setLoadingAllAppointments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentDoctor, setCurrentDoctor] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -169,6 +177,7 @@ const DoctorDashboard = () => {
     if (isAuthenticated) {
       // Fetch appointments
       fetchAppointments();
+      fetchAllDoctorAppointments();
 
       // Load doctor availability settings
       const doctor = Doctors.find(
@@ -199,6 +208,14 @@ const DoctorDashboard = () => {
       // Use our dedicated patients API endpoint instead
       fetchPatients();
     }
+
+    // If we're on the all-appointments tab, fetch all doctor appointments
+    if (
+      activeTab === "all-appointments" &&
+      allDoctorAppointments.length === 0
+    ) {
+      fetchAllDoctorAppointments();
+    }
   }, [activeTab, uniquePatients]);
 
   const fetchAppointments = async () => {
@@ -216,14 +233,35 @@ const DoctorDashboard = () => {
           (doc: any) => doc.primaryPhysician === doctorName && !doc.archived
         ) as Appointment[];
 
+        // Process appointments to check for missed ones
+        const processedAppointments = doctorAppointments.map(
+          (appointment: Appointment) => {
+            if (appointment.status === "scheduled") {
+              const appointmentDate = new Date(appointment.schedule);
+              const currentDate = new Date();
+
+              // Check if the appointment is 5 hours past the scheduled time
+              const timeDifference =
+                currentDate.getTime() - appointmentDate.getTime();
+              const hoursPassed = timeDifference / (1000 * 60 * 60);
+
+              if (hoursPassed > 5) {
+                return { ...appointment, status: "missed" as Status };
+              }
+            }
+            return appointment;
+          }
+        );
+
         // Count appointments by status
-        const counts = doctorAppointments.reduce(
+        const counts = processedAppointments.reduce(
           (
             acc: {
               scheduledCount: number;
               pendingCount: number;
               cancelledCount: number;
               completedCount: number;
+              missedCount: number;
             },
             appointment: Appointment
           ) => {
@@ -240,6 +278,9 @@ const DoctorDashboard = () => {
               case "completed":
                 acc.completedCount++;
                 break;
+              case "missed":
+                acc.missedCount++;
+                break;
             }
             return acc;
           },
@@ -248,6 +289,7 @@ const DoctorDashboard = () => {
             pendingCount: 0,
             cancelledCount: 0,
             completedCount: 0,
+            missedCount: 0,
           }
         );
 
@@ -278,12 +320,13 @@ const DoctorDashboard = () => {
         setUniquePatients(uniquePatientsObj);
 
         setFilteredAppointments({
-          documents: doctorAppointments,
+          documents: processedAppointments,
           scheduledCount: counts.scheduledCount,
           pendingCount: counts.pendingCount,
           cancelledCount: counts.cancelledCount,
           completedCount: counts.completedCount,
-          totalCount: doctorAppointments.length,
+          missedCount: counts.missedCount,
+          totalCount: processedAppointments.length,
         });
       } else {
         console.error("Failed to fetch appointments");
@@ -318,6 +361,50 @@ const DoctorDashboard = () => {
       }
     } catch (error) {
       console.error("Error fetching patients:", error);
+    }
+  };
+
+  // Add function to fetch all doctor appointments
+  const fetchAllDoctorAppointments = async () => {
+    const doctorName = localStorage.getItem("doctorName");
+    if (!doctorName) return;
+
+    setLoadingAllAppointments(true);
+    try {
+      const appointments = await getDoctorAppointments(doctorName);
+
+      if (appointments && appointments.length > 0) {
+        // Filter out archived appointments (though the API should already do this)
+        const nonArchivedAppointments = appointments.filter(
+          (apt: Appointment) => !apt.archived
+        );
+
+        // Process appointments to check for missed ones
+        const processedAppointments = nonArchivedAppointments.map(
+          (appointment: Appointment) => {
+            if (appointment.status === "scheduled") {
+              const appointmentDate = new Date(appointment.schedule);
+              const currentDate = new Date();
+
+              // Check if the appointment is 5 hours past the scheduled time
+              const timeDifference =
+                currentDate.getTime() - appointmentDate.getTime();
+              const hoursPassed = timeDifference / (1000 * 60 * 60);
+
+              if (hoursPassed > 5) {
+                return { ...appointment, status: "missed" as Status };
+              }
+            }
+            return appointment;
+          }
+        );
+
+        setAllDoctorAppointments(processedAppointments);
+      }
+    } catch (error) {
+      console.error("Error fetching all doctor appointments:", error);
+    } finally {
+      setLoadingAllAppointments(false);
     }
   };
 
@@ -375,6 +462,7 @@ const DoctorDashboard = () => {
 
         // Fetch appointments after successful authentication
         fetchAppointments();
+        fetchAllDoctorAppointments();
       } else {
         setError("Invalid passkey. Please try again.");
         setPasskey(""); // Clear the passkey on error
@@ -522,8 +610,12 @@ const DoctorDashboard = () => {
         pendingCount: 0,
         cancelledCount: 0,
         completedCount: 0,
+        missedCount: 0,
         totalCount: 0,
       });
+
+      // Also clear all doctor appointments
+      setAllDoctorAppointments([]);
 
       // Fetch patients again to ensure we have the most up-to-date data
       await fetchPatients();
@@ -706,8 +798,9 @@ const DoctorDashboard = () => {
               className="w-full"
               onValueChange={setActiveTab}
             >
-              <TabsList className="grid grid-cols-1 md:grid-cols-4 mb-4">
+              <TabsList className="grid grid-cols-1 md:grid-cols-5 mb-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="all-appointments">Appointments</TabsTrigger>
                 <TabsTrigger
                   value="patients"
                   onClick={() => {
@@ -724,12 +817,12 @@ const DoctorDashboard = () => {
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6">
-                <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                   <StatCard
                     type="appointments"
                     count={filteredAppointments.scheduledCount}
                     label="Scheduled appointments"
-                    icon={"/assets/icons/appointments.svg"}
+                    icon={"/assets/icons/scheduled.svg"}
                   />
                   <StatCard
                     type="cancelled"
@@ -758,6 +851,12 @@ const DoctorDashboard = () => {
                     label="Completed appointments"
                     icon={"/assets/icons/check.svg"}
                   />
+                  <StatCard
+                    type="missed"
+                    count={filteredAppointments.missedCount}
+                    label="Missed appointments"
+                    icon={"/assets/icons/missed.svg"}
+                  />
                 </section>
 
                 {loading ? (
@@ -772,12 +871,76 @@ const DoctorDashboard = () => {
                       <h2 className="text-xl font-semibold">
                         Recent Appointments
                       </h2>
+                    </div>
+                    <DataTable
+                      columns={columns}
+                      data={filteredAppointments.documents}
+                    />
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* All Appointments Tab */}
+              <TabsContent value="all-appointments" className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-semibold">All Appointments</h2>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        placeholder="Search appointments..."
+                        className="w-60"
+                        value={appointmentSearch}
+                        onChange={(e) => setAppointmentSearch(e.target.value)}
+                      />
+                      <Select
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="scheduled">Scheduled</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-blue-600 hover:bg-blue-50"
+                        onClick={() => {
+                          setAppointmentSearch("");
+                          setStatusFilter("all");
+                        }}
+                        disabled={
+                          !appointmentSearch &&
+                          (!statusFilter || statusFilter === "all")
+                        }
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-1"
+                        >
+                          <path d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"></path>
+                        </svg>
+                        Reset Filters
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         className="text-red-700 hover:bg-red-50"
                         onClick={() => setShowClearHistoryDialog(true)}
-                        disabled={filteredAppointments.documents.length === 0}
+                        disabled={allDoctorAppointments.length === 0}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -798,12 +961,65 @@ const DoctorDashboard = () => {
                         Clear History
                       </Button>
                     </div>
+                  </div>
+                  {loadingAllAppointments ? (
+                    <div className="flex h-40 items-center justify-center">
+                      <p className="text-lg font-medium">
+                        Loading appointments...
+                      </p>
+                    </div>
+                  ) : (
                     <DataTable
                       columns={columns}
-                      data={filteredAppointments.documents}
+                      data={allDoctorAppointments.filter((appointment) => {
+                        // Apply status filter
+                        if (
+                          statusFilter &&
+                          statusFilter !== "all" &&
+                          appointment.status !== statusFilter
+                        ) {
+                          return false;
+                        }
+
+                        // If no search query, return all appointments that match the status filter
+                        if (!appointmentSearch) {
+                          return true;
+                        }
+
+                        // Apply search filter
+                        const searchLower = appointmentSearch.toLowerCase();
+
+                        // Search in patient name
+                        if (
+                          appointment.patient?.name &&
+                          appointment.patient.name
+                            .toLowerCase()
+                            .includes(searchLower)
+                        ) {
+                          return true;
+                        }
+                        // Search in appointment code
+                        if (
+                          appointment.appointmentCode &&
+                          appointment.appointmentCode
+                            .toLowerCase()
+                            .includes(searchLower)
+                        ) {
+                          return true;
+                        }
+                        // Search in reason
+                        if (
+                          appointment.reason &&
+                          appointment.reason.toLowerCase().includes(searchLower)
+                        ) {
+                          return true;
+                        }
+
+                        return false;
+                      })}
                     />
-                  </div>
-                )}
+                  )}
+                </div>
               </TabsContent>
 
               {/* Patients Tab */}

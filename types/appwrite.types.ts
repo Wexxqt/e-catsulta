@@ -18,7 +18,7 @@ export interface Patient extends Models.Document {
   pastMedicalHistory: string | undefined;
   identificationType: string;
   identificationNumber: string;
-  
+
   // Profile picture from OAuth provider (e.g. Google)
   profilePictureUrl?: string;
   avatarDocument: FormData | undefined;
@@ -61,7 +61,12 @@ export interface Passkey extends Models.Document {
 // Add these to your types/appwrite.types.ts file
 export type Gender = "Male" | "Female" | "Other" | "Prefer not to say";
 
-export type Status = "pending" | "scheduled" | "cancelled" | "completed";
+export type Status =
+  | "pending"
+  | "scheduled"
+  | "cancelled"
+  | "completed"
+  | "missed";
 
 export interface CreateAppointmentParams {
   patient: Patient;

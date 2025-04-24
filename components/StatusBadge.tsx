@@ -1,12 +1,6 @@
 import clsx from "clsx";
-import {
-  CheckCircle,
-  Clock,
-  XCircle,
-  Calendar,
-  Hourglass,
-  AlertTriangle,
-} from "lucide-react";
+import Image from "next/image";
+import { Clock } from "lucide-react";
 
 import { Status } from "@/types/appwrite.types";
 
@@ -15,13 +9,60 @@ export const StatusBadge = ({ status }: { status: Status }) => {
   const getStatusIcon = () => {
     switch (status) {
       case "scheduled":
-        return <Calendar className="h-4 w-4 text-green-700" />;
+        return (
+          <div className="h-4 w-4 relative">
+            <Image
+              src="/assets/icons/scheduled.svg"
+              alt="scheduled"
+              fill
+              className="object-contain"
+            />
+          </div>
+        );
       case "completed":
-        return <CheckCircle className="h-4 w-4 text-blue-700" />;
+        return (
+          <div className="h-4 w-4 relative">
+            <Image
+              src="/assets/icons/check.svg"
+              alt="completed"
+              fill
+              className="object-contain"
+            />
+          </div>
+        );
       case "cancelled":
-        return <XCircle className="h-4 w-4 text-red-700" />;
+        return (
+          <div className="h-4 w-4 relative">
+            <Image
+              src="/assets/icons/cancelled.svg"
+              alt="cancelled"
+              fill
+              className="object-contain"
+            />
+          </div>
+        );
       case "pending":
-        return <AlertTriangle className="h-4 w-4 text-rose-700" />;
+        return (
+          <div className="h-4 w-4 relative">
+            <Image
+              src="/assets/icons/today.svg"
+              alt="pending"
+              fill
+              className="object-contain"
+            />
+          </div>
+        );
+      case "missed":
+        return (
+          <div className="h-4 w-4 relative">
+            <Image
+              src="/assets/icons/missed.svg"
+              alt="missed"
+              fill
+              className="object-contain"
+            />
+          </div>
+        );
       default:
         return <Clock className="h-4 w-4" />;
     }
@@ -38,6 +79,8 @@ export const StatusBadge = ({ status }: { status: Status }) => {
         return "Cancelled";
       case "pending":
         return "Pending";
+      case "missed":
+        return "Missed";
       default:
         return status;
     }
@@ -52,6 +95,7 @@ export const StatusBadge = ({ status }: { status: Status }) => {
           "bg-blue-100 border-2 border-blue-400": status === "completed",
           "bg-red-100 border-2 border-red-400": status === "cancelled",
           "bg-amber-100 border-2 border-amber-400": status === "pending",
+          "bg-purple-100 border-2 border-purple-400": status === "missed",
         }
       )}
     >
@@ -62,6 +106,7 @@ export const StatusBadge = ({ status }: { status: Status }) => {
           "text-blue-800": status === "completed",
           "text-red-800": status === "cancelled",
           "text-amber-800": status === "pending",
+          "text-purple-800": status === "missed",
         })}
       >
         {getStatusLabel()}

@@ -2,7 +2,7 @@ import clsx from "clsx";
 import Image from "next/image";
 
 type StatCardProps = {
-  type: "appointments" | "pending" | "cancelled" | "completed";
+  type: "appointments" | "pending" | "cancelled" | "completed" | "missed";
   count: number;
   label: string;
   icon: string;
@@ -12,7 +12,7 @@ export const StatCard = ({ count = 0, label, icon, type }: StatCardProps) => {
   return (
     <div
       className={clsx("stat-card", {
-        "bg-appointments": type === "appointments",
+        "bg-appointments": type === "appointments" || type === "missed",
         "bg-pending": type === "pending",
         "bg-cancelled": type === "cancelled",
         "bg-completed": type === "completed",

@@ -11,12 +11,11 @@ import { Form, FormControl } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SelectItem } from "@/components/ui/select";
+import { Category, GenderOptions, PatientFormDefaultValues } from "@/constants";
 import {
-  Category,
-  GenderOptions,
-  PatientFormDefaultValues,
-} from "@/constants";
-import { registerPatient, verifyPatientPasskey } from "@/lib/actions/patient.actions";
+  registerPatient,
+  verifyPatientPasskey,
+} from "@/lib/actions/patient.actions";
 import { PatientFormValidation } from "@/lib/validation";
 
 import "react-datepicker/dist/react-datepicker.css";
@@ -60,8 +59,8 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   // Format date as user types (automatically add /)
   const formatDateInput = (value: string) => {
     // Remove any non-numeric characters
-    let numericValue = value.replace(/[^0-9]/g, '');
-    
+    let numericValue = value.replace(/[^0-9]/g, "");
+
     // Format with slashes
     if (numericValue.length > 4) {
       // Format: MM/DD/YYYY
@@ -70,7 +69,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       // Format: MM/DD
       return `${numericValue.slice(0, 2)}/${numericValue.slice(2)}`;
     }
-    
+
     return numericValue;
   };
 
@@ -81,7 +80,9 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
-      birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : "",
+      birthDate: user.birthDate
+        ? new Date(user.birthDate).toISOString().split("T")[0]
+        : "",
       gender: user.gender as "Male" | "Female" | "Other",
     },
   });
@@ -92,8 +93,11 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
 
     try {
       // Verify the passkey against the ID number
-      const isValid = await verifyPatientPasskey(formValues.identificationNumber, passkey);
-      
+      const isValid = await verifyPatientPasskey(
+        formValues.identificationNumber,
+        passkey
+      );
+
       if (isValid) {
         // Continue with registration if passkey is valid
         await completeRegistration(formValues);
@@ -102,13 +106,17 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       }
     } catch (error) {
       console.error("Passkey validation error:", error);
-      setPasskeyError(error instanceof Error ? error.message : "Failed to validate passkey");
+      setPasskeyError(
+        error instanceof Error ? error.message : "Failed to validate passkey"
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const completeRegistration = async (values: z.infer<typeof PatientFormValidation>) => {
+  const completeRegistration = async (
+    values: z.infer<typeof PatientFormValidation>
+  ) => {
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -125,20 +133,27 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       // Validate phone number format
       const phoneRegex = /^\+?[0-9]{10,15}$/;
       if (!phoneRegex.test(values.phone)) {
-        throw new Error("Please enter a valid phone number (e.g., +639123456789 or 09123456789)");
+        throw new Error(
+          "Please enter a valid phone number (e.g., +639123456789 or 09123456789)"
+        );
       }
 
       // Validate emergency contact number format
       if (!/^\+639\d{9}$/.test(values.emergencyContactNumber)) {
-        throw new Error("Please enter a valid emergency contact number in the format +639XXXXXXXXX");
+        throw new Error(
+          "Please enter a valid emergency contact number in the format +639XXXXXXXXX"
+        );
       }
 
       // Validate birth date format
-      const birthDateRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+      const birthDateRegex =
+        /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
       if (!birthDateRegex.test(values.birthDate)) {
-        throw new Error("Please enter your date of birth in MM/DD/YYYY format (e.g., 04/14/2000)");
+        throw new Error(
+          "Please enter your date of birth in MM/DD/YYYY format (e.g., 04/14/2000)"
+        );
       }
-      
+
       const patient = {
         userId: user.$id,
         name: values.name,
@@ -164,46 +179,55 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       let newPatient = null;
       let retryCount = 0;
       const maxRetries = 3; // Increased from 2 for better reliability
-      
+
       while (!newPatient && retryCount <= maxRetries) {
         try {
           // Add a small delay before first retry to allow any transient issues to resolve
           if (retryCount > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log(`Registration attempt ${retryCount} starting after delay...`);
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            console.log(
+              `Registration attempt ${retryCount} starting after delay...`
+            );
           }
-          
+
           // For mobile devices, use a more conservative approach on retries
-          const isLowEndOrMobile = typeof window !== 'undefined' && (
-            window.navigator.userAgent.includes('iPhone') || 
-            window.navigator.userAgent.includes('Android') ||
-            (window as any).isLowEndDevice === true
-          );
-          
+          const isLowEndOrMobile =
+            typeof window !== "undefined" &&
+            (window.navigator.userAgent.includes("iPhone") ||
+              window.navigator.userAgent.includes("Android") ||
+              (window as any).isLowEndDevice === true);
+
           // Standard registration attempt
           newPatient = await registerPatient(patient);
-          
+
           if (!newPatient && retryCount < maxRetries) {
             retryCount++;
-            console.log(`Registration attempt ${retryCount} failed, retrying...`);
+            console.log(
+              `Registration attempt ${retryCount} failed, retrying...`
+            );
             continue;
           }
-          
+
           if (!newPatient && retryCount >= maxRetries) {
-            throw new Error("Registration could not be completed after multiple attempts. Please try again later.");
+            throw new Error(
+              "Registration could not be completed after multiple attempts. Please try again later."
+            );
           }
-          
+
           break; // Break out of retry loop if successful
         } catch (innerError) {
           if (retryCount >= maxRetries) {
             throw innerError; // Re-throw if we've exhausted retries
           }
           retryCount++;
-          console.log(`Registration attempt ${retryCount} failed with error, retrying...`, innerError);
-          
+          console.log(
+            `Registration attempt ${retryCount} failed with error, retrying...`,
+            innerError
+          );
+
           // Use exponential backoff for retries (wait longer with each retry)
           const delayMs = 1000 * Math.pow(2, retryCount - 1);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         }
       }
 
@@ -213,26 +237,39 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         // Ensure we have the user ID for redirection
         const userIdForRedirect = user.$id;
         console.log("User ID for redirection:", userIdForRedirect);
-        console.log("Redirecting to:", `/patients/${userIdForRedirect}/dashboard`);
-        
+        console.log(
+          "Redirecting to:",
+          `/patients/${userIdForRedirect}/dashboard`
+        );
+
         // Show success modal instead of alert
         setShowSuccessModal(true);
       } else {
         // If newPatient is null or undefined, something went wrong
-        throw new Error("Registration could not be completed. Please try again.");
+        throw new Error(
+          "Registration could not be completed. Please try again."
+        );
       }
     } catch (error) {
       console.error("Error during registration:", error);
       // Show more specific error messages
       if (error instanceof Error) {
         // Check for specific network or server errors
-        if (error.message.includes("network") || error.message.includes("connection") || error.message.includes("timeout")) {
-          setErrorMessage("Network error. Please check your connection and try again when you have a stable internet connection.");
+        if (
+          error.message.includes("network") ||
+          error.message.includes("connection") ||
+          error.message.includes("timeout")
+        ) {
+          setErrorMessage(
+            "Network error. Please check your connection and try again when you have a stable internet connection."
+          );
         } else {
           setErrorMessage(error.message);
         }
       } else {
-        setErrorMessage("An unexpected error occurred. Please try again with a stable internet connection.");
+        setErrorMessage(
+          "An unexpected error occurred. Please try again with a stable internet connection."
+        );
       }
       // Show option to proceed without documents
       setShowErrorModal(true);
@@ -248,7 +285,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
     try {
       // Store the form values for later use
       setFormValues(values);
-      
+
       // Show passkey modal for verification
       setShowPasskeyModal(true);
     } catch (error) {
@@ -279,7 +316,9 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         <section className="space-y-4">
           <h1 className="header">Hi CatSUans! 👋</h1>
           <p className="text-dark-700">Let us know more about yourself.</p>
-          <p className="text-dark-600 text-sm">Fields marked with * are required.</p>
+          <p className="text-dark-600 text-sm">
+            Fields marked with * are required.
+          </p>
         </section>
 
         <section className="space-y-6">
@@ -293,7 +332,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
             fieldType={FormFieldType.INPUT}
             control={form.control}
             name="name"
-            label='Full Name'
+            label="Full Name"
             placeholder="Full Name"
             iconSrc="/assets/icons/user.svg"
             iconAlt="user"
@@ -379,7 +418,7 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
               name="address"
               label="Address"
               placeholder="123 Example Street, Example Bldg."
-            /> 
+            />
           </div>
 
           {/* Category */}
@@ -500,7 +539,9 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
                     />
                   </div>
                   <div className="flex justify-end mt-1">
-                    <span className={`text-xs ${idNumberLength > 10 ? 'text-red-500' : 'text-dark-600'}`}>
+                    <span
+                      className={`text-xs ${idNumberLength > 10 ? "text-red-500" : "text-dark-600"}`}
+                    >
                       {idNumberLength}/10 characters
                     </span>
                   </div>
@@ -543,8 +584,8 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       </form>
 
       {/* Passkey Verification Modal */}
-      <Dialog 
-        open={showPasskeyModal} 
+      <Dialog
+        open={showPasskeyModal}
         onOpenChange={(open) => {
           setShowPasskeyModal(open);
           if (!open) {
@@ -555,12 +596,14 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       >
         <DialogContent className="bg-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-primary">Verify Your Identity</DialogTitle>
+            <DialogTitle className="text-center text-xl font-bold text-primary">
+              Verify Your Identity
+            </DialogTitle>
             <DialogDescription className="text-center">
               Please enter the 6-digit passkey associated with your ID number.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="my-6">
             <InputOTP
               maxLength={6}
@@ -576,23 +619,23 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
                 <InputOTPSlot className="shad-otp-slot" index={5} />
               </InputOTPGroup>
             </InputOTP>
-            
+
             {passkeyError && (
               <p className="text-center text-red-500 mt-3 text-sm">
                 {passkeyError}
               </p>
             )}
           </div>
-          
+
           <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button 
+            <Button
               variant="outline"
               onClick={() => setShowPasskeyModal(false)}
               className="sm:w-1/3"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               type="button"
               className="bg-primary text-white hover:bg-primary-dark sm:w-1/3"
               onClick={handlePasskeyValidation}
@@ -605,8 +648,8 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       </Dialog>
 
       {/* Success Modal */}
-      <Dialog 
-        open={showSuccessModal} 
+      <Dialog
+        open={showSuccessModal}
         onOpenChange={(open) => {
           setShowSuccessModal(open);
           // Redirect when modal is closed
@@ -617,7 +660,9 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       >
         <DialogContent className="bg-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-primary">Registration Successful!</DialogTitle>
+            <DialogTitle className="text-center text-xl font-bold text-primary">
+              Registration Successful!
+            </DialogTitle>
             <DialogDescription className="text-center">
               <div className="mt-2 flex flex-col items-center justify-center">
                 <div className="rounded-full bg-green-100 p-3">
@@ -637,13 +682,14 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
                   </svg>
                 </div>
                 <p className="mt-4 text-center text-sm text-gray-500">
-                  Please log in with your Google account to access your patient dashboard.
+                  Please log in with your Google account to access your patient
+                  dashboard.
                 </p>
               </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex justify-center mt-4">
-            <Button 
+            <Button
               className="bg-primary text-white hover:bg-primary-dark"
               onClick={() => {
                 setShowSuccessModal(false);
@@ -657,26 +703,29 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       </Dialog>
 
       {/* Error Modal */}
-      <Dialog 
-        open={showErrorModal} 
+      <Dialog
+        open={showErrorModal}
         onOpenChange={(open) => setShowErrorModal(open)}
       >
         <DialogContent className="bg-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold text-red-600">Registration Error</DialogTitle>
+            <DialogTitle className="text-center text-xl font-bold text-red-600">
+              Registration Error
+            </DialogTitle>
             <DialogDescription className="text-center">
               <div className="mt-2 flex flex-col items-center justify-center">
                 <div className="rounded-full bg-red-100 p-3">
                   <AlertCircle className="h-6 w-6 text-red-600" />
                 </div>
                 <p className="mt-4 text-center text-sm text-gray-700">
-                  {errorMessage || "An error occurred during registration. Please try again."}
+                  {errorMessage ||
+                    "An error occurred during registration. Please try again."}
                 </p>
               </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex justify-center mt-4">
-            <Button 
+            <Button
               className="bg-primary text-white hover:bg-primary-dark"
               onClick={() => setShowErrorModal(false)}
             >

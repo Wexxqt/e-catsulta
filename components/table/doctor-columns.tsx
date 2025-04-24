@@ -247,7 +247,8 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
       return (
         <div className="flex gap-1">
           {appointment.status !== "cancelled" &&
-            appointment.status !== "completed" && (
+            appointment.status !== "completed" &&
+            appointment.status !== "missed" && (
               <AppointmentModal
                 patientId={patient.$id}
                 userId={appointment.userId}

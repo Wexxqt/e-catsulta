@@ -33,7 +33,7 @@
     transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
   }
-  
+
   .rotate-chevron.open {
     transform: rotate(180deg);
   }
@@ -382,59 +382,59 @@
   .doctor-detail-modal {
     @apply sm:max-w-[600px] max-h-[80vh] overflow-y-auto;
   }
-  
+
   .doctor-detail-section {
     @apply space-y-4;
   }
-  
+
   .doctor-detail-header {
     @apply font-semibold text-lg border-b pb-2;
   }
-  
+
   .doctor-detail-grid {
     @apply grid grid-cols-2 gap-4;
   }
-  
+
   .doctor-detail-label {
     @apply text-sm text-gray-500;
   }
-  
+
   .doctor-detail-value {
     @apply text-base;
   }
-  
+
   .doctor-detail-value-bold {
     @apply text-base font-medium;
   }
-  
+
   .doctor-document-button {
     @apply flex items-center gap-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors;
   }
-  
+
   .doctor-note-container {
     @apply bg-gray-50 p-4 rounded-lg space-y-2;
   }
-  
+
   .doctor-note-header {
     @apply flex justify-between items-start;
   }
-  
+
   .doctor-note-timestamp {
     @apply text-sm text-gray-500;
   }
-  
+
   .doctor-note-delete {
     @apply text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50;
   }
-  
+
   .doctor-note-content {
     @apply text-gray-700 whitespace-pre-wrap;
   }
-  
+
   .doctor-appointment-card {
     @apply p-3 border border-gray-200 rounded-lg;
   }
-  
+
   .doctor-appointment-row {
     @apply flex justify-between;
   }
@@ -577,7 +577,7 @@
 
 /* ==== APPOINTMENT CALENDAR VIEW-ONLY STYLES (Improved for Patients) ==== */
 .appointment-calendar .react-datepicker {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   border: 1px solid rgba(74, 79, 85, 0.5);
   border-radius: 1rem;
   background-color: #212529;
@@ -591,7 +591,7 @@
 }
 
 .appointment-calendar .react-datepicker__header {
-  background-color: #23272B;
+  background-color: #23272b;
   border-bottom: 1px solid rgba(74, 79, 85, 0.3);
   padding: 0.75rem 0;
   text-align: center;
@@ -599,7 +599,7 @@
 }
 
 .appointment-calendar .react-datepicker__current-month {
-  color: #E2E6EA;
+  color: #e2e6ea;
   font-size: 1.1rem;
   font-weight: 500;
   margin-bottom: 0.5rem;
@@ -607,7 +607,7 @@
 }
 
 .appointment-calendar .react-datepicker__day-name {
-  color: #9AA5B1;
+  color: #9aa5b1;
   font-size: 0.75rem;
   width: 2.2rem;
   margin: 0;
@@ -617,7 +617,7 @@
 }
 
 .appointment-calendar .react-datepicker__day {
-  color: #6C757D;
+  color: #6c757d;
   opacity: 0.5;
   cursor: default !important;
   font-size: 0.9rem;
@@ -630,7 +630,7 @@
 }
 
 .appointment-calendar .react-datepicker__day--selected {
-  background-color: #24AE7C;
+  background-color: #24ae7c;
   color: white;
   border-radius: 50%;
   font-weight: 600;
@@ -640,7 +640,7 @@
 
 .appointment-calendar .react-datepicker__day--today {
   font-weight: 600;
-  color: #CBD5E0;
+  color: #cbd5e0;
   opacity: 1;
 }
 
@@ -666,10 +666,9 @@
 }
 
 .appointment-calendar .react-datepicker__day--outside-month {
-  color: #43484D;
+  color: #43484d;
   opacity: 0.4;
 }
-
 
 /* =====  REACT PHONE NUMBER INPUT OVERRIDES */
 .PhoneInputInput {
@@ -794,25 +793,25 @@
     min-height: 44px;
     min-width: 44px;
   }
-  
+
   .simplified-ui input,
   .simplified-ui select,
   .simplified-ui textarea {
     font-size: 16px !important; /* Prevents iOS zoom on focus */
   }
-  
+
   /* Add more padding to clickable elements for mobile */
   .simplified-ui .shad-input,
   .simplified-ui .shad-select-trigger,
   .simplified-ui .shad-textarea {
     padding: 12px !important;
   }
-  
+
   /* Optimize forms for low-end devices */
   .low-end-form .FormField {
     margin-bottom: 1rem;
   }
-  
+
   .low-end-form input,
   .low-end-form select,
   .low-end-form textarea {
