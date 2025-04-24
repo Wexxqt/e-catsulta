@@ -12,7 +12,11 @@ import {
   messaging,
   PATIENT_COLLECTION_ID,
 } from "../appwrite.config";
-import { formatDateTime, parseStringify, generateAppointmentCode } from "../utils";
+import {
+  formatDateTime,
+  parseStringify,
+  generateAppointmentCode,
+} from "../utils";
 
 /**
  * Validates and sanitizes appointment data to prevent errors from deleted patients
@@ -21,18 +25,18 @@ const validateAppointmentData = (appointment: any): any => {
   try {
     // If the appointment doesn't exist, return null
     if (!appointment) return null;
-    
+
     // Check if patient property exists and is an object
-    if (!appointment.patient || typeof appointment.patient !== 'object') {
+    if (!appointment.patient || typeof appointment.patient !== "object") {
       // Create a placeholder patient object to prevent errors
       appointment.patient = {
         name: "Deleted Patient",
         $id: appointment.userId || "unknown",
         email: null,
-        phone: "N/A"
+        phone: "N/A",
       };
     }
-    
+
     return appointment;
   } catch (error) {
     console.error("Error validating appointment data:", error);
@@ -46,15 +50,18 @@ export const createAppointment = async (
 ) => {
   try {
     // Generate appointment code
-    const appointmentCode = generateAppointmentCode(ID.unique(), appointment.userId);
-    
+    const appointmentCode = generateAppointmentCode(
+      ID.unique(),
+      appointment.userId
+    );
+
     const newAppointment = await databases.createDocument(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
       ID.unique(),
       {
         ...appointment,
-        appointmentCode
+        appointmentCode,
       }
     );
 
@@ -72,31 +79,28 @@ export const getRecentAppointmentList = async () => {
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
-      [
-        Query.orderDesc("$createdAt"),
-        Query.limit(10),
-      ]
+      [Query.orderDesc("$createdAt"), Query.limit(10)]
     );
 
     // Count appointments by status
     const [scheduledCount, pendingCount, cancelledCount] = await Promise.all([
-      databases.listDocuments(
-        DATABASE_ID!,
-        APPOINTMENT_COLLECTION_ID!,
-        [Query.equal("status", "scheduled")]
-      ).then(res => res.total),
-      
-      databases.listDocuments(
-        DATABASE_ID!,
-        APPOINTMENT_COLLECTION_ID!,
-        [Query.equal("status", "pending")]
-      ).then(res => res.total),
-      
-      databases.listDocuments(
-        DATABASE_ID!,
-        APPOINTMENT_COLLECTION_ID!,
-        [Query.equal("status", "cancelled")]
-      ).then(res => res.total)
+      databases
+        .listDocuments(DATABASE_ID!, APPOINTMENT_COLLECTION_ID!, [
+          Query.equal("status", "scheduled"),
+        ])
+        .then((res) => res.total),
+
+      databases
+        .listDocuments(DATABASE_ID!, APPOINTMENT_COLLECTION_ID!, [
+          Query.equal("status", "pending"),
+        ])
+        .then((res) => res.total),
+
+      databases
+        .listDocuments(DATABASE_ID!, APPOINTMENT_COLLECTION_ID!, [
+          Query.equal("status", "cancelled"),
+        ])
+        .then((res) => res.total),
     ]);
 
     // Get today's date (start and end)
@@ -111,24 +115,24 @@ export const getRecentAppointmentList = async () => {
       [
         Query.greaterThanEqual("schedule", startOfDay),
         Query.lessThanEqual("schedule", endOfDay),
-        Query.equal("status", "scheduled")
+        Query.equal("status", "scheduled"),
       ]
     );
     const todayCount = todayAppointments.total;
 
     // Count patients by category
     const [studentCount, employeeCount] = await Promise.all([
-      databases.listDocuments(
-        DATABASE_ID!,
-        PATIENT_COLLECTION_ID!,
-        [Query.equal("category", "Student")]
-      ).then(res => res.total),
-      
-      databases.listDocuments(
-        DATABASE_ID!,
-        PATIENT_COLLECTION_ID!,
-        [Query.equal("category", "Employee")]
-      ).then(res => res.total)
+      databases
+        .listDocuments(DATABASE_ID!, PATIENT_COLLECTION_ID!, [
+          Query.equal("category", "Student"),
+        ])
+        .then((res) => res.total),
+
+      databases
+        .listDocuments(DATABASE_ID!, PATIENT_COLLECTION_ID!, [
+          Query.equal("category", "Employee"),
+        ])
+        .then((res) => res.total),
     ]);
 
     return {
@@ -182,9 +186,11 @@ export const updateAppointment = async ({
 
     if (!updatedAppointment) throw Error;
 
-    const smsMessage = `E-CatSulta. ${type === "schedule" 
-      ? `Your appointment is on ${formatDateTime(appointment.schedule!, timeZone).dateTime}. See you!`
-      : `We regret to inform that your appointment for ${formatDateTime(appointment.schedule!, timeZone).dateTime} is cancelled. Reason:  ${appointment.cancellationReason}`}.`;
+    const smsMessage = `E-CatSulta. ${
+      type === "schedule"
+        ? `Your appointment is on ${formatDateTime(appointment.schedule!, timeZone).dateTime}. See you!`
+        : `We regret to inform that your appointment for ${formatDateTime(appointment.schedule!, timeZone).dateTime} is cancelled. Reason:  ${appointment.cancellationReason}`
+    }.`;
     await sendSMSNotification(userId, smsMessage);
 
     revalidatePath("/admin");
@@ -202,13 +208,16 @@ export const getAppointment = async (appointmentId: string) => {
       APPOINTMENT_COLLECTION_ID!,
       appointmentId
     );
-    
+
     // If appointment doesn't have a code, generate one and save it to database
     const typedAppointment = appointment as any;
     if (!typedAppointment.appointmentCode) {
-      const newCode = generateAppointmentCode(appointmentId, typedAppointment.userId || '');
+      const newCode = generateAppointmentCode(
+        appointmentId,
+        typedAppointment.userId || ""
+      );
       typedAppointment.appointmentCode = newCode;
-      
+
       // Save the generated code to the database
       await databases.updateDocument(
         DATABASE_ID!,
@@ -238,7 +247,7 @@ export const getAppointmentByCode = async (code: string) => {
         APPOINTMENT_COLLECTION_ID!,
         code
       );
-      
+
       if (directAppointment) {
         return parseStringify(validateAppointmentData(directAppointment));
       }
@@ -246,19 +255,19 @@ export const getAppointmentByCode = async (code: string) => {
       // Not a direct ID, continue to search by code
       console.log("Not a direct appointment ID, searching by code...");
     }
-    
+
     // Search for appointment with matching code
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
       [Query.equal("appointmentCode", code)]
     );
-    
+
     if (appointments.total === 0) {
       console.log("No appointment found with code:", code);
       return null;
     }
-    
+
     // Get the first matching appointment
     const appointment = appointments.documents[0];
     return parseStringify(validateAppointmentData(appointment));
@@ -268,7 +277,7 @@ export const getAppointmentByCode = async (code: string) => {
   }
 };
 
-// GET DOCTOR APPOINTMENTS 
+// GET DOCTOR APPOINTMENTS
 export const getDoctorAppointments = async (doctorName: string) => {
   try {
     const appointments = await databases.listDocuments(
@@ -278,8 +287,8 @@ export const getDoctorAppointments = async (doctorName: string) => {
         Query.equal("primaryPhysician", doctorName),
         Query.or([
           Query.equal("status", "scheduled"),
-          Query.equal("status", "completed")
-        ])
+          Query.equal("status", "completed"),
+        ]),
       ]
     );
 
@@ -305,10 +314,7 @@ export const getPatientAppointments = async (patientId: string) => {
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
-      [
-        Query.equal("userId", patientId),
-        Query.orderDesc("schedule")
-      ]
+      [Query.equal("userId", patientId), Query.orderDesc("schedule")]
     );
 
     // Filter out archived appointments AND sanitize the data
@@ -338,23 +344,23 @@ export const clearPatientAppointmentHistory = async (patientId: string) => {
     );
 
     // Instead of deleting, mark each appointment as archived
-    const updatePromises = appointments.documents.map(appointment => 
+    const updatePromises = appointments.documents.map((appointment) =>
       databases.updateDocument(
         DATABASE_ID!,
         APPOINTMENT_COLLECTION_ID!,
         appointment.$id,
-        { 
-          archived: true // This hides from patient view but preserves the record
+        {
+          archived: true, // This hides from patient view but preserves the record
         }
       )
     );
 
     // Wait for all updates to complete
     await Promise.all(updatePromises);
-    
+
     // Revalidate the patient dashboard path
     revalidatePath(`/patients/${patientId}/dashboard`);
-    
+
     return { success: true, count: appointments.documents.length };
   } catch (error) {
     console.error("Error clearing patient appointment history:", error);
@@ -363,7 +369,10 @@ export const clearPatientAppointmentHistory = async (patientId: string) => {
 };
 
 // CLEAR DOCTOR APPOINTMENT HISTORY
-export const clearDoctorAppointmentHistory = async (doctorName: string, preservePatientData: boolean = false) => {
+export const clearDoctorAppointmentHistory = async (
+  doctorName: string,
+  preservePatientData: boolean = false
+) => {
   try {
     // Get all appointments for this doctor
     const appointments = await databases.listDocuments(
@@ -374,7 +383,7 @@ export const clearDoctorAppointmentHistory = async (doctorName: string, preserve
 
     // Keep track of unique patients if preservePatientData is true
     const uniquePatientIds = new Set<string>();
-    
+
     if (preservePatientData) {
       appointments.documents.forEach((doc: any) => {
         if (doc.userId) {
@@ -385,13 +394,13 @@ export const clearDoctorAppointmentHistory = async (doctorName: string, preserve
 
     // For each appointment, update it to mark as "archived" only
     // This is better than deletion as it keeps records but hides them from the doctor view
-    const updatePromises = appointments.documents.map(appointment => 
+    const updatePromises = appointments.documents.map((appointment) =>
       databases.updateDocument(
         DATABASE_ID!,
         APPOINTMENT_COLLECTION_ID!,
         appointment.$id,
-        { 
-          archived: true
+        {
+          archived: true,
           // We can't add fields that don't exist in the database schema
         }
       )
@@ -399,14 +408,14 @@ export const clearDoctorAppointmentHistory = async (doctorName: string, preserve
 
     // Wait for all updates to complete
     await Promise.all(updatePromises);
-    
+
     // Revalidate the doctor dashboard path
     revalidatePath(`/doctor`);
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       count: appointments.documents.length,
-      preservedPatientCount: uniquePatientIds.size
+      preservedPatientCount: uniquePatientIds.size,
     };
   } catch (error) {
     console.error("Error clearing doctor appointment history:", error);
@@ -421,11 +430,11 @@ export const getAppointmentChartData = async (timeRange = 7) => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - timeRange);
-    
+
     // Format dates for query
     const startISO = startDate.toISOString();
     const endISO = endDate.toISOString();
-    
+
     // Fetch appointments within date range
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
@@ -436,44 +445,54 @@ export const getAppointmentChartData = async (timeRange = 7) => {
         Query.limit(1000), // Increase limit to get all data
       ]
     );
-    
+
     // Process the data for chart
     interface CountMap {
       [key: string]: number;
     }
-    
+
     const medicalCounts: CountMap = {}; // Track medical appointments by date
     const dentalCounts: CountMap = {}; // Track dental appointments by date
     const dateLabels: string[] = []; // Store all unique dates
-    
+
     // Generate all dates in the range for consistent data
     for (let i = 0; i < timeRange; i++) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      const dateStr = date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
       dateLabels.push(dateStr);
       medicalCounts[dateStr] = 0;
       dentalCounts[dateStr] = 0;
     }
-    
+
     // Count appointments by date and category
     appointments.documents.forEach((appointment: any) => {
       // Extract the date part only (YYYY-MM-DD)
-      const appointmentDate = new Date(appointment.schedule).toISOString().split('T')[0];
-      
+      const appointmentDate = new Date(appointment.schedule)
+        .toISOString()
+        .split("T")[0];
+
       // Skip if not in our date range
       if (!dateLabels.includes(appointmentDate)) return;
-      
+
       // Check appointment category (medical or dental)
-      if (appointment.primaryPhysician && appointment.primaryPhysician.includes("Abundo")) {
+      if (
+        appointment.primaryPhysician &&
+        appointment.primaryPhysician.includes("Abundo")
+      ) {
         // Dr. Abundo is Medical
-        medicalCounts[appointmentDate] = (medicalCounts[appointmentDate] || 0) + 1;
-      } else if (appointment.primaryPhysician && appointment.primaryPhysician.includes("De Castro")) {
+        medicalCounts[appointmentDate] =
+          (medicalCounts[appointmentDate] || 0) + 1;
+      } else if (
+        appointment.primaryPhysician &&
+        appointment.primaryPhysician.includes("De Castro")
+      ) {
         // Dr. De Castro is Dental
-        dentalCounts[appointmentDate] = (dentalCounts[appointmentDate] || 0) + 1;
+        dentalCounts[appointmentDate] =
+          (dentalCounts[appointmentDate] || 0) + 1;
       }
     });
-    
+
     // Format data for chart
     interface ChartDataPoint {
       date: string;
@@ -481,18 +500,24 @@ export const getAppointmentChartData = async (timeRange = 7) => {
       Dental: number;
       Total: number;
     }
-    
-    const chartData: ChartDataPoint[] = dateLabels.map(date => ({
+
+    const chartData: ChartDataPoint[] = dateLabels.map((date) => ({
       date,
       Medical: medicalCounts[date] || 0,
       Dental: dentalCounts[date] || 0,
-      Total: (medicalCounts[date] || 0) + (dentalCounts[date] || 0)
+      Total: (medicalCounts[date] || 0) + (dentalCounts[date] || 0),
     }));
-    
+
     return {
       chartData,
-      totalMedical: Object.values(medicalCounts).reduce((sum: number, count: number) => sum + count, 0),
-      totalDental: Object.values(dentalCounts).reduce((sum: number, count: number) => sum + count, 0),
+      totalMedical: Object.values(medicalCounts).reduce(
+        (sum: number, count: number) => sum + count,
+        0
+      ),
+      totalDental: Object.values(dentalCounts).reduce(
+        (sum: number, count: number) => sum + count,
+        0
+      ),
     };
   } catch (error) {
     console.error("Error fetching appointment chart data:", error);
@@ -524,17 +549,17 @@ export const getAllAppointments = async ({
 }) => {
   try {
     const queries: any[] = [];
-    
+
     // Add status filter if specified
     if (status) {
       queries.push(Query.equal("status", status));
     }
-    
+
     // Add doctor filter if specified
     if (doctor) {
       queries.push(Query.equal("primaryPhysician", doctor));
     }
-    
+
     // Add date range filter if specified
     if (startDate) {
       queries.push(Query.greaterThanEqual("schedule", startDate));
@@ -542,7 +567,7 @@ export const getAllAppointments = async ({
     if (endDate) {
       queries.push(Query.lessThanEqual("schedule", endDate));
     }
-    
+
     // Add search query if specified
     if (searchQuery && searchQuery.trim() !== "") {
       // Note: For Appwrite, ideally we'd search in the patient name,
@@ -550,36 +575,40 @@ export const getAllAppointments = async ({
       // This would be better handled by a custom API or advanced search.
       queries.push(Query.search("note", searchQuery));
     }
-    
+
     // Add sorting (default to sorting by schedule date)
     if (sortField && sortOrder) {
       if (sortField === "schedule" || sortField === "$createdAt") {
-        queries.push(sortOrder === "asc" ? Query.orderAsc(sortField) : Query.orderDesc(sortField));
+        queries.push(
+          sortOrder === "asc"
+            ? Query.orderAsc(sortField)
+            : Query.orderDesc(sortField)
+        );
       }
     }
-    
+
     // Add pagination
     const offset = (page - 1) * limit;
     queries.push(Query.limit(limit));
     queries.push(Query.offset(offset));
-    
+
     console.log("Appointment queries:", JSON.stringify(queries));
-    
+
     // Fetch appointments from the database
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
       queries
     );
-    
+
     // Validate appointment data to handle deleted patients
     const validatedAppointments = appointments.documents
       .map((doc: any) => validateAppointmentData(doc))
       .filter((doc) => doc !== null);
-    
+
     // Count total appointments for pagination (without pagination limit)
     let totalCount = appointments.total;
-    
+
     return {
       appointments: validatedAppointments,
       totalCount,

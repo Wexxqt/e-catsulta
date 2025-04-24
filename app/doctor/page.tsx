@@ -77,6 +77,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 // Add import for the AppointmentCalendar component
 import AppointmentCalendar from "@/components/AppointmentCalendar";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Settings, LogOut } from "lucide-react";
+
 interface AppointmentState {
   documents: Appointment[];
   scheduledCount: number;
@@ -118,12 +129,14 @@ const DoctorDashboard = () => {
   const [loadingAllAppointments, setLoadingAllAppointments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentDoctor, setCurrentDoctor] = useState("");
+  const [currentDoctorId, setCurrentDoctorId] = useState("");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [passkey, setPasskey] = useState("");
   const [error, setError] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
 
   // Calendar state
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -149,6 +162,12 @@ const DoctorDashboard = () => {
 
   const router = useRouter();
 
+  // Function to get doctor ID from name
+  const getDoctorIdFromName = (name: string) => {
+    const doctor = Doctors.find((doc) => doc.name === name);
+    return doctor ? doctor.id : "default";
+  };
+
   // Check authentication on component mount
   useEffect(() => {
     const checkAuth = () => {
@@ -169,6 +188,7 @@ const DoctorDashboard = () => {
       }
 
       setCurrentDoctor(doctorName);
+      setCurrentDoctorId(getDoctorIdFromName(doctorName));
       return true;
     };
 
@@ -459,6 +479,7 @@ const DoctorDashboard = () => {
 
         setShowAuthModal(false);
         setCurrentDoctor(selectedDoctor);
+        setCurrentDoctorId(getDoctorIdFromName(selectedDoctor));
 
         // Fetch appointments after successful authentication
         fetchAppointments();
@@ -759,6 +780,225 @@ const DoctorDashboard = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Availability Settings Modal */}
+      <Dialog
+        open={showAvailabilityModal}
+        onOpenChange={setShowAvailabilityModal}
+      >
+        <DialogContent className="sm:max-w-[900px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              Availability Settings
+            </DialogTitle>
+            <DialogDescription>
+              Configure your working hours and time off
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="text-16-medium font-semibold">Working Hours</h3>
+              <div className="dashboard-card p-4 space-y-4">
+                <div className="space-y-2">
+                  <h4 className="text-16-medium">Working Days</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Sunday",
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday",
+                    ].map((day, index) => (
+                      <div key={day} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`day-${index}`}
+                          checked={availabilitySettings.days.includes(index)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setAvailabilitySettings((prev) => ({
+                                ...prev,
+                                days: [...prev.days, index].sort(),
+                              }));
+                            } else {
+                              setAvailabilitySettings((prev) => ({
+                                ...prev,
+                                days: prev.days.filter((d) => d !== index),
+                              }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`day-${index}`}>{day}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="text-16-medium">Start Time</h4>
+                    <Select
+                      value={availabilitySettings.startTime.toString()}
+                      onValueChange={(value) => {
+                        setAvailabilitySettings((prev) => ({
+                          ...prev,
+                          startTime: parseInt(value),
+                        }));
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select start time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...Array(24)].map((_, i) => (
+                          <SelectItem key={i} value={i.toString()}>
+                            {i === 0
+                              ? "12:00 AM"
+                              : i < 12
+                                ? `${i}:00 AM`
+                                : i === 12
+                                  ? "12:00 PM"
+                                  : `${i - 12}:00 PM`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="text-16-medium">End Time</h4>
+                    <Select
+                      value={availabilitySettings.endTime.toString()}
+                      onValueChange={(value) => {
+                        setAvailabilitySettings((prev) => ({
+                          ...prev,
+                          endTime: parseInt(value),
+                        }));
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select end time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...Array(24)].map((_, i) => (
+                          <SelectItem key={i} value={i.toString()}>
+                            {i === 0
+                              ? "12:00 AM"
+                              : i < 12
+                                ? `${i}:00 AM`
+                                : i === 12
+                                  ? "12:00 PM"
+                                  : `${i - 12}:00 PM`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-16-medium font-semibold">
+                Holidays/Time Off
+              </h3>
+              <div className="dashboard-card p-4">
+                <div className="border rounded-md p-3 mb-3">
+                  <p className="text-sm text-dark-600 mb-2">
+                    Select dates to mark as holidays:
+                  </p>
+                  <Input
+                    type="date"
+                    className="mb-2"
+                    onChange={(e) => {
+                      const selectedDate = new Date(e.target.value);
+                      if (!isNaN(selectedDate.getTime())) {
+                        setSelectedDates((prev) => [...prev, selectedDate]);
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-16-medium">Selected Dates</h4>
+                  <div className="max-h-40 overflow-y-auto">
+                    {selectedDates.length === 0 ? (
+                      <p className="text-14-regular text-dark-600">
+                        No dates selected
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {selectedDates.map((date, i) => (
+                          <div
+                            key={i}
+                            className="flex justify-between items-center"
+                          >
+                            <span>{format(date, "MMM dd, yyyy")}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedDates((prev) =>
+                                  prev.filter(
+                                    (d) => d.getTime() !== date.getTime()
+                                  )
+                                );
+                              }}
+                            >
+                              <Image
+                                src="/assets/icons/close.svg"
+                                alt="remove"
+                                width={16}
+                                height={16}
+                              />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <Button
+                    onClick={() => {
+                      setAvailabilitySettings((prev) => ({
+                        ...prev,
+                        holidays: [...selectedDates],
+                      }));
+                      alert("Holidays added to your availability settings!");
+                    }}
+                    className="shad-primary-btn w-full"
+                    disabled={selectedDates.length === 0}
+                  >
+                    Add Selected Dates as Holidays
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAvailabilityModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                saveAvailabilitySettings();
+                setShowAvailabilityModal(false);
+              }}
+              className="save-availability-btn shad-primary-btn"
+            >
+              Save Availability Settings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dashboard Content */}
       <div className="mx-auto max-w-7xl flex flex-col space-y-8 px-4 sm:px-6 lg:px-8">
         <header className="flex justify-between items-center py-4">
@@ -773,9 +1013,47 @@ const DoctorDashboard = () => {
           </Link>
 
           <div className="flex items-center gap-4">
-            <button onClick={handleLogout} className="text-lg font-semibold">
-              Logout
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center space-x-2 rounded-full overflow-hidden border-2 border-dark-500 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-dark-300 transition-all duration-200">
+                  <Avatar className="h-10 w-10 cursor-pointer">
+                    <AvatarImage
+                      src={`/assets/images/doctors/${currentDoctorId || "default"}.jpg`}
+                      alt={`Dr. ${currentDoctor}`}
+                    />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500/80 to-blue-700/80 text-white">
+                      {currentDoctor
+                        ? currentDoctor.substring(0, 2).toUpperCase()
+                        : "DR"}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span className="font-medium">Dr. {currentDoctor}</span>
+                    <span className="text-xs text-gray-400">Doctor</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowAvailabilityModal(true)}
+                  className="cursor-pointer"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Availability Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-500 cursor-pointer focus:text-red-500"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -798,7 +1076,7 @@ const DoctorDashboard = () => {
               className="w-full"
               onValueChange={setActiveTab}
             >
-              <TabsList className="grid grid-cols-1 md:grid-cols-5 mb-4">
+              <TabsList className="grid grid-cols-1 md:grid-cols-4 mb-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="all-appointments">Appointments</TabsTrigger>
                 <TabsTrigger
@@ -812,7 +1090,6 @@ const DoctorDashboard = () => {
                   Patients
                 </TabsTrigger>
                 <TabsTrigger value="schedule">Calendar</TabsTrigger>
-                <TabsTrigger value="availability">Availability</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
@@ -1088,216 +1365,6 @@ const DoctorDashboard = () => {
                     appointments={filteredAppointments.documents}
                   />
                 )}
-              </TabsContent>
-
-              {/* Availability Tab */}
-              <TabsContent value="availability" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 space-y-4">
-                    <h2 className="text-xl font-semibold">
-                      Set Your Availability
-                    </h2>
-                    <div className="dashboard-card p-4 space-y-4">
-                      <div className="space-y-2">
-                        <h3 className="text-16-medium">Working Days</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            "Sunday",
-                            "Monday",
-                            "Tuesday",
-                            "Wednesday",
-                            "Thursday",
-                            "Friday",
-                            "Saturday",
-                          ].map((day, index) => (
-                            <div
-                              key={day}
-                              className="flex items-center space-x-2"
-                            >
-                              <Checkbox
-                                id={`day-${index}`}
-                                checked={availabilitySettings.days.includes(
-                                  index
-                                )}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setAvailabilitySettings((prev) => ({
-                                      ...prev,
-                                      days: [...prev.days, index].sort(),
-                                    }));
-                                  } else {
-                                    setAvailabilitySettings((prev) => ({
-                                      ...prev,
-                                      days: prev.days.filter(
-                                        (d) => d !== index
-                                      ),
-                                    }));
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`day-${index}`}>{day}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <h3 className="text-16-medium">Start Time</h3>
-                          <Select
-                            value={availabilitySettings.startTime.toString()}
-                            onValueChange={(value) => {
-                              setAvailabilitySettings((prev) => ({
-                                ...prev,
-                                startTime: parseInt(value),
-                              }));
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select start time" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[...Array(24)].map((_, i) => (
-                                <SelectItem key={i} value={i.toString()}>
-                                  {i === 0
-                                    ? "12:00 AM"
-                                    : i < 12
-                                      ? `${i}:00 AM`
-                                      : i === 12
-                                        ? "12:00 PM"
-                                        : `${i - 12}:00 PM`}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <h3 className="text-16-medium">End Time</h3>
-                          <Select
-                            value={availabilitySettings.endTime.toString()}
-                            onValueChange={(value) => {
-                              setAvailabilitySettings((prev) => ({
-                                ...prev,
-                                endTime: parseInt(value),
-                              }));
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select end time" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[...Array(24)].map((_, i) => (
-                                <SelectItem key={i} value={i.toString()}>
-                                  {i === 0
-                                    ? "12:00 AM"
-                                    : i < 12
-                                      ? `${i}:00 AM`
-                                      : i === 12
-                                        ? "12:00 PM"
-                                        : `${i - 12}:00 PM`}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="pt-4">
-                        <Button
-                          onClick={saveAvailabilitySettings}
-                          className="save-availability-btn shad-primary-btn w-full sm:w-auto"
-                        >
-                          Save Availability Settings
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">
-                      Add Holidays/Time Off
-                    </h2>
-                    <div className="dashboard-card p-4">
-                      <div className="border rounded-md p-3 mb-3">
-                        <p className="text-sm text-dark-600 mb-2">
-                          Select dates to mark as holidays:
-                        </p>
-                        <Input
-                          type="date"
-                          className="mb-2"
-                          onChange={(e) => {
-                            const selectedDate = new Date(e.target.value);
-                            if (!isNaN(selectedDate.getTime())) {
-                              setSelectedDates((prev) => [
-                                ...prev,
-                                selectedDate,
-                              ]);
-                            }
-                          }}
-                        />
-                      </div>
-
-                      <div className="mt-4 space-y-2">
-                        <h3 className="text-16-medium">Selected Dates</h3>
-                        <div className="max-h-40 overflow-y-auto">
-                          {selectedDates.length === 0 ? (
-                            <p className="text-14-regular text-dark-600">
-                              No dates selected
-                            </p>
-                          ) : (
-                            <div className="space-y-2">
-                              {selectedDates.map((date, i) => (
-                                <div
-                                  key={i}
-                                  className="flex justify-between items-center"
-                                >
-                                  <span>{format(date, "MMM dd, yyyy")}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedDates((prev) =>
-                                        prev.filter(
-                                          (d) => d.getTime() !== date.getTime()
-                                        )
-                                      );
-                                    }}
-                                  >
-                                    <Image
-                                      src="/assets/icons/close.svg"
-                                      alt="remove"
-                                      width={16}
-                                      height={16}
-                                    />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <Button
-                          onClick={() => {
-                            setAvailabilitySettings((prev) => ({
-                              ...prev,
-                              holidays: [...selectedDates],
-                            }));
-                            alert(
-                              "Holidays added to your availability settings!"
-                            );
-                          }}
-                          className="shad-primary-btn w-full"
-                          disabled={selectedDates.length === 0}
-                        >
-                          Add Selected Dates as Holidays
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </TabsContent>
             </Tabs>
           </section>

@@ -600,7 +600,8 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
               Verify Your Identity
             </DialogTitle>
             <DialogDescription className="text-center">
-              Please enter the 6-digit passkey associated with your ID number.
+              Please enter your 6-digit passkey (format: MMDDYY) associated with
+              your ID number.
             </DialogDescription>
           </DialogHeader>
 
