@@ -212,6 +212,13 @@ const DoctorDashboard = () => {
         });
       }
     }
+
+    // Cleanup function to reset modal states when component unmounts
+    return () => {
+      setShowAuthModal(false);
+      setShowClearHistoryDialog(false);
+      setShowAvailabilityModal(false);
+    };
   }, []);
 
   // Watch for passkey changes and auto-submit when length is correct
@@ -469,6 +476,7 @@ const DoctorDashboard = () => {
         setError(
           "Doctor authentication is not properly configured. Please contact administrator."
         );
+        setIsSubmitting(false);
         return;
       }
 
@@ -657,11 +665,12 @@ const DoctorDashboard = () => {
       <AlertDialog
         open={showAuthModal}
         onOpenChange={(isOpen) => {
-          // Only allow closing via the close button or successful authentication
+          // Allow the dialog to close normally, and handle auth state separately
+          setShowAuthModal(isOpen);
+
+          // If user is trying to close without auth, redirect to home page
           if (!isOpen && !localStorage.getItem("doctorAccessKey")) {
-            setShowAuthModal(true);
-          } else {
-            setShowAuthModal(isOpen);
+            router.push("/");
           }
         }}
       >
@@ -674,7 +683,7 @@ const DoctorDashboard = () => {
                 alt="close"
                 width={20}
                 height={20}
-                onClick={() => setShowAuthModal(false)}
+                onClick={() => router.push("/")}
                 className="cursor-pointer"
               />
             </AlertDialogTitle>
@@ -753,7 +762,7 @@ const DoctorDashboard = () => {
         open={showClearHistoryDialog}
         onOpenChange={setShowClearHistoryDialog}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="z-50">
           <AlertDialogHeader>
             <AlertDialogTitle>Clear Appointment History</AlertDialogTitle>
             <AlertDialogDescription>
@@ -785,7 +794,7 @@ const DoctorDashboard = () => {
         open={showAvailabilityModal}
         onOpenChange={setShowAvailabilityModal}
       >
-        <DialogContent className="sm:max-w-[900px]">
+        <DialogContent className="sm:max-w-[900px] z-50">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">
               Availability Settings
