@@ -625,3 +625,31 @@ export const getAllAppointments = async ({
     };
   }
 };
+
+// GET DOCTOR ARCHIVED APPOINTMENTS
+export const getArchivedDoctorAppointments = async (doctorName: string) => {
+  try {
+    const appointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      [
+        Query.equal("primaryPhysician", doctorName),
+        Query.equal("archived", true),
+        Query.orderDesc("$updatedAt")
+      ]
+    );
+
+    // Sanitize the data
+    const validatedAppointments = appointments.documents
+      .map((doc: any) => validateAppointmentData(doc))
+      .filter((doc) => doc !== null); // Remove any null results
+
+    return parseStringify(validatedAppointments);
+  } catch (error) {
+    console.error(
+      "An error occurred while retrieving archived doctor appointments:",
+      error
+    );
+    return [];
+  }
+};

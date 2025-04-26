@@ -86,7 +86,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Settings, LogOut } from "lucide-react";
+import { Settings, LogOut, Archive } from "lucide-react";
 
 interface AppointmentState {
   documents: Appointment[];
@@ -1102,6 +1102,14 @@ const DoctorDashboard = () => {
                 >
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Availability Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => router.push("/doctor/archived")}
+                  className="cursor-pointer"
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  <span>Archived Appointments</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
