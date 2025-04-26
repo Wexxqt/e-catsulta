@@ -137,6 +137,8 @@ const DoctorDashboard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  // Add a ref to track modal state
+  const modalOpenRef = useRef(false);
 
   // Calendar state
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -659,6 +661,37 @@ const DoctorDashboard = () => {
     }
   };
 
+  // Add cleanup effect for modal
+  useEffect(() => {
+    const cleanup = () => {
+      // Force cleanup of any modal artifacts
+      const bodyElement = document.body;
+      bodyElement.classList.remove('overflow-hidden');
+      bodyElement.style.pointerEvents = '';
+      
+      // Remove any stray overlay elements
+      const overlays = document.querySelectorAll('[data-radix-portal]');
+      overlays.forEach(overlay => {
+        if (overlay.getAttribute('aria-hidden') === 'true') {
+          overlay.remove();
+        }
+      });
+    };
+
+    if (!showAvailabilityModal && modalOpenRef.current) {
+      // Modal was open and is now closed, perform cleanup
+      cleanup();
+      modalOpenRef.current = false;
+    }
+
+    if (showAvailabilityModal) {
+      modalOpenRef.current = true;
+    }
+
+    // Also clean up on component unmount
+    return cleanup;
+  }, [showAvailabilityModal]);
+
   return (
     <>
       {/* Authentication Modal */}
@@ -792,7 +825,24 @@ const DoctorDashboard = () => {
       {/* Availability Settings Modal */}
       <Dialog
         open={showAvailabilityModal}
-        onOpenChange={setShowAvailabilityModal}
+        onOpenChange={(open) => {
+          setShowAvailabilityModal(open);
+          if (!open) {
+            // Immediately force cleanup when closed
+            document.body.style.pointerEvents = '';
+            document.body.classList.remove('overflow-hidden');
+            
+            // Add a small delay to ensure the modal is fully closed
+            setTimeout(() => {
+              const overlays = document.querySelectorAll('[role="dialog"]');
+              overlays.forEach(overlay => {
+                if (overlay.getAttribute('aria-hidden') === 'true') {
+                  overlay.remove();
+                }
+              });
+            }, 100);
+          }
+        }}
       >
         <DialogContent className="sm:max-w-[900px] z-50">
           <DialogHeader>
