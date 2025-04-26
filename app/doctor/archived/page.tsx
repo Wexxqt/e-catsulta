@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import * as XLSX from 'xlsx';
 
 import { DataTable } from "@/components/table/DataTable";
 import { columns } from "@/components/table/doctor-columns";
@@ -172,36 +173,61 @@ const ArchivedAppointmentsPage = () => {
     router.push("/doctor");
   };
 
-  // Export to CSV function
-  const exportToCSV = () => {
+  // Export to Excel function
+  const exportToExcel = () => {
     if (filteredAppointments.length === 0) return;
     
-    // Create CSV content
-    const headers = ["Date", "Patient", "Status", "Reason", "Note", "Archived Date"];
-    const csvContent = [
-      headers.join(","),
-      ...filteredAppointments.map(apt => {
-        const scheduleDate = format(new Date(apt.schedule), "yyyy-MM-dd HH:mm");
-        const archivedDate = apt.$updatedAt ? format(new Date(apt.$updatedAt), "yyyy-MM-dd HH:mm") : "Unknown";
-        const patientName = apt.patient?.name || "Unknown Patient";
-        const reason = apt.reason?.replace(/,/g, ";") || "";
-        const note = apt.note?.replace(/,/g, ";") || "";
-        const status = apt.status;
-        
-        return [scheduleDate, patientName, status, reason, note, archivedDate].join(",");
-      })
-    ].join("\n");
+    // Filter only completed appointments
+    const completedAppointments = filteredAppointments.filter(apt => 
+      apt.status.toLowerCase() === "completed"
+    );
     
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `archived_appointments_${format(new Date(), "yyyy-MM-dd")}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (completedAppointments.length === 0) {
+      alert("No completed appointments to export.");
+      return;
+    }
+    
+    // Get current month and year for report title
+    const currentDate = new Date();
+    const monthYear = format(currentDate, "MMMM yyyy");
+    
+    // Create worksheet data with specific required fields
+    const worksheetData = completedAppointments.map(apt => ({
+      "Patient Name": apt.patient?.name || "Unknown Patient",
+      "Appointment Date": format(new Date(apt.schedule), "MM/dd/yyyy"),
+      "Appointment Time": format(new Date(apt.schedule), "h:mm a"),
+      "ID Number": apt.patient?.identificationNumber || apt.patient?.userId || "N/A",
+      "Appointment Code": apt.appointmentCode || "N/A",
+      "Reason": apt.reason || "N/A",
+      "Category": apt.patient?.category || "N/A",
+      "Phone Number": apt.patient?.phone || "N/A",
+      "Doctor Name": `Dr. ${apt.primaryPhysician}` || "N/A"
+    }));
+    
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    
+    // Add column widths for better readability
+    const columnWidths = [
+      { wch: 25 }, // Patient Name
+      { wch: 15 }, // Appointment Date
+      { wch: 15 }, // Appointment Time
+      { wch: 15 }, // ID Number
+      { wch: 15 }, // Appointment Code
+      { wch: 30 }, // Reason
+      { wch: 12 }, // Category
+      { wch: 15 }, // Phone Number
+      { wch: 20 }  // Doctor Name
+    ];
+    
+    worksheet['!cols'] = columnWidths;
+    
+    // Add worksheet to workbook with a title including the month/year
+    XLSX.utils.book_append_sheet(workbook, worksheet, `Appointments ${monthYear}`);
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(workbook, `Completed_Appointments_${format(currentDate, "yyyy-MM")}.xlsx`);
   };
 
   return (
@@ -311,11 +337,11 @@ const ArchivedAppointmentsPage = () => {
                 <Button
                   variant="outline"
                   className="h-10 w-full sm:w-auto"
-                  onClick={exportToCSV}
-                  disabled={filteredAppointments.length === 0}
+                  onClick={exportToExcel}
+                  disabled={!filteredAppointments.some(apt => apt.status.toLowerCase() === "completed")}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  Export Monthly Report
                 </Button>
               </div>
             </div>
