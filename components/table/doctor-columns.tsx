@@ -29,7 +29,7 @@ import {
   getPatientNotes,
   deletePatientNote,
 } from "@/lib/actions/patient-notes.actions";
-import { getRecentAppointmentList } from "@/lib/actions/appointment.actions";
+import { getRecentAppointmentList, archiveSingleAppointment } from "@/lib/actions/appointment.actions";
 
 import { AppointmentModal } from "../AppointmentModal";
 import { StatusBadge } from "../StatusBadge";
@@ -243,6 +243,22 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
     cell: ({ row }) => {
       const appointment = row.original;
       const patient = safePatientAccess(appointment);
+      const [archiving, setArchiving] = useState(false);
+      
+      const handleArchive = async () => {
+        try {
+          setArchiving(true);
+          await archiveSingleAppointment(appointment.$id);
+          // Remove the appointment from the list (UI update)
+          // This would typically be handled by revalidating path or refreshing data
+          window.location.reload();
+        } catch (error) {
+          console.error("Error archiving appointment:", error);
+          alert("Failed to archive appointment");
+        } finally {
+          setArchiving(false);
+        }
+      };
 
       return (
         <div className="flex gap-1">
@@ -259,6 +275,34 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
                 description="Are you sure you want to cancel this appointment?"
               />
             )}
+            
+          {(appointment.status === "completed" || appointment.status === "missed") && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Archive</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Archive Appointment</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to archive this appointment? It will be moved to the archived appointments section.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleArchive}
+                    disabled={archiving}
+                  >
+                    {archiving ? "Archiving..." : "Archive"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       );
     },

@@ -1,58 +1,41 @@
-import { NextResponse } from "next/server";
-import { clearDoctorAppointmentHistory } from "@/lib/actions/appointment.actions";
+import { NextRequest, NextResponse } from "next/server";
+import { clearDoctorAppointmentHistory, archiveSingleAppointment } from "@/lib/actions/appointment.actions";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    // Parse the request body
     const body = await request.json();
-    const { doctorName, action, preservePatientData = false } = body;
-
-    if (!doctorName) {
-      return NextResponse.json(
-        { error: "Doctor name is required" },
-        { status: 400 }
-      );
+    
+    // For clearing all doctor appointments
+    if (body.action === "archive" && body.doctorName) {
+      const preservePatientData = body.preservePatientData === true;
+      const result = await clearDoctorAppointmentHistory(body.doctorName, preservePatientData);
+      
+      return NextResponse.json({ 
+        message: "Successfully archived appointments",
+        ...result
+      });
     }
-
-    // Currently we only support 'archive' action
-    if (action !== 'archive') {
-      return NextResponse.json(
-        { error: "Invalid action specified" },
-        { status: 400 }
-      );
+    
+    // For archiving a single appointment
+    if (body.action === "archiveSingle" && body.appointmentId) {
+      const result = await archiveSingleAppointment(body.appointmentId);
+      
+      return NextResponse.json({
+        success: true,
+        message: "Successfully archived the appointment",
+        data: result
+      });
     }
-
-    // Call the server action to clear the appointments
-    const result = await clearDoctorAppointmentHistory(doctorName, preservePatientData);
-
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || "Failed to clear appointment history" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `Successfully archived ${result.count} appointments for Dr. ${doctorName}`,
-      count: result.count,
-      preservedPatientData: preservePatientData
-    });
-
-  } catch (error: any) {
-    console.error("Error clearing appointment history:", {
-      message: error.message,
-      type: error.type,
-      code: error.code
-    });
     
     return NextResponse.json(
-      { 
-        error: error.message || "Failed to clear appointment history",
-        type: error.type,
-        code: error.code 
-      },
-      { status: error.code || 500 }
+      { error: "Invalid request. Missing required parameters." }, 
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error("Error in appointment archive API route:", error);
+    return NextResponse.json(
+      { error: "Failed to archive appointment(s)" },
+      { status: 500 }
     );
   }
 } 

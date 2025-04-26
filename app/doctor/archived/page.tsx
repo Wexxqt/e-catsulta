@@ -33,6 +33,16 @@ import {
 } from "@/components/ui/select";
 import { Settings, LogOut, ChevronLeft, Search, Calendar, Download } from "lucide-react";
 
+import { ColumnDef } from "@tanstack/react-table";
+import { formatDateTime } from "@/lib/utils";
+import { StatusBadge } from "@/components/StatusBadge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 const ArchivedAppointmentsPage = () => {
   const [archivedAppointments, setArchivedAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -230,6 +240,155 @@ const ArchivedAppointmentsPage = () => {
     XLSX.writeFile(workbook, `Completed_Appointments_${format(currentDate, "yyyy-MM")}.xlsx`);
   };
 
+  // Define columns for archived appointments
+  const archivedColumns: ColumnDef<Appointment>[] = [
+    {
+      header: "#",
+      cell: ({ row }) => <p className="text-14-medium">{row.index + 1}</p>,
+    },
+    {
+      accessorKey: "patient",
+      header: "Patient",
+      cell: ({ row }) => {
+        const appointment = row.original;
+        const patient = safePatientAccess(appointment);
+        return <p className="text-14-medium">{patient.name}</p>;
+      },
+    },
+    {
+      accessorKey: "appointmentCode",
+      header: "Code",
+      cell: ({ row }) => {
+        const appointment = row.original;
+        return (
+          <p className="text-14-medium text-blue-500 font-medium">
+            {generateAppointmentCode(appointment)}
+          </p>
+        );
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const appointment = row.original;
+        return (
+          <div className="min-w-[115px]">
+            <StatusBadge status={appointment.status} />
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "schedule",
+      header: "Appointment Date",
+      cell: ({ row }) => {
+        const appointment = row.original;
+        return (
+          <p className="text-14-regular min-w-[100px]">
+            {formatDateTime(appointment.schedule).dateTime}
+          </p>
+        );
+      },
+    },
+    {
+      accessorKey: "reason",
+      header: "Reason",
+      cell: ({ row }) => {
+        const appointment = row.original;
+        const [showFullReason, setShowFullReason] = useState(false);
+        
+        return (
+          <div className="max-w-[200px]">
+            {appointment.reason || appointment.note ? (
+              <button
+                onClick={() => setShowFullReason(true)}
+                className="doctor-table-icon"
+                title="View Reason & Notes"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            ) : (
+              <span className="text-gray-400 text-sm">N/A</span>
+            )}
+
+            {showFullReason && (
+              <Dialog open={showFullReason} onOpenChange={setShowFullReason}>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Appointment Details</DialogTitle>
+                  </DialogHeader>
+
+                  {/* Reason Section */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-16-semibold">Reason for Appointment</h3>
+                      <div className="mt-2 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                        {appointment.reason || "No reason provided"}
+                      </div>
+                    </div>
+
+                    {/* Patient Notes/Comments Section */}
+                    {appointment.note && (
+                      <div>
+                        <h3 className="text-16-semibold">Patient Notes</h3>
+                        <div className="mt-2 whitespace-pre-wrap bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
+                          {appointment.note}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  // Define helper functions for the archived columns
+  const safePatientAccess = (appointment: any) => {
+    try {
+      if (!appointment.patient || typeof appointment.patient !== "object") {
+        return {
+          name: "Deleted Patient",
+          email: null,
+          $id: appointment.userId || "unknown",
+          phone: "N/A",
+        };
+      }
+      return appointment.patient;
+    } catch (error) {
+      return {
+        name: "Deleted Patient",
+        email: null,
+        $id: appointment.userId || "unknown",
+        phone: "N/A",
+      };
+    }
+  };
+
+  const generateAppointmentCode = (appointment: Appointment) => {
+    if (appointment.appointmentCode) {
+      return appointment.appointmentCode;
+    }
+    return `TEMP-${appointment.$id?.substring(0, 6) || "UNKNOWN"}`;
+  };
+
   return (
     <div className="min-h-screen bg-white dark:bg-dark-300">
       <div className="mx-auto max-w-7xl flex flex-col space-y-8 px-4 sm:px-6 lg:px-8">
@@ -376,7 +535,7 @@ const ArchivedAppointmentsPage = () => {
                   </div>
                   <div className="rounded-md border">
                     <DataTable 
-                      columns={columns} 
+                      columns={archivedColumns} 
                       data={filteredAppointments} 
                     />
                   </div>

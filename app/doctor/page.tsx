@@ -253,17 +253,17 @@ const DoctorDashboard = () => {
 
     setLoading(true);
     try {
-      const appointments =
-        (await getRecentAppointmentList()) as AppointmentListResponse;
+      const appointments = 
+        (await getDoctorAppointments(doctorName)) as Appointment[];
 
-      if (appointments && appointments.documents) {
-        // Filter appointments for the current doctor and exclude archived
-        const doctorAppointments = appointments.documents.filter(
-          (doc: any) => doc.primaryPhysician === doctorName && !doc.archived
-        ) as Appointment[];
+      if (appointments && appointments.length > 0) {
+        // Filter out archived appointments
+        const nonArchivedAppointments = appointments.filter(
+          (apt) => !apt.archived
+        );
 
         // Process appointments to check for missed ones
-        const processedAppointments = doctorAppointments.map(
+        const processedAppointments = nonArchivedAppointments.map(
           (appointment: Appointment) => {
             if (appointment.status === "scheduled") {
               const appointmentDate = new Date(appointment.schedule);
@@ -282,56 +282,27 @@ const DoctorDashboard = () => {
           }
         );
 
-        // Count appointments by status
-        const counts = processedAppointments.reduce(
-          (
-            acc: {
-              scheduledCount: number;
-              pendingCount: number;
-              cancelledCount: number;
-              completedCount: number;
-              missedCount: number;
-            },
-            appointment: Appointment
-          ) => {
-            switch (appointment.status) {
-              case "scheduled":
-                acc.scheduledCount++;
-                break;
-              case "pending":
-                acc.pendingCount++;
-                break;
-              case "cancelled":
-                acc.cancelledCount++;
-                break;
-              case "completed":
-                acc.completedCount++;
-                break;
-              case "missed":
-                acc.missedCount++;
-                break;
-            }
-            return acc;
-          },
-          {
-            scheduledCount: 0,
-            pendingCount: 0,
-            cancelledCount: 0,
-            completedCount: 0,
-            missedCount: 0,
-          }
-        );
+        // Calculate counts
+        const scheduledCount = processedAppointments.filter(
+          (apt) => apt.status === "scheduled"
+        ).length;
+        const pendingCount = processedAppointments.filter(
+          (apt) => apt.status === "pending"
+        ).length;
+        const cancelledCount = processedAppointments.filter(
+          (apt) => apt.status === "cancelled"
+        ).length;
+        const completedCount = processedAppointments.filter(
+          (apt) => apt.status === "completed"
+        ).length;
+        const missedCount = processedAppointments.filter(
+          (apt) => apt.status === "missed"
+        ).length;
 
-        // For the patient management tab, we need ALL appointments including archived ones
-        // to create a complete patient list
-        const allDoctorAppointments = appointments.documents.filter(
-          (doc: any) => doc.primaryPhysician === doctorName
-        ) as Appointment[];
-
-        // Create unique patients object from ALL appointments
+        // Create unique patients object
         const uniquePatientsObj: { [patientId: string]: Appointment } = {};
 
-        allDoctorAppointments.forEach((appointment: Appointment) => {
+        appointments.forEach((appointment: Appointment) => {
           if (appointment.patient && appointment.patient.$id) {
             const patientId = appointment.patient.$id;
 
@@ -348,20 +319,38 @@ const DoctorDashboard = () => {
 
         setUniquePatients(uniquePatientsObj);
 
+        // Set appointment state
         setFilteredAppointments({
           documents: processedAppointments,
-          scheduledCount: counts.scheduledCount,
-          pendingCount: counts.pendingCount,
-          cancelledCount: counts.cancelledCount,
-          completedCount: counts.completedCount,
-          missedCount: counts.missedCount,
+          scheduledCount,
+          pendingCount,
+          cancelledCount,
+          completedCount,
+          missedCount,
           totalCount: processedAppointments.length,
         });
       } else {
-        console.error("Failed to fetch appointments");
+        setFilteredAppointments({
+          documents: [],
+          scheduledCount: 0,
+          pendingCount: 0,
+          cancelledCount: 0,
+          completedCount: 0,
+          missedCount: 0,
+          totalCount: 0,
+        });
       }
     } catch (error) {
       console.error("Error fetching appointments:", error);
+      setFilteredAppointments({
+        documents: [],
+        scheduledCount: 0,
+        pendingCount: 0,
+        cancelledCount: 0,
+        completedCount: 0,
+        missedCount: 0,
+        totalCount: 0,
+      });
     } finally {
       setLoading(false);
     }

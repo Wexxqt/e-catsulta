@@ -285,10 +285,7 @@ export const getDoctorAppointments = async (doctorName: string) => {
       APPOINTMENT_COLLECTION_ID!,
       [
         Query.equal("primaryPhysician", doctorName),
-        Query.or([
-          Query.equal("status", "scheduled"),
-          Query.equal("status", "completed"),
-        ]),
+        Query.equal("status", ["scheduled", "completed"]),
       ]
     );
 
@@ -651,5 +648,30 @@ export const getArchivedDoctorAppointments = async (doctorName: string) => {
       error
     );
     return [];
+  }
+};
+
+// ARCHIVE SINGLE APPOINTMENT
+export const archiveSingleAppointment = async (appointmentId: string) => {
+  try {
+    if (!appointmentId) {
+      throw new Error("Missing required parameter: appointmentId");
+    }
+
+    // Update the appointment to mark it as archived
+    const updatedAppointment = await databases.updateDocument(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      appointmentId,
+      {
+        archived: true
+      }
+    );
+
+    console.log("Appointment archived successfully:", appointmentId);
+    return parseStringify(updatedAppointment);
+  } catch (error) {
+    console.error("Error archiving appointment:", error);
+    throw error;
   }
 };
