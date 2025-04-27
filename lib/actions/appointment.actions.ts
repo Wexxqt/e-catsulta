@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ID, Query } from "node-appwrite";
 
-import { Appointment } from "@/types/appwrite.types";
+import { Appointment, DoctorSettings } from "@/types/appwrite.types";
 
 import {
   APPOINTMENT_COLLECTION_ID,
@@ -55,12 +55,16 @@ export const createAppointment = async (
     const doctor = Doctors.find(
       (doc) => doc.name === appointment.primaryPhysician
     );
-    let doctorAvailability = doctor?.availability;
 
-    // Try to get saved settings from localStorage (if running in a serverless environment that supports it)
-    // On server, localStorage is not available, so we rely on the Doctors constant
-    // If you store availability in a DB, fetch it here instead
+    // First check for availability in the database
+    let doctorAvailability = await getDoctorAvailability(doctor?.id || "");
 
+    // If not found in database, fallback to the default from Doctors constant
+    if (!doctorAvailability && doctor) {
+      doctorAvailability = doctor.availability;
+    }
+
+    // Validate that the doctor is available
     if (
       !doctorAvailability ||
       !doctorAvailability.days ||
@@ -695,5 +699,83 @@ export const archiveSingleAppointment = async (appointmentId: string) => {
   } catch (error) {
     console.error("Error archiving appointment:", error);
     throw error;
+  }
+};
+
+// New function to save doctor availability to database
+export const saveDoctorAvailability = async (
+  doctorId: string,
+  availability: any
+) => {
+  try {
+    // Create a collection ID for doctor settings if not defined
+    const DOCTOR_SETTINGS_COLLECTION_ID =
+      process.env.DOCTOR_SETTINGS_COLLECTION_ID || "doctor_settings";
+
+    // Check if settings already exist for this doctor
+    const existingSettings = await databases.listDocuments(
+      DATABASE_ID!,
+      DOCTOR_SETTINGS_COLLECTION_ID,
+      [Query.equal("doctorId", doctorId)]
+    );
+
+    if (existingSettings.total > 0) {
+      // Update existing settings
+      await databases.updateDocument(
+        DATABASE_ID!,
+        DOCTOR_SETTINGS_COLLECTION_ID,
+        existingSettings.documents[0].$id,
+        {
+          availability: JSON.stringify(availability),
+          updatedAt: new Date().toISOString(),
+        }
+      );
+    } else {
+      // Create new settings document
+      await databases.createDocument(
+        DATABASE_ID!,
+        DOCTOR_SETTINGS_COLLECTION_ID,
+        ID.unique(),
+        {
+          doctorId,
+          availability: JSON.stringify(availability),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      );
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error saving doctor availability:", error);
+    return { success: false, error: String(error) };
+  }
+};
+
+// New function to get doctor availability from database
+export const getDoctorAvailability = async (doctorId: string) => {
+  try {
+    // Create a collection ID for doctor settings if not defined
+    const DOCTOR_SETTINGS_COLLECTION_ID =
+      process.env.DOCTOR_SETTINGS_COLLECTION_ID || "doctor_settings";
+
+    // Query for doctor settings
+    const settings = await databases.listDocuments(
+      DATABASE_ID!,
+      DOCTOR_SETTINGS_COLLECTION_ID,
+      [Query.equal("doctorId", doctorId)]
+    );
+
+    if (settings.total > 0) {
+      // Parse stored JSON availability
+      const document = settings.documents[0] as DoctorSettings;
+      return JSON.parse(document.availability);
+    }
+
+    // Return null if no settings found
+    return null;
+  } catch (error) {
+    console.error("Error getting doctor availability:", error);
+    return null;
   }
 };

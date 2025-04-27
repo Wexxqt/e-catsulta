@@ -58,6 +58,14 @@ export interface Passkey extends Models.Document {
   updatedAt: string;
 }
 
+// New interface for doctor availability settings
+export interface DoctorSettings extends Models.Document {
+  doctorId: string;
+  availability: string; // JSON stringified availability object
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Add these to your types/appwrite.types.ts file
 export type Gender = "Male" | "Female" | "Other" | "Prefer not to say";
 

@@ -17,7 +17,10 @@ export const parseStringify = (value: any) => {
 export const convertFileToUrl = (file: File) => URL.createObjectURL(file);
 
 // FORMAT DATE TIME
-export const formatDateTime = (dateString: Date | string, timeZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone) => {
+export const formatDateTime = (
+  dateString: Date | string,
+  timeZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone
+) => {
   const dateTimeOptions: Intl.DateTimeFormatOptions = {
     // weekday: "short", // abbreviated weekday name (e.g., 'Mon')
     month: "short", // abbreviated month name (e.g., 'Oct')
@@ -88,14 +91,17 @@ export function decryptKey(passkey: string) {
 }
 
 // Generate a unique appointment code for patients
-export function generateAppointmentCode(appointmentId: string, patientId: string) {
+export function generateAppointmentCode(
+  appointmentId: string,
+  patientId: string
+) {
   // Take first 3 characters from appointmentId and last 3 from patientId
   const prefix = appointmentId.substring(0, 3).toUpperCase();
   const suffix = patientId.substring(patientId.length - 3).toUpperCase();
-  
+
   // Add timestamp element for uniqueness
   const timestamp = new Date().getTime().toString().slice(-6);
-  
+
   // Combine and format as XXX-YYYYY-ZZZ
   return `${prefix}-${timestamp}-${suffix}`;
 }
@@ -108,21 +114,27 @@ export function md5(d: string): string {
   // For production, consider using a more robust library
   // This implementation is enough for Gravatar URLs
   const r = (d: string) => {
-    return Array.from(d).reduce((a, c) => (a << 5) - a + c.charCodeAt(0), 0) >>> 0;
+    return (
+      Array.from(d).reduce((a, c) => (a << 5) - a + c.charCodeAt(0), 0) >>> 0
+    );
   };
-  return r(d).toString(16).padStart(32, '0');
+  return r(d).toString(16).padStart(32, "0");
 }
 
 /**
  * Get a Gravatar URL for an email address
  */
-export function getGravatarUrl(email: string = '', size: number = 200, defaultImage: string = 'robohash'): string {
+export function getGravatarUrl(
+  email: string = "",
+  size: number = 200,
+  defaultImage: string = "robohash"
+): string {
   // Trim and lowercase the email if it exists, otherwise use empty string
-  const cleanEmail = email ? email.trim().toLowerCase() : '';
-  
+  const cleanEmail = email ? email.trim().toLowerCase() : "";
+
   // Generate MD5 hash or use 'default' for empty emails
-  const hash = cleanEmail ? md5(cleanEmail) : 'default';
-  
+  const hash = cleanEmail ? md5(cleanEmail) : "default";
+
   // Return the Gravatar URL
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=${defaultImage}`;
 }
@@ -132,25 +144,29 @@ export function getGravatarUrl(email: string = '', size: number = 200, defaultIm
  * hardware capabilities, browser features, and user agent information
  */
 export function isLowEndDevice(): boolean {
-  if (typeof window === 'undefined') return false;
-  
+  if (typeof window === "undefined") return false;
+
   // Check for device memory (available in Chrome)
-  const lowMemory = 'deviceMemory' in navigator && (navigator as any).deviceMemory < 2;
-  
+  const lowMemory =
+    "deviceMemory" in navigator && (navigator as any).deviceMemory < 2;
+
   // Check for hardware concurrency (available in most browsers)
   const lowConcurrency = navigator.hardwareConcurrency < 4;
-  
+
   // Check for known low-end device user agents (iPhone 6/6s, older Android phones)
   const userAgent = navigator.userAgent;
-  const isOlderPhone = /iPhone\s(5|6|7|8|SE)/i.test(userAgent) || 
-                      /Android\s[4-7]/i.test(userAgent) ||
-                      /Windows\sPhone/i.test(userAgent);
-  
+  const isOlderPhone =
+    /iPhone\s(5|6|7|8|SE)/i.test(userAgent) ||
+    /Android\s[4-7]/i.test(userAgent) ||
+    /Windows\sPhone/i.test(userAgent);
+
   // Check for connection type if available
   const connection = (navigator as any).connection;
-  const slowConnection = connection && 
-    (connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g');
-  
+  const slowConnection =
+    connection &&
+    (connection.effectiveType === "2g" ||
+      connection.effectiveType === "slow-2g");
+
   // Device is considered low-end if it meets any of these criteria
   return lowMemory || lowConcurrency || isOlderPhone || slowConnection;
 }
@@ -159,74 +175,102 @@ export function isLowEndDevice(): boolean {
  * Gets the optimized image quality based on the device and connection
  */
 export function getOptimizedImageQuality(): number {
-  if (typeof window === 'undefined') return 75; // Default quality
-  
+  if (typeof window === "undefined") return 75; // Default quality
+
   const connection = (navigator as any).connection;
-  
+
   if (isLowEndDevice()) {
     return 50; // Lower quality for low-end devices
-  } else if (connection && 
-            (connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g')) {
+  } else if (
+    connection &&
+    (connection.effectiveType === "2g" ||
+      connection.effectiveType === "slow-2g")
+  ) {
     return 40; // Even lower for slow connections
   } else if (connection && connection.saveData) {
     return 40; // Respect data saver mode
   }
-  
+
   return 75; // Default quality for normal devices
 }
 
 /**
- * Broadcasts doctor availability changes to other tabs/windows
+ * Broadcasts doctor availability changes to other tabs/windows and saves to database
  * This is used to implement real-time updates when a doctor changes their availability
- * without requiring a database subscription
  */
-export function broadcastAvailabilityChange(doctorId: string, availability: any) {
+export function broadcastAvailabilityChange(
+  doctorId: string,
+  availability: any
+) {
   try {
     // Save the previous value to compare
-    const previousValue = localStorage.getItem(`doctorAvailability_${doctorId}`);
-    
+    const previousValue = localStorage.getItem(
+      `doctorAvailability_${doctorId}`
+    );
+
     // Only proceed if the value actually changed to prevent loops
     if (previousValue) {
       try {
         const previousAvailability = JSON.parse(previousValue);
-        
+
         // Simple deep comparison for objects
-        const isEqual = JSON.stringify(previousAvailability) === JSON.stringify(availability);
+        const isEqual =
+          JSON.stringify(previousAvailability) === JSON.stringify(availability);
         if (isEqual) {
           // If the values are identical, no need to broadcast
-          console.log('Availability unchanged, skipping broadcast');
+          console.log("Availability unchanged, skipping broadcast");
           return;
         }
       } catch (err) {
         // Continue if parsing failed
-        console.error('Error parsing previous availability:', err);
+        console.error("Error parsing previous availability:", err);
       }
     }
-    
-    // Store in localStorage to persist the change
-    localStorage.setItem(`doctorAvailability_${doctorId}`, JSON.stringify(availability));
-    
-    // Use a safer way to create and dispatch the custom event
+
+    // First - Store in localStorage for backwards compatibility
+    localStorage.setItem(
+      `doctorAvailability_${doctorId}`,
+      JSON.stringify(availability)
+    );
+
+    // Second - Save to database for persistent storage (will work across all clients)
+    // Import is done dynamically to avoid circular dependencies
+    import("./actions/appointment.actions").then(
+      ({ saveDoctorAvailability }) => {
+        saveDoctorAvailability(doctorId, availability)
+          .then(() =>
+            console.log(`Saved availability to database for doctor ${doctorId}`)
+          )
+          .catch((error) =>
+            console.error("Error saving availability to database:", error)
+          );
+      }
+    );
+
+    // Third - Use custom events for immediate real-time updates within the same browser
     try {
       // Create the custom event with correct typing
-      const customEvent = new CustomEvent('availabilityChange', {
+      const customEvent = new CustomEvent("availabilityChange", {
         detail: {
           doctorId,
           value: availability,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         },
         bubbles: false,
-        cancelable: false
+        cancelable: false,
       });
-      
+
       // Dispatch on window - wrapped in try/catch for safety
       window.dispatchEvent(customEvent);
-      
-      console.log(`Broadcasted availability change for doctor ${doctorId}`, availability);
+
+      console.log(
+        `Broadcasted availability change for doctor ${doctorId}`,
+        availability
+      );
     } catch (eventError) {
-      console.error('Error broadcasting availability event:', eventError);
+      console.error("Error broadcasting availability event:", eventError);
     }
   } catch (error) {
-    console.error('Error in broadcastAvailabilityChange:', error);
+    console.error("Error in broadcastAvailabilityChange:", error);
   }
 }
