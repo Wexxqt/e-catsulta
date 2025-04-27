@@ -285,7 +285,7 @@ export const getDoctorAppointments = async (doctorName: string) => {
       APPOINTMENT_COLLECTION_ID!,
       [
         Query.equal("primaryPhysician", doctorName),
-        Query.equal("status", ["scheduled", "completed"]),
+        Query.equal("status", ["scheduled", "completed", "cancelled"]),
       ]
     );
 

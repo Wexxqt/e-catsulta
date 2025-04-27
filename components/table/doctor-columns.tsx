@@ -276,7 +276,7 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
               />
             )}
             
-          {(appointment.status === "completed" || appointment.status === "missed") && (
+          {(appointment.status === "completed" || appointment.status === "missed" || appointment.status === "cancelled") && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" className="flex items-center gap-1">
