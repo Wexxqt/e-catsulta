@@ -11,6 +11,7 @@ const validateEnvVariables = () => {
     "NEXT_PUBLIC_BUCKET_ID",
     "DATABASE_ID",
     "PATIENT_NOTES_COLLECTION_ID",
+    "DOCTOR_SETTINGS_COLLECTION_ID",
   ];
 
   const missingVars = requiredVars.filter((varName) => !process.env[varName]);
@@ -37,6 +38,7 @@ export const {
   DOCTOR_COLLECTION_ID,
   APPOINTMENT_COLLECTION_ID,
   PATIENT_NOTES_COLLECTION_ID = "patient_notes",
+  DOCTOR_SETTINGS_COLLECTION_ID = "doctor_settings",
   NEXT_PUBLIC_BUCKET_ID: BUCKET_ID,
   DATABASE_ID,
 } = process.env;

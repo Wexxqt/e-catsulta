@@ -8,6 +8,7 @@ import { Appointment, DoctorSettings } from "@/types/appwrite.types";
 import {
   APPOINTMENT_COLLECTION_ID,
   DATABASE_ID,
+  DOCTOR_SETTINGS_COLLECTION_ID,
   databases,
   messaging,
   PATIENT_COLLECTION_ID,
@@ -708,33 +709,44 @@ export const saveDoctorAvailability = async (
   availability: any
 ) => {
   try {
-    // Create a collection ID for doctor settings if not defined
-    const DOCTOR_SETTINGS_COLLECTION_ID =
-      process.env.DOCTOR_SETTINGS_COLLECTION_ID || "doctor_settings";
+    console.log(`Saving availability for doctorId: ${doctorId}`);
+
+    // Use the collection ID from appwrite.config.ts
+    console.log(`Using collection ID: ${DOCTOR_SETTINGS_COLLECTION_ID}`);
 
     // Check if settings already exist for this doctor
+    console.log(
+      `Checking for existing settings in database: ${DATABASE_ID}, collection: ${DOCTOR_SETTINGS_COLLECTION_ID}`
+    );
     const existingSettings = await databases.listDocuments(
       DATABASE_ID!,
-      DOCTOR_SETTINGS_COLLECTION_ID,
+      DOCTOR_SETTINGS_COLLECTION_ID!,
       [Query.equal("doctorId", doctorId)]
     );
 
+    console.log(`Found ${existingSettings.total} existing settings documents`);
+
     if (existingSettings.total > 0) {
       // Update existing settings
+      console.log(
+        `Updating existing settings document: ${existingSettings.documents[0].$id}`
+      );
       await databases.updateDocument(
         DATABASE_ID!,
-        DOCTOR_SETTINGS_COLLECTION_ID,
+        DOCTOR_SETTINGS_COLLECTION_ID!,
         existingSettings.documents[0].$id,
         {
           availability: JSON.stringify(availability),
           updatedAt: new Date().toISOString(),
         }
       );
+      console.log(`Successfully updated settings document`);
     } else {
       // Create new settings document
-      await databases.createDocument(
+      console.log(`Creating new settings document for doctorId: ${doctorId}`);
+      const newDoc = await databases.createDocument(
         DATABASE_ID!,
-        DOCTOR_SETTINGS_COLLECTION_ID,
+        DOCTOR_SETTINGS_COLLECTION_ID!,
         ID.unique(),
         {
           doctorId,
@@ -743,11 +755,13 @@ export const saveDoctorAvailability = async (
           updatedAt: new Date().toISOString(),
         }
       );
+      console.log(`Successfully created new settings document: ${newDoc.$id}`);
     }
 
     return { success: true };
   } catch (error) {
     console.error("Error saving doctor availability:", error);
+    console.error("Full error details:", JSON.stringify(error));
     return { success: false, error: String(error) };
   }
 };
@@ -755,23 +769,33 @@ export const saveDoctorAvailability = async (
 // New function to get doctor availability from database
 export const getDoctorAvailability = async (doctorId: string) => {
   try {
-    // Create a collection ID for doctor settings if not defined
-    const DOCTOR_SETTINGS_COLLECTION_ID =
-      process.env.DOCTOR_SETTINGS_COLLECTION_ID || "doctor_settings";
+    console.log(`Getting availability for doctorId: ${doctorId}`);
+
+    // Use the collection ID from appwrite.config.ts
+    console.log(`Using collection ID: ${DOCTOR_SETTINGS_COLLECTION_ID}`);
 
     // Query for doctor settings
+    console.log(
+      `Querying database: ${DATABASE_ID}, collection: ${DOCTOR_SETTINGS_COLLECTION_ID}`
+    );
     const settings = await databases.listDocuments(
       DATABASE_ID!,
-      DOCTOR_SETTINGS_COLLECTION_ID,
+      DOCTOR_SETTINGS_COLLECTION_ID!,
       [Query.equal("doctorId", doctorId)]
     );
+
+    console.log(`Query results: found ${settings.total} settings documents`);
 
     if (settings.total > 0) {
       // Parse stored JSON availability
       const document = settings.documents[0] as DoctorSettings;
+      console.log(
+        `Found availability in database: ${document.availability.substring(0, 50)}...`
+      );
       return JSON.parse(document.availability);
     }
 
+    console.log(`No availability found in database for doctorId: ${doctorId}`);
     // Return null if no settings found
     return null;
   } catch (error) {

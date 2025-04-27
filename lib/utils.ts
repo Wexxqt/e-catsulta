@@ -203,9 +203,22 @@ export function broadcastAvailabilityChange(
   availability: any
 ) {
   try {
+    console.log(
+      `Broadcasting availability change for doctorId: ${doctorId}`,
+      availability
+    );
+
+    // Make sure we're using consistent doctor ID format
+    // This is important because the ID might be passed as a name in some places
+    const actualDoctorId = doctorId?.trim();
+    if (!actualDoctorId) {
+      console.error("Invalid doctorId provided to broadcastAvailabilityChange");
+      return;
+    }
+
     // Save the previous value to compare
     const previousValue = localStorage.getItem(
-      `doctorAvailability_${doctorId}`
+      `doctorAvailability_${actualDoctorId}`
     );
 
     // Only proceed if the value actually changed to prevent loops
@@ -229,7 +242,7 @@ export function broadcastAvailabilityChange(
 
     // First - Store in localStorage for backwards compatibility
     localStorage.setItem(
-      `doctorAvailability_${doctorId}`,
+      `doctorAvailability_${actualDoctorId}`,
       JSON.stringify(availability)
     );
 
@@ -237,9 +250,11 @@ export function broadcastAvailabilityChange(
     // Import is done dynamically to avoid circular dependencies
     import("./actions/appointment.actions").then(
       ({ saveDoctorAvailability }) => {
-        saveDoctorAvailability(doctorId, availability)
+        saveDoctorAvailability(actualDoctorId, availability)
           .then(() =>
-            console.log(`Saved availability to database for doctor ${doctorId}`)
+            console.log(
+              `Saved availability to database for doctor ${actualDoctorId}`
+            )
           )
           .catch((error) =>
             console.error("Error saving availability to database:", error)
@@ -252,7 +267,7 @@ export function broadcastAvailabilityChange(
       // Create the custom event with correct typing
       const customEvent = new CustomEvent("availabilityChange", {
         detail: {
-          doctorId,
+          doctorId: actualDoctorId,
           value: availability,
           timestamp: new Date().toISOString(),
         },
@@ -264,8 +279,7 @@ export function broadcastAvailabilityChange(
       window.dispatchEvent(customEvent);
 
       console.log(
-        `Broadcasted availability change for doctor ${doctorId}`,
-        availability
+        `Broadcasted availability change for doctor ${actualDoctorId}`
       );
     } catch (eventError) {
       console.error("Error broadcasting availability event:", eventError);
