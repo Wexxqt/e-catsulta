@@ -208,31 +208,25 @@ export function broadcastAvailabilityChange(
       availability
     );
 
-    // Make sure we're using consistent doctor ID format
-    // This is important because the ID might be passed as a name in some places
     const actualDoctorId = doctorId?.trim();
     if (!actualDoctorId) {
       console.error("Invalid doctorId provided to broadcastAvailabilityChange");
       return;
     }
 
-    // Save the previous value to compare
     const previousValue = localStorage.getItem(
       `doctorAvailability_${actualDoctorId}`
     );
-
-    // Only proceed if the value actually changed to prevent loops
     if (previousValue) {
       try {
         const previousAvailability = JSON.parse(previousValue);
-
-        // Simple deep comparison for objects
         const isEqual =
           JSON.stringify(previousAvailability) === JSON.stringify(availability);
         if (isEqual) {
-          // If the values are identical, no need to broadcast
-          console.log("Availability unchanged, skipping broadcast");
-          return;
+          // Log but DO NOT return; always sync to database and broadcast
+          console.log(
+            "Availability unchanged in localStorage, but will sync to database and broadcast."
+          );
         }
       } catch (err) {
         // Continue if parsing failed
@@ -240,14 +234,13 @@ export function broadcastAvailabilityChange(
       }
     }
 
-    // First - Store in localStorage for backwards compatibility
+    // Always store in localStorage
     localStorage.setItem(
       `doctorAvailability_${actualDoctorId}`,
       JSON.stringify(availability)
     );
 
-    // Second - Save to database for persistent storage (will work across all clients)
-    // Import is done dynamically to avoid circular dependencies
+    // Always save to database for persistent storage (will work across all clients)
     import("./actions/appointment.actions").then(
       ({ saveDoctorAvailability }) => {
         saveDoctorAvailability(actualDoctorId, availability)
@@ -262,9 +255,8 @@ export function broadcastAvailabilityChange(
       }
     );
 
-    // Third - Use custom events for immediate real-time updates within the same browser
+    // Always broadcast event for immediate real-time updates within the same browser
     try {
-      // Create the custom event with correct typing
       const customEvent = new CustomEvent("availabilityChange", {
         detail: {
           doctorId: actualDoctorId,
@@ -274,10 +266,7 @@ export function broadcastAvailabilityChange(
         bubbles: false,
         cancelable: false,
       });
-
-      // Dispatch on window - wrapped in try/catch for safety
       window.dispatchEvent(customEvent);
-
       console.log(
         `Broadcasted availability change for doctor ${actualDoctorId}`
       );
