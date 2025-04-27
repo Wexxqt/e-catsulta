@@ -4,7 +4,7 @@ import Image from "next/image";
 import ReactDatePicker from "react-datepicker";
 import { Control } from "react-hook-form";
 import PhoneInput from "react-phone-number-input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Doctors } from "@/constants";
 import { Checkbox } from "./ui/checkbox";
 import {
@@ -17,7 +17,7 @@ import {
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { getDoctorAppointments } from "@/lib/actions/appointment.actions";
 import { useRealtime } from '@/contexts/RealtimeContext';
@@ -67,115 +67,41 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
   
   const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
   const [bookedSlots, setBookedSlots] = useState<{ date: Date; slots: Date[]; count: number }[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(field.value || null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(field.value ?? null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [tempSelectedDate, setTempSelectedDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dateSelectionError, setDateSelectionError] = useState("");
+  const [subscriptionsSet, setSubscriptionsSet] = useState(false);
+  
+  // Added ref to prevent state updates during unmount
+  const isMounted = useRef(true);
+  // Ref to control dialog open state to avoid loops
+  const dialogOpenRef = useRef(dialogOpen);
 
-  // Fetch real booked appointments when doctor changes or dialog opens
+  // Add logic to extract bookingStartDate and bookingEndDate from doctor availability
+  const [bookingRange, setBookingRange] = useState<{ min: Date | null, max: Date | null }>({ min: null, max: null });
+
+  // Set up cleanup on unmount
   useEffect(() => {
-    if (doctorId) {
-      // First try to load doctor's availability from localStorage (saved settings)
-      const doctor = Doctors.find(doc => doc.name === doctorId);
-      if (doctor) {
-        // Check for saved settings in localStorage
-        const savedSettings = localStorage.getItem(`doctorAvailability_${doctor.id}`);
-        let doctorAvailability;
-        
-        if (savedSettings) {
-          try {
-            // Use saved availability settings if available
-            doctorAvailability = JSON.parse(savedSettings);
-            console.log("Using saved availability settings for", doctorId, doctorAvailability);
-          } catch (err) {
-            console.error("Error parsing saved availability settings:", err);
-            // Fall back to default availability from constants
-            doctorAvailability = doctor.availability;
-          }
-        } else {
-          // No saved settings, use defaults from constants
-          doctorAvailability = doctor.availability;
-        }
-        
-        // Set the availability state
-        setAvailability({
-          days: doctorAvailability.days || [1, 2, 3, 4, 5],
-          startTime: doctorAvailability.startTime || 8,
-          endTime: doctorAvailability.endTime || 17,
-          holidays: doctorAvailability.holidays || [],
-        });
+    return () => {
+      isMounted.current = false;
+      // Force cleanup when unmounting
+      setSubscriptionsSet(false);
+    };
+  }, []);
 
-        // Only reset when doctor changes, not when dialog opens
-        if (!dialogOpen) {
-          // Don't reset date on doctor change if we already have a valid selected date
-          if (!selectedDate) {
-            setSelectedDate(null);
-            field.onChange(null);
-          }
-        }
-        
-        // Generate available time slots using the actual availability
-        generateTimeSlots({
-          availability: {
-            days: doctorAvailability.days || [1, 2, 3, 4, 5],
-            startTime: doctorAvailability.startTime || 8,
-            endTime: doctorAvailability.endTime || 17,
-            holidays: doctorAvailability.holidays || [],
-          }
-        });
-        
-        // Fetch real booked appointments
-        fetchBookedAppointments(doctorId);
-
-        // Subscribe to real-time availability changes
-        const unsubscribeAvailability = subscribeToAvailabilityChanges(
-          doctor.id,
-          (newAvailability) => {
-            console.log("Real-time availability update received:", newAvailability);
-            setAvailability({
-              days: newAvailability.days || [1, 2, 3, 4, 5],
-              startTime: newAvailability.startTime || 8,
-              endTime: newAvailability.endTime || 17,
-              holidays: newAvailability.holidays || [],
-            });
-            
-            // Regenerate time slots with the new availability
-            generateTimeSlots({
-              availability: newAvailability
-            });
-          }
-        );
-
-        // Subscribe to real-time appointment changes
-        const unsubscribeAppointments = subscribeToAppointments((updatedAppointment) => {
-          console.log("Real-time appointment update received:", updatedAppointment);
-          
-          // If this is an appointment for the current doctor, update our list
-          if (updatedAppointment.primaryPhysician === doctorId) {
-            // Refresh the booked slots
-            fetchBookedAppointments(doctorId);
-          }
-        });
-
-        // Return cleanup function
-        return () => {
-          unsubscribeAvailability();
-          unsubscribeAppointments();
-        };
-      }
-    }
-  }, [doctorId, dialogOpen, subscribeToAppointments, subscribeToAvailabilityChanges]);
-
-  // Update the form field value when selectedDate changes
+  // Update ref when dialogOpen changes only if necessary
   useEffect(() => {
-    if (selectedDate) {
-      field.onChange(selectedDate);
+    if (dialogOpenRef.current !== dialogOpen) {
+      dialogOpenRef.current = dialogOpen;
     }
-  }, [selectedDate]);
+  }, [dialogOpen]);
 
-  // Function to fetch real booked appointments for this doctor
+  // Function to fetch booked appointments - moved outside the effect
   const fetchBookedAppointments = async (doctorId: string) => {
+    if (!doctorId) return;
+    
     setIsLoading(true);
     try {
       const appointments = await getDoctorAppointments(doctorId);
@@ -213,7 +139,7 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
     }
   };
 
-  // Generate available time slots for the selected doctor
+  // Generate available time slots - moved outside the effect
   const generateTimeSlots = (doctor: any) => {
     const times: Date[] = [];
     const availability = doctor.availability;
@@ -229,6 +155,99 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
     
     setAvailableTimes(times);
   };
+
+  // Update useEffect that initializes doctor availability:
+  useEffect(() => {
+    if (!doctorId) return;
+
+    const doctor = Doctors.find(doc => doc.name === doctorId);
+    if (!doctor) return;
+
+    const savedSettings = localStorage.getItem(`doctorAvailability_${doctor.id}`);
+    let doctorAvailability;
+
+    if (savedSettings) {
+      try {
+        doctorAvailability = JSON.parse(savedSettings);
+      } catch (err) {
+        doctorAvailability = doctor.availability;
+      }
+    } else {
+      doctorAvailability = doctor.availability;
+    }
+
+    const newAvailability = {
+      days: doctorAvailability.days || [1, 2, 3, 4, 5],
+      startTime: doctorAvailability.startTime || 8,
+      endTime: doctorAvailability.endTime || 17,
+      holidays: doctorAvailability.holidays || [],
+    };
+
+    // Set booking range if present
+    let min = null, max = null;
+    if (doctorAvailability.bookingStartDate) min = new Date(doctorAvailability.bookingStartDate);
+    if (doctorAvailability.bookingEndDate) max = new Date(doctorAvailability.bookingEndDate);
+    setBookingRange({ min, max });
+
+    if (JSON.stringify(availability) !== JSON.stringify(newAvailability)) {
+      setAvailability(newAvailability);
+    }
+
+    if (!dialogOpen && !selectedDate) {
+      setSelectedDate(null);
+      field.onChange(null);
+    }
+
+    generateTimeSlots({ availability: newAvailability });
+    fetchBookedAppointments(doctorId);
+
+  }, [doctorId]);
+
+  // Separate effect for setting up subscriptions
+  useEffect(() => {
+    if (!doctorId || subscriptionsSet) return;
+
+    const doctor = Doctors.find(doc => doc.name === doctorId);
+    if (!doctor) return;
+
+    const unsubscribeAvailability = subscribeToAvailabilityChanges(
+      doctor.id,
+      (newAvailability) => {
+        const updatedAvailability = {
+          days: newAvailability.days || [1, 2, 3, 4, 5],
+          startTime: newAvailability.startTime || 8,
+          endTime: newAvailability.endTime || 17,
+          holidays: newAvailability.holidays || [],
+        };
+
+        if (JSON.stringify(availability) !== JSON.stringify(updatedAvailability)) {
+          setAvailability(updatedAvailability);
+          generateTimeSlots({ availability: updatedAvailability });
+        }
+      }
+    );
+
+    const unsubscribeAppointments = subscribeToAppointments((updatedAppointment) => {
+      if (updatedAppointment.primaryPhysician === doctorId) {
+        fetchBookedAppointments(doctorId);
+      }
+    });
+
+    setSubscriptionsSet(true);
+
+    return () => {
+      unsubscribeAvailability();
+      unsubscribeAppointments();
+      setSubscriptionsSet(false);
+    };
+  }, [doctorId, subscribeToAppointments, subscribeToAvailabilityChanges]);
+
+  // Update the form field value when selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      field.onChange(selectedDate);
+    }
+  }, [selectedDate]);
 
   // Check if a date is available based on doctor's working days and holidays
   const isDateAvailable = (date: Date) => {
@@ -365,15 +384,16 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
 
   // Confirm date selection from dialog
   const confirmDateSelection = () => {
-    if (!tempSelectedDate) return;
-    
+    if (!tempSelectedDate) {
+      setDateSelectionError("Please select both a date and time");
+      return;
+    }
     // Check if time is selected
     const hasTime = tempSelectedDate.getHours() !== 0 || tempSelectedDate.getMinutes() !== 0;
     if (!hasTime) {
       setDateSelectionError("Please select both a date and time");
       return;
     }
-    
     setSelectedDate(tempSelectedDate);
     field.onChange(tempSelectedDate);
     setDialogOpen(false);
@@ -400,10 +420,17 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
 
   return (
     <div className="flex flex-col">
+      {/* Doctor unavailable warning */}
+      {doctorId && availability.days.length === 0 && (
+        <div className="flex items-center gap-2 p-3 mb-2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z" /></svg>
+          <span>This doctor is currently not available for appointments. Please check back later or contact the clinic.</span>
+        </div>
+      )}
       {/* Date/Time Display and Trigger */}
       <div 
-        className="flex rounded-md border border-dark-500 bg-dark-400 cursor-pointer" 
-        onClick={() => doctorId && setDialogOpen(true)}
+        className={`flex rounded-md border border-dark-500 bg-dark-400 ${availability.days.length === 0 ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+        onClick={() => doctorId && availability.days.length > 0 && setDialogOpen(true)}
       >
         <Image
           src="/assets/icons/calendar.svg"
@@ -417,16 +444,26 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
         </div>
       </div>
       
-      {/* DatePicker Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => {
-        setDialogOpen(open);
-        if (!open) {
-          setDateSelectionError("");
-        }
-      }}>
+      {/* DatePicker Dialog - Memoized to prevent re-renders */}
+      {doctorId && (
+        <Dialog 
+          open={dialogOpen} 
+          onOpenChange={(open) => {
+            if (!open) {
+              setDialogOpen(false);
+              setTempSelectedDate(null);
+              setDateSelectionError("");
+            } else {
+              setDialogOpen(true);
+            }
+          }}
+        >
         <DialogContent className="sm:max-w-md md:max-w-lg backdrop-blur-lg bg-white/60 dark:bg-zinc-900/60 rounded-2xl shadow-2xl border border-white/20 dark:border-zinc-700/40">
           <DialogHeader>
             <DialogTitle>Select Appointment Date & Time</DialogTitle>
+            <DialogDescription>
+              Please select a date and time for your appointment from the available slots.
+            </DialogDescription>
             {isLoading && <p className="text-sm text-gray-500">Loading real-time availability...</p>}
           </DialogHeader>
           
@@ -504,7 +541,7 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
               ).join('')}
             `}</style>
             <ReactDatePicker
-              selected={tempSelectedDate || selectedDate}
+              selected={tempSelectedDate}
               onChange={handleDateChange}
               showTimeSelect
               inline={true}
@@ -512,7 +549,8 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
               dateFormat={dateFormat}
               filterDate={isDateAvailable}
               includeTimes={tempSelectedDate ? getAvailableTimesForDate(tempSelectedDate) : []}
-              minDate={new Date()}
+              minDate={bookingRange.min}
+              maxDate={bookingRange.max}
               placeholderText="Select date and time"
               timeFormat="h:mm aa"
               timeIntervals={30}
@@ -576,7 +614,11 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
           <div className="mt-4 flex justify-end gap-3">
             <Button 
               variant="outline"
-              onClick={() => setDialogOpen(false)}
+              onClick={() => {
+                setDialogOpen(false);
+                setTempSelectedDate(null);
+                setDateSelectionError("");
+              }}
             >
               Cancel
             </Button>
@@ -589,6 +631,7 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
           </div>
         </DialogContent>
       </Dialog>
+      )}
       
       {/* Helper text */}
       {doctorId ? (

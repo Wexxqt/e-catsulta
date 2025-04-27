@@ -182,21 +182,51 @@ export function getOptimizedImageQuality(): number {
  */
 export function broadcastAvailabilityChange(doctorId: string, availability: any) {
   try {
+    // Save the previous value to compare
+    const previousValue = localStorage.getItem(`doctorAvailability_${doctorId}`);
+    
+    // Only proceed if the value actually changed to prevent loops
+    if (previousValue) {
+      try {
+        const previousAvailability = JSON.parse(previousValue);
+        
+        // Simple deep comparison for objects
+        const isEqual = JSON.stringify(previousAvailability) === JSON.stringify(availability);
+        if (isEqual) {
+          // If the values are identical, no need to broadcast
+          console.log('Availability unchanged, skipping broadcast');
+          return;
+        }
+      } catch (err) {
+        // Continue if parsing failed
+        console.error('Error parsing previous availability:', err);
+      }
+    }
+    
     // Store in localStorage to persist the change
     localStorage.setItem(`doctorAvailability_${doctorId}`, JSON.stringify(availability));
     
-    // Create a custom event to notify other tabs/windows
-    const event = new StorageEvent('storage', {
-      key: `doctorAvailability_${doctorId}`,
-      newValue: JSON.stringify(availability),
-      url: window.location.href,
-    });
-    
-    // Dispatch the event
-    window.dispatchEvent(event);
-    
-    console.log(`Broadcasted availability change for doctor ${doctorId}`, availability);
+    // Use a safer way to create and dispatch the custom event
+    try {
+      // Create the custom event with correct typing
+      const customEvent = new CustomEvent('availabilityChange', {
+        detail: {
+          doctorId,
+          value: availability,
+          timestamp: new Date().toISOString()
+        },
+        bubbles: false,
+        cancelable: false
+      });
+      
+      // Dispatch on window - wrapped in try/catch for safety
+      window.dispatchEvent(customEvent);
+      
+      console.log(`Broadcasted availability change for doctor ${doctorId}`, availability);
+    } catch (eventError) {
+      console.error('Error broadcasting availability event:', eventError);
+    }
   } catch (error) {
-    console.error('Error broadcasting availability change:', error);
+    console.error('Error in broadcastAvailabilityChange:', error);
   }
 }

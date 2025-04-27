@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { Models } from 'appwrite';
 import { subscribe, DATABASE_ID, APPOINTMENT_COLLECTION_ID } from '@/lib/appwrite-client';
 
@@ -13,66 +13,160 @@ const RealtimeContext = createContext<RealtimeContextType | undefined>(undefined
 
 export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
   const [unsubscribeCallbacks, setUnsubscribeCallbacks] = useState<(() => void)[]>([]);
+  // Ref to keep track of active subscriptions by ID to prevent duplicates
+  const activeSubscriptions = useRef<{ [key: string]: boolean }>({});
+  // Ref to track if the component is mounted
+  const isMounted = useRef(true);
 
   // Clean up all subscriptions when component unmounts
   useEffect(() => {
+    // Set mounted flag
+    isMounted.current = true;
+    
     return () => {
-      unsubscribeCallbacks.forEach(unsubscribe => unsubscribe());
+      // Mark as unmounted to prevent state updates
+      isMounted.current = false;
+      
+      // Clean up all subscriptions
+      unsubscribeCallbacks.forEach(unsubscribe => {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.error('Error cleaning up subscription:', error);
+        }
+      });
+      
+      // Clear active subscriptions
+      activeSubscriptions.current = {};
     };
-  }, [unsubscribeCallbacks]);
+  }, []);
+
+  // Safe way to update state only if component is mounted
+  const safeSetUnsubscribeCallbacks = (updater: (prev: (() => void)[]) => (() => void)[]) => {
+    if (isMounted.current) {
+      setUnsubscribeCallbacks(updater);
+    }
+  };
 
   // Subscribe to appointment changes
   const subscribeToAppointments = (callback: (appointment: any) => void) => {
+    const subscriptionId = `appointments-${Math.random().toString(36).substring(2, 9)}`;
+    
+    // If already subscribed, don't create a duplicate
+    if (activeSubscriptions.current[subscriptionId]) {
+      return () => {};
+    }
+    
+    // Mark this subscription as active
+    activeSubscriptions.current[subscriptionId] = true;
+    
     // Create a subscription to appointment collection
-    const unsubscribe = subscribe(
-      [`databases.${DATABASE_ID}.collections.${APPOINTMENT_COLLECTION_ID}.documents`],
-      (response: any) => {
-        // Check if this is an appointment-related event
-        if (response.events.some((event: string) => 
-          event.includes(`databases.${DATABASE_ID}.collections.${APPOINTMENT_COLLECTION_ID}`)
-        )) {
-          // Pass the updated appointment data to the callback
-          callback(response.payload);
+    let unsubscribe: () => void;
+    
+    try {
+      unsubscribe = subscribe(
+        [`databases.${DATABASE_ID}.collections.${APPOINTMENT_COLLECTION_ID}.documents`],
+        (response: any) => {
+          // Only process if the subscription is still active and component is mounted
+          if (!activeSubscriptions.current[subscriptionId] || !isMounted.current) return;
+          
+          // Check if this is an appointment-related event
+          if (response.events.some((event: string) => 
+            event.includes(`databases.${DATABASE_ID}.collections.${APPOINTMENT_COLLECTION_ID}`)
+          )) {
+            // Pass the updated appointment data to the callback
+            try {
+              callback(response.payload);
+            } catch (error) {
+              console.error('Error processing appointment update:', error);
+            }
+          }
         }
-      }
-    );
+      );
+    } catch (error) {
+      console.error('Error creating appointment subscription:', error);
+      // Return a no-op function if subscription fails
+      return () => {};
+    }
 
     // Add unsubscribe callback to state
-    setUnsubscribeCallbacks(prev => [...prev, unsubscribe]);
+    safeSetUnsubscribeCallbacks(prev => [...prev, unsubscribe]);
 
     // Return a cleanup function
-    return unsubscribe;
+    return () => {
+      // Mark subscription as inactive
+      activeSubscriptions.current[subscriptionId] = false;
+      try {
+        unsubscribe();
+      } catch (error) {
+        console.error('Error unsubscribing from appointments:', error);
+      }
+    };
   };
 
   // Subscribe to doctor availability changes
   const subscribeToAvailabilityChanges = (doctorId: string, callback: (availability: any) => void) => {
-    // For now we'll use localStorage for doctor availability
-    // This will be replaced with a proper database subscription when implemented
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === `doctorAvailability_${doctorId}` && event.newValue) {
+    const subscriptionId = `availability-${doctorId}-${Math.random().toString(36).substring(2, 9)}`;
+    
+    // If already subscribed, don't create a duplicate
+    if (activeSubscriptions.current[subscriptionId]) {
+      return () => {};
+    }
+    
+    // Mark this subscription as active
+    activeSubscriptions.current[subscriptionId] = true;
+    
+    // Check for current availability first
+    try {
+      const currentSettings = localStorage.getItem(`doctorAvailability_${doctorId}`);
+      if (currentSettings && isMounted.current) {
+        const availability = JSON.parse(currentSettings);
+        callback(availability);
+      }
+    } catch (error) {
+      console.error('Error getting initial availability:', error);
+    }
+    
+    // Handler for custom availability change event
+    const handleAvailabilityChange = (event: CustomEvent) => {
+      // Only process if the subscription is still active and component is mounted
+      if (!activeSubscriptions.current[subscriptionId] || !isMounted.current) return;
+      
+      const { doctorId: eventDoctorId, value } = event.detail;
+      
+      // Only process if this event is for our doctor
+      if (eventDoctorId === doctorId && value) {
         try {
-          const availability = JSON.parse(event.newValue);
-          callback(availability);
+          callback(value);
         } catch (error) {
-          console.error('Error parsing availability changes:', error);
+          console.error('Error processing availability changes:', error);
         }
       }
     };
 
-    // Add event listener for local storage changes
-    window.addEventListener('storage', handleStorageChange);
+    // Add event listener for custom events
+    window.addEventListener('availabilityChange', handleAvailabilityChange as EventListener);
 
     // Return cleanup function
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      // Mark subscription as inactive
+      activeSubscriptions.current[subscriptionId] = false;
+      try {
+        window.removeEventListener('availabilityChange', handleAvailabilityChange as EventListener);
+      } catch (error) {
+        console.error('Error removing availability event listener:', error);
+      }
     };
   };
 
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = React.useMemo(() => ({ 
+    subscribeToAppointments,
+    subscribeToAvailabilityChanges
+  }), []);
+
   return (
-    <RealtimeContext.Provider value={{ 
-      subscribeToAppointments,
-      subscribeToAvailabilityChanges
-    }}>
+    <RealtimeContext.Provider value={contextValue}>
       {children}
     </RealtimeContext.Provider>
   );

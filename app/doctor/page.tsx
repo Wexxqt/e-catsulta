@@ -143,10 +143,12 @@ const DoctorDashboard = () => {
   // Calendar state
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [availabilitySettings, setAvailabilitySettings] = useState({
-    days: [1, 2, 3, 4, 5], // Monday to Friday by default
+    days: [1, 2, 3, 4, 5],
     startTime: 8,
     endTime: 17,
     holidays: [] as Date[],
+    bookingStartDate: '',
+    bookingEndDate: '',
   });
 
   // Patient state
@@ -211,6 +213,18 @@ const DoctorDashboard = () => {
           startTime: doctor.availability.startTime,
           endTime: doctor.availability.endTime,
           holidays: doctor.availability.holidays || [],
+          bookingStartDate: doctor.availability.bookingStartDate || '',
+          bookingEndDate: doctor.availability.bookingEndDate || '',
+        });
+      } else if (doctor.availability) {
+        // Use the doctor's default availability from constants
+        setAvailabilitySettings({
+          days: doctor.availability.days,
+          startTime: doctor.availability.startTime,
+          endTime: doctor.availability.endTime,
+          holidays: doctor.availability.holidays || [],
+          bookingStartDate: doctor.availability.bookingStartDate || '',
+          bookingEndDate: doctor.availability.bookingEndDate || '',
         });
       }
     }
@@ -522,6 +536,8 @@ const DoctorDashboard = () => {
         startTime: availabilitySettings.startTime,
         endTime: availabilitySettings.endTime,
         holidays: availabilitySettings.holidays || [],
+        bookingStartDate: availabilitySettings.bookingStartDate,
+        bookingEndDate: availabilitySettings.bookingEndDate,
       };
 
       // Save to localStorage
@@ -572,6 +588,8 @@ const DoctorDashboard = () => {
             startTime: parsedSettings.startTime || 8,
             endTime: parsedSettings.endTime || 17,
             holidays: parsedSettings.holidays || [],
+            bookingStartDate: parsedSettings.bookingStartDate || '',
+            bookingEndDate: parsedSettings.bookingEndDate || '',
           });
 
           // Also update the doctor object with these settings
@@ -581,7 +599,14 @@ const DoctorDashboard = () => {
         }
       } else if (doctor.availability) {
         // Use the doctor's default availability from constants
-        setAvailabilitySettings(doctor.availability);
+        setAvailabilitySettings({
+          days: doctor.availability.days,
+          startTime: doctor.availability.startTime,
+          endTime: doctor.availability.endTime,
+          holidays: doctor.availability.holidays || [],
+          bookingStartDate: doctor.availability.bookingStartDate || '',
+          bookingEndDate: doctor.availability.bookingEndDate || '',
+        });
       }
     };
 
@@ -942,6 +967,30 @@ const DoctorDashboard = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-16-medium">Appointment Booking Range</h4>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex flex-col">
+                      <label className="text-sm mb-1">Start Date</label>
+                      <Input
+                        type="date"
+                        value={availabilitySettings.bookingStartDate}
+                        onChange={e => setAvailabilitySettings(prev => ({ ...prev, bookingStartDate: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-sm mb-1">End Date</label>
+                      <Input
+                        type="date"
+                        value={availabilitySettings.bookingEndDate}
+                        min={availabilitySettings.bookingStartDate}
+                        onChange={e => setAvailabilitySettings(prev => ({ ...prev, bookingEndDate: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Patients can only book appointments within this date range.</p>
                 </div>
               </div>
             </div>
