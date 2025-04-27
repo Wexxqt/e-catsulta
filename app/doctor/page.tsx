@@ -221,15 +221,16 @@ const DoctorDashboard = () => {
           bookingStartDate: doctor.availability.bookingStartDate || "",
           bookingEndDate: doctor.availability.bookingEndDate || "",
         });
-      } else if (doctor.availability) {
-        // Use the doctor's default availability from constants
+      } else {
+        // Fallback to default availability from the first doctor in the list
+        const defaultDoctor = Doctors[0];
         setAvailabilitySettings({
-          days: doctor.availability.days,
-          startTime: doctor.availability.startTime,
-          endTime: doctor.availability.endTime,
-          holidays: doctor.availability.holidays || [],
-          bookingStartDate: doctor.availability.bookingStartDate || "",
-          bookingEndDate: doctor.availability.bookingEndDate || "",
+          days: defaultDoctor.availability.days,
+          startTime: defaultDoctor.availability.startTime,
+          endTime: defaultDoctor.availability.endTime,
+          holidays: defaultDoctor.availability.holidays || [],
+          bookingStartDate: defaultDoctor.availability.bookingStartDate || "",
+          bookingEndDate: defaultDoctor.availability.bookingEndDate || "",
         });
       }
     }
