@@ -20,6 +20,7 @@ import { Textarea } from "./ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { getDoctorAppointments } from "@/lib/actions/appointment.actions";
+import { useRealtime } from '@/contexts/RealtimeContext';
 
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -56,6 +57,7 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
   doctorId?: string;
   dateFormat?: string;
 }) => {
+  const { subscribeToAppointments, subscribeToAvailabilityChanges } = useRealtime();
   const [availability, setAvailability] = useState<{ 
     days: number[], 
     startTime: number, 
@@ -125,9 +127,45 @@ const AppointmentDatePicker = ({ field, doctorId, dateFormat = "MM/dd/yyyy h:mm 
         
         // Fetch real booked appointments
         fetchBookedAppointments(doctorId);
+
+        // Subscribe to real-time availability changes
+        const unsubscribeAvailability = subscribeToAvailabilityChanges(
+          doctor.id,
+          (newAvailability) => {
+            console.log("Real-time availability update received:", newAvailability);
+            setAvailability({
+              days: newAvailability.days || [1, 2, 3, 4, 5],
+              startTime: newAvailability.startTime || 8,
+              endTime: newAvailability.endTime || 17,
+              holidays: newAvailability.holidays || [],
+            });
+            
+            // Regenerate time slots with the new availability
+            generateTimeSlots({
+              availability: newAvailability
+            });
+          }
+        );
+
+        // Subscribe to real-time appointment changes
+        const unsubscribeAppointments = subscribeToAppointments((updatedAppointment) => {
+          console.log("Real-time appointment update received:", updatedAppointment);
+          
+          // If this is an appointment for the current doctor, update our list
+          if (updatedAppointment.primaryPhysician === doctorId) {
+            // Refresh the booked slots
+            fetchBookedAppointments(doctorId);
+          }
+        });
+
+        // Return cleanup function
+        return () => {
+          unsubscribeAvailability();
+          unsubscribeAppointments();
+        };
       }
     }
-  }, [doctorId, dialogOpen]);
+  }, [doctorId, dialogOpen, subscribeToAppointments, subscribeToAvailabilityChanges]);
 
   // Update the form field value when selectedDate changes
   useEffect(() => {

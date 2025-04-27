@@ -20,7 +20,7 @@ import {
 } from "@/lib/actions/patient-notes.actions";
 import { Doctors } from "@/constants";
 import { Appointment, Patient, PatientNote } from "@/types/appwrite.types";
-import { decryptKey, encryptKey, formatDateTime } from "@/lib/utils";
+import { decryptKey, encryptKey, formatDateTime, broadcastAvailabilityChange } from "@/lib/utils";
 
 // Import the UI components
 import {
@@ -516,10 +516,6 @@ const DoctorDashboard = () => {
         throw new Error("Doctor not found");
       }
 
-      // Create API request to update doctor availability
-      // In this case, we're using localStorage as intermediate storage
-      // since we don't have a proper backend implementation yet
-
       // Create a new availability object with the current settings
       const updatedAvailability = {
         days: availabilitySettings.days,
@@ -536,6 +532,9 @@ const DoctorDashboard = () => {
 
       // Update the doctor object in memory
       doctor.availability = updatedAvailability;
+      
+      // Broadcast the availability change for real-time updates
+      broadcastAvailabilityChange(doctor.id, updatedAvailability);
 
       // Success notification
       alert("Availability settings updated successfully!");

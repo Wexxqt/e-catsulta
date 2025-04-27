@@ -174,3 +174,29 @@ export function getOptimizedImageQuality(): number {
   
   return 75; // Default quality for normal devices
 }
+
+/**
+ * Broadcasts doctor availability changes to other tabs/windows
+ * This is used to implement real-time updates when a doctor changes their availability
+ * without requiring a database subscription
+ */
+export function broadcastAvailabilityChange(doctorId: string, availability: any) {
+  try {
+    // Store in localStorage to persist the change
+    localStorage.setItem(`doctorAvailability_${doctorId}`, JSON.stringify(availability));
+    
+    // Create a custom event to notify other tabs/windows
+    const event = new StorageEvent('storage', {
+      key: `doctorAvailability_${doctorId}`,
+      newValue: JSON.stringify(availability),
+      url: window.location.href,
+    });
+    
+    // Dispatch the event
+    window.dispatchEvent(event);
+    
+    console.log(`Broadcasted availability change for doctor ${doctorId}`, availability);
+  } catch (error) {
+    console.error('Error broadcasting availability change:', error);
+  }
+}

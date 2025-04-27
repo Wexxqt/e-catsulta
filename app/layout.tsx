@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Bricolage_Grotesque as FontSans } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { RealtimeProvider } from "@/contexts/RealtimeContext";
 
 import { cn } from "@/lib/utils";
 
@@ -86,7 +87,9 @@ export default function RootLayout({
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="dark">
-          {children}
+          <RealtimeProvider>
+            {children}
+          </RealtimeProvider>
         </ThemeProvider>
       </body>
     </html>
