@@ -327,15 +327,15 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
           .filter-card {
             position: relative;
             flex: 1;
-            min-width: 120px;
-            max-width: 200px;
-            border-radius: 8px;
+            min-width: 90px;
+            max-width: 140px;
+            border-radius: 6px;
             overflow: hidden;
             background-color: #1a1d21;
             border: 1px solid rgba(74, 85, 104, 0.4);
             cursor: pointer;
             transition: all 0.3s ease;
-            padding: 12px;
+            padding: 7px 8px;
           }
 
           .filter-card:hover {
@@ -391,15 +391,15 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
           }
 
           .filter-icon {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background-color: currentColor;
           }
 
           .filter-checkbox {
-            width: 18px;
-            height: 18px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
             border: 2px solid currentColor;
             display: flex;
@@ -409,21 +409,21 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
 
           .filter-checkbox.active::after {
             content: "";
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background-color: currentColor;
           }
 
           .filter-title {
-            font-size: 1rem;
+            font-size: 0.92rem;
             font-weight: 600;
             color: #e2e8f0;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
           }
 
           .filter-count {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             color: rgba(226, 232, 240, 0.8);
           }
 
@@ -434,9 +434,9 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
           }
 
           .filter-action-button {
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.78rem;
             background-color: #2d3748;
             color: #e2e8f0;
             border: none;
