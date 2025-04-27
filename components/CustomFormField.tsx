@@ -117,12 +117,26 @@ const AppointmentDatePicker = ({
   }, [dialogOpen]);
 
   // Function to fetch booked appointments - moved outside the effect
-  const fetchBookedAppointments = async (doctorId: string) => {
-    if (!doctorId) return;
+  const fetchBookedAppointments = async (doctorName: string) => {
+    if (!doctorName) return;
+
+    console.log(`Fetching appointments for doctor: ${doctorName}`);
+
+    // Find the doctor by name to get the ID
+    const doctor = Doctors.find((doc) => doc.name === doctorName);
+    if (!doctor) {
+      console.log(`Doctor not found with name: ${doctorName}`);
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const appointments = await getDoctorAppointments(doctorId);
+      // Use doctorName for this function since that's how appointments are stored
+      const appointments = await getDoctorAppointments(doctorName);
+
+      console.log(
+        `Retrieved ${appointments.length} appointments for ${doctorName} (ID: ${doctor.id})`
+      );
 
       // Group appointments by date
       const bookedByDate = appointments.reduce(
@@ -188,6 +202,7 @@ const AppointmentDatePicker = ({
   useEffect(() => {
     if (!doctorId) return;
 
+    // Find doctor by name (the doctorId param is actually the doctor's name)
     const doctor = Doctors.find((doc) => doc.name === doctorId);
     if (!doctor) return;
 
@@ -196,6 +211,7 @@ const AppointmentDatePicker = ({
       id: doctor.id,
     });
 
+    // Important: Use doctor.id (like "dr-abundo") NOT the doctor.name
     const savedSettings = localStorage.getItem(
       `doctorAvailability_${doctor.id}`
     );
@@ -248,11 +264,15 @@ const AppointmentDatePicker = ({
   useEffect(() => {
     if (!doctorId || subscriptionsSet) return;
 
+    // Find the doctor by name (the doctorId param is actually the doctor's name)
     const doctor = Doctors.find((doc) => doc.name === doctorId);
     if (!doctor) return;
 
+    console.log("Setting up subscriptions for doctor:", doctor.id);
+
+    // Always use doctor.id NOT doctor.name for consistency
     const unsubscribeAvailability = subscribeToAvailabilityChanges(
-      doctor.id,
+      doctor.id, // <-- Use doctor.id here
       (newAvailability) => {
         const updatedAvailability = {
           days: newAvailability.days || [1, 2, 3, 4, 5],

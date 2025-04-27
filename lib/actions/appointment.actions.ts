@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ID, Query } from "node-appwrite";
+import { ID, Query, Permission, Role } from "node-appwrite";
 
 import { Appointment, DoctorSettings } from "@/types/appwrite.types";
 
@@ -703,25 +703,132 @@ export const archiveSingleAppointment = async (appointmentId: string) => {
   }
 };
 
-// New function to save doctor availability to database
+// Add this function
+export const ensureDoctorSettingsCollection = async () => {
+  try {
+    // Try to list documents from the collection to see if it exists
+    await databases.listDocuments(DATABASE_ID!, DOCTOR_SETTINGS_COLLECTION_ID!);
+    console.log("Doctor settings collection exists");
+    return true;
+  } catch (error: any) {
+    // If the error is "Collection not found", create it
+    if (error?.code === 404) {
+      try {
+        console.log("Creating doctor settings collection");
+        await databases.createCollection(
+          DATABASE_ID!,
+          DOCTOR_SETTINGS_COLLECTION_ID!,
+          "Doctor Settings",
+          [Permission.read(Role.any()), Permission.write(Role.any())]
+        );
+
+        // Create attributes
+        await databases.createStringAttribute(
+          DATABASE_ID!,
+          DOCTOR_SETTINGS_COLLECTION_ID!,
+          "doctorId",
+          36,
+          true
+        );
+
+        await databases.createStringAttribute(
+          DATABASE_ID!,
+          DOCTOR_SETTINGS_COLLECTION_ID!,
+          "availability",
+          10000,
+          true
+        );
+
+        await databases.createStringAttribute(
+          DATABASE_ID!,
+          DOCTOR_SETTINGS_COLLECTION_ID!,
+          "createdAt",
+          30,
+          true
+        );
+
+        await databases.createStringAttribute(
+          DATABASE_ID!,
+          DOCTOR_SETTINGS_COLLECTION_ID!,
+          "updatedAt",
+          30,
+          true
+        );
+
+        // Create index for doctorId
+        await databases.createIndex(
+          DATABASE_ID!,
+          DOCTOR_SETTINGS_COLLECTION_ID!,
+          "doctorId_idx",
+          "key",
+          ["doctorId"],
+          true
+        );
+
+        console.log("Doctor settings collection created successfully");
+        return true;
+      } catch (createError) {
+        console.error(
+          "Error creating doctor settings collection:",
+          createError
+        );
+        return false;
+      }
+    } else {
+      console.error("Error checking doctor settings collection:", error);
+      return false;
+    }
+  }
+};
+
+// Function to save doctor availability to database
 export const saveDoctorAvailability = async (
-  doctorId: string,
+  doctorIdOrName: string,
   availability: any
 ) => {
   try {
-    console.log(`Saving availability for doctorId: ${doctorId}`);
+    console.log(`Saving availability for doctor: ${doctorIdOrName}`);
+
+    // Handle when doctorIdOrName is not provided
+    if (!doctorIdOrName) {
+      console.error("No doctor ID or name provided");
+      return { success: false, error: "No doctor ID provided" };
+    }
+
+    // Lookup to standardize the doctor ID
+    let standardDoctorId = doctorIdOrName;
+
+    // Check if doctorIdOrName is actually a doctor name
+    if (doctorIdOrName.includes(" ")) {
+      // This is likely a doctor name, not an ID
+      // Import Doctors without causing circular dependencies
+      const { Doctors } = await import("@/constants");
+      const doctorByName = Doctors.find((doc) => doc.name === doctorIdOrName);
+
+      if (doctorByName) {
+        console.log(
+          `Found doctor by name: ${doctorIdOrName} -> ID: ${doctorByName.id}`
+        );
+        standardDoctorId = doctorByName.id;
+      } else {
+        console.log(`Doctor not found with name: ${doctorIdOrName}`);
+      }
+    }
+
+    // First, ensure the collection exists
+    await ensureDoctorSettingsCollection();
 
     // Use the collection ID from appwrite.config.ts
     console.log(`Using collection ID: ${DOCTOR_SETTINGS_COLLECTION_ID}`);
 
     // Check if settings already exist for this doctor
     console.log(
-      `Checking for existing settings in database: ${DATABASE_ID}, collection: ${DOCTOR_SETTINGS_COLLECTION_ID}`
+      `Checking for existing settings in database: ${DATABASE_ID}, collection: ${DOCTOR_SETTINGS_COLLECTION_ID}, doctorId: ${standardDoctorId}`
     );
     const existingSettings = await databases.listDocuments(
       DATABASE_ID!,
       DOCTOR_SETTINGS_COLLECTION_ID!,
-      [Query.equal("doctorId", doctorId)]
+      [Query.equal("doctorId", standardDoctorId)]
     );
 
     console.log(`Found ${existingSettings.total} existing settings documents`);
@@ -743,13 +850,15 @@ export const saveDoctorAvailability = async (
       console.log(`Successfully updated settings document`);
     } else {
       // Create new settings document
-      console.log(`Creating new settings document for doctorId: ${doctorId}`);
+      console.log(
+        `Creating new settings document for doctorId: ${standardDoctorId}`
+      );
       const newDoc = await databases.createDocument(
         DATABASE_ID!,
         DOCTOR_SETTINGS_COLLECTION_ID!,
         ID.unique(),
         {
-          doctorId,
+          doctorId: standardDoctorId,
           availability: JSON.stringify(availability),
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -767,21 +876,47 @@ export const saveDoctorAvailability = async (
 };
 
 // New function to get doctor availability from database
-export const getDoctorAvailability = async (doctorId: string) => {
+export const getDoctorAvailability = async (doctorIdOrName: string) => {
   try {
-    console.log(`Getting availability for doctorId: ${doctorId}`);
+    console.log(`Getting availability for doctor: ${doctorIdOrName}`);
+
+    // Handle when doctorIdOrName is not provided
+    if (!doctorIdOrName) {
+      console.log("No doctor ID or name provided");
+      return null;
+    }
+
+    // Lookup to standardize the doctor ID
+    let standardDoctorId = doctorIdOrName;
+
+    // Check if doctorIdOrName is actually a doctor name
+    if (doctorIdOrName.includes(" ")) {
+      // This is likely a doctor name, not an ID
+      // Import Doctors without causing circular dependencies
+      const { Doctors } = await import("@/constants");
+      const doctorByName = Doctors.find((doc) => doc.name === doctorIdOrName);
+
+      if (doctorByName) {
+        console.log(
+          `Found doctor by name: ${doctorIdOrName} -> ID: ${doctorByName.id}`
+        );
+        standardDoctorId = doctorByName.id;
+      } else {
+        console.log(`Doctor not found with name: ${doctorIdOrName}`);
+      }
+    }
 
     // Use the collection ID from appwrite.config.ts
     console.log(`Using collection ID: ${DOCTOR_SETTINGS_COLLECTION_ID}`);
 
     // Query for doctor settings
     console.log(
-      `Querying database: ${DATABASE_ID}, collection: ${DOCTOR_SETTINGS_COLLECTION_ID}`
+      `Querying database: ${DATABASE_ID}, collection: ${DOCTOR_SETTINGS_COLLECTION_ID}, doctorId: ${standardDoctorId}`
     );
     const settings = await databases.listDocuments(
       DATABASE_ID!,
       DOCTOR_SETTINGS_COLLECTION_ID!,
-      [Query.equal("doctorId", doctorId)]
+      [Query.equal("doctorId", standardDoctorId)]
     );
 
     console.log(`Query results: found ${settings.total} settings documents`);
@@ -795,7 +930,9 @@ export const getDoctorAvailability = async (doctorId: string) => {
       return JSON.parse(document.availability);
     }
 
-    console.log(`No availability found in database for doctorId: ${doctorId}`);
+    console.log(
+      `No availability found in database for doctorId: ${standardDoctorId}`
+    );
     // Return null if no settings found
     return null;
   } catch (error) {
