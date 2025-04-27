@@ -17,6 +17,7 @@ import {
   parseStringify,
   generateAppointmentCode,
 } from "../utils";
+import { Doctors } from "@/constants";
 
 /**
  * Validates and sanitizes appointment data to prevent errors from deleted patients
@@ -49,6 +50,26 @@ export const createAppointment = async (
   appointment: CreateAppointmentParams
 ) => {
   try {
+    // === AVAILABILITY CHECK START ===
+    // Find the doctor by name
+    const doctor = Doctors.find(
+      (doc) => doc.name === appointment.primaryPhysician
+    );
+    let doctorAvailability = doctor?.availability;
+
+    // Try to get saved settings from localStorage (if running in a serverless environment that supports it)
+    // On server, localStorage is not available, so we rely on the Doctors constant
+    // If you store availability in a DB, fetch it here instead
+
+    if (
+      !doctorAvailability ||
+      !doctorAvailability.days ||
+      doctorAvailability.days.length === 0
+    ) {
+      throw new Error("Doctor is not available for appointments at this time.");
+    }
+    // === AVAILABILITY CHECK END ===
+
     // Generate appointment code
     const appointmentCode = generateAppointmentCode(
       ID.unique(),
@@ -69,6 +90,7 @@ export const createAppointment = async (
     return parseStringify(newAppointment);
   } catch (error) {
     console.error("An error occurred while creating a new appointment:", error);
+    throw error;
   }
 };
 
@@ -632,7 +654,7 @@ export const getArchivedDoctorAppointments = async (doctorName: string) => {
       [
         Query.equal("primaryPhysician", doctorName),
         Query.equal("archived", true),
-        Query.orderDesc("$updatedAt")
+        Query.orderDesc("$updatedAt"),
       ]
     );
 
@@ -664,7 +686,7 @@ export const archiveSingleAppointment = async (appointmentId: string) => {
       APPOINTMENT_COLLECTION_ID!,
       appointmentId,
       {
-        archived: true
+        archived: true,
       }
     );
 
