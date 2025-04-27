@@ -29,7 +29,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/papaparse": "^5.3.14",
     "@yudiel/react-qr-scanner": "^2.2.1",
-    "appwrite": "^17.0.1",
+    "appwrite": "^17.0.2",
     "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

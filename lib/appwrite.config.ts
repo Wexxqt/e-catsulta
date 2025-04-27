@@ -3,24 +3,24 @@ import * as sdk from "node-appwrite";
 // Validate required environment variables
 const validateEnvVariables = () => {
   const requiredVars = [
-    'NEXT_PUBLIC_ENDPOINT',
-    'PROJECT_ID',
-    'API_KEY',
-    'PATIENT_COLLECTION_ID',
-    'APPOINTMENT_COLLECTION_ID',
-    'NEXT_PUBLIC_BUCKET_ID',
-    'DATABASE_ID',
-    'PATIENT_NOTES_COLLECTION_ID'
+    "NEXT_PUBLIC_ENDPOINT",
+    "PROJECT_ID",
+    "API_KEY",
+    "PATIENT_COLLECTION_ID",
+    "APPOINTMENT_COLLECTION_ID",
+    "NEXT_PUBLIC_BUCKET_ID",
+    "DATABASE_ID",
+    "PATIENT_NOTES_COLLECTION_ID",
   ];
-  
-  const missingVars = requiredVars.filter(
-    varName => !process.env[varName]
-  );
-  
+
+  const missingVars = requiredVars.filter((varName) => !process.env[varName]);
+
   if (missingVars.length > 0) {
-    console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    console.error(
+      `Missing required environment variables: ${missingVars.join(", ")}`
+    );
     // In development, we'll log the error but not throw
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === "production") {
       throw new Error(`Configuration error: Missing environment variables`);
     }
   }
@@ -32,11 +32,11 @@ validateEnvVariables();
 export const {
   NEXT_PUBLIC_ENDPOINT: ENDPOINT,
   PROJECT_ID,
-  API_KEY, 
+  API_KEY,
   PATIENT_COLLECTION_ID,
   DOCTOR_COLLECTION_ID,
   APPOINTMENT_COLLECTION_ID,
-  PATIENT_NOTES_COLLECTION_ID = 'patient_notes',
+  PATIENT_NOTES_COLLECTION_ID = "patient_notes",
   NEXT_PUBLIC_BUCKET_ID: BUCKET_ID,
   DATABASE_ID,
 } = process.env;

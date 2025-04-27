@@ -23,10 +23,7 @@ export const PatientFormDefaultValues = {
   privacyConsent: false,
 };
 
-export const IdentificationTypes = [
-  "Student ID",
-  "Employee ID",
-];
+export const IdentificationTypes = ["Student ID", "Employee ID"];
 
 // Philippine Holidays for 2025
 export const Holidays = [
@@ -41,7 +38,7 @@ export const Holidays = [
   new Date("2025-11-30"), // Bonifacio Day
   new Date("2025-12-25"), // Christmas Day
   new Date("2025-12-30"), // Rizal Day
-  
+
   // Special Non-working Holidays
   new Date("2025-01-25"), // Chinese New Year
   new Date("2025-02-25"), // EDSA People Power Revolution Anniversary
@@ -52,7 +49,7 @@ export const Holidays = [
   new Date("2025-12-08"), // Feast of the Immaculate Conception
   new Date("2025-12-24"), // Christmas Eve
   new Date("2025-12-31"), // New Year's Eve
-  
+
   // Islamic Holidays (approximate dates - may need adjustment)
   new Date("2025-04-11"), // Eid'l Fitr (End of Ramadan)
   new Date("2025-06-17"), // Eid'l Adha (Feast of Sacrifice)
@@ -69,7 +66,9 @@ export const Doctors = [
       days: [1, 2, 3, 4, 5],
       startTime: 8,
       endTime: 17,
-      holidays: Holidays
+      holidays: Holidays,
+      bookingStartDate: "",
+      bookingEndDate: "",
     },
   },
   {
@@ -81,15 +80,14 @@ export const Doctors = [
       days: [1, 2, 3, 4, 5],
       startTime: 8,
       endTime: 17,
-      holidays: Holidays
+      holidays: Holidays,
+      bookingStartDate: "",
+      bookingEndDate: "",
     },
   },
 ];
 
-export const Category = [
-  "Student",
-  "Employee",
-]
+export const Category = ["Student", "Employee"];
 
 export const StatusIcon = {
   scheduled: "/assets/icons/check.svg",

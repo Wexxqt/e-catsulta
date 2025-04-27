@@ -9,17 +9,17 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'www.gravatar.com',
-        pathname: '**',
+        protocol: "https",
+        hostname: "www.gravatar.com",
+        pathname: "**",
       },
       {
-        protocol: 'https',
-        hostname: 'cloud.appwrite.io',
-        pathname: '**',
+        protocol: "https",
+        hostname: "cloud.appwrite.io",
+        pathname: "**",
       },
     ],
-  }
+  },
 };
 
 export default nextConfig;

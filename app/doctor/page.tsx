@@ -20,7 +20,12 @@ import {
 } from "@/lib/actions/patient-notes.actions";
 import { Doctors } from "@/constants";
 import { Appointment, Patient, PatientNote } from "@/types/appwrite.types";
-import { decryptKey, encryptKey, formatDateTime, broadcastAvailabilityChange } from "@/lib/utils";
+import {
+  decryptKey,
+  encryptKey,
+  formatDateTime,
+  broadcastAvailabilityChange,
+} from "@/lib/utils";
 
 // Import the UI components
 import {
@@ -147,8 +152,8 @@ const DoctorDashboard = () => {
     startTime: 8,
     endTime: 17,
     holidays: [] as Date[],
-    bookingStartDate: '',
-    bookingEndDate: '',
+    bookingStartDate: "",
+    bookingEndDate: "",
   });
 
   // Patient state
@@ -213,8 +218,8 @@ const DoctorDashboard = () => {
           startTime: doctor.availability.startTime,
           endTime: doctor.availability.endTime,
           holidays: doctor.availability.holidays || [],
-          bookingStartDate: doctor.availability.bookingStartDate || '',
-          bookingEndDate: doctor.availability.bookingEndDate || '',
+          bookingStartDate: doctor.availability.bookingStartDate || "",
+          bookingEndDate: doctor.availability.bookingEndDate || "",
         });
       } else if (doctor.availability) {
         // Use the doctor's default availability from constants
@@ -223,8 +228,8 @@ const DoctorDashboard = () => {
           startTime: doctor.availability.startTime,
           endTime: doctor.availability.endTime,
           holidays: doctor.availability.holidays || [],
-          bookingStartDate: doctor.availability.bookingStartDate || '',
-          bookingEndDate: doctor.availability.bookingEndDate || '',
+          bookingStartDate: doctor.availability.bookingStartDate || "",
+          bookingEndDate: doctor.availability.bookingEndDate || "",
         });
       }
     }
@@ -267,8 +272,9 @@ const DoctorDashboard = () => {
 
     setLoading(true);
     try {
-      const appointments = 
-        (await getDoctorAppointments(doctorName)) as Appointment[];
+      const appointments = (await getDoctorAppointments(
+        doctorName
+      )) as Appointment[];
 
       if (appointments && appointments.length > 0) {
         // Filter out archived appointments
@@ -548,7 +554,7 @@ const DoctorDashboard = () => {
 
       // Update the doctor object in memory
       doctor.availability = updatedAvailability;
-      
+
       // Broadcast the availability change for real-time updates
       broadcastAvailabilityChange(doctor.id, updatedAvailability);
 
@@ -588,8 +594,8 @@ const DoctorDashboard = () => {
             startTime: parsedSettings.startTime || 8,
             endTime: parsedSettings.endTime || 17,
             holidays: parsedSettings.holidays || [],
-            bookingStartDate: parsedSettings.bookingStartDate || '',
-            bookingEndDate: parsedSettings.bookingEndDate || '',
+            bookingStartDate: parsedSettings.bookingStartDate || "",
+            bookingEndDate: parsedSettings.bookingEndDate || "",
           });
 
           // Also update the doctor object with these settings
@@ -604,8 +610,8 @@ const DoctorDashboard = () => {
           startTime: doctor.availability.startTime,
           endTime: doctor.availability.endTime,
           holidays: doctor.availability.holidays || [],
-          bookingStartDate: doctor.availability.bookingStartDate || '',
-          bookingEndDate: doctor.availability.bookingEndDate || '',
+          bookingStartDate: doctor.availability.bookingStartDate || "",
+          bookingEndDate: doctor.availability.bookingEndDate || "",
         });
       }
     };
@@ -679,13 +685,13 @@ const DoctorDashboard = () => {
     const cleanup = () => {
       // Force cleanup of any modal artifacts
       const bodyElement = document.body;
-      bodyElement.classList.remove('overflow-hidden');
-      bodyElement.style.pointerEvents = '';
-      
+      bodyElement.classList.remove("overflow-hidden");
+      bodyElement.style.pointerEvents = "";
+
       // Remove any stray overlay elements
-      const overlays = document.querySelectorAll('[data-radix-portal]');
-      overlays.forEach(overlay => {
-        if (overlay.getAttribute('aria-hidden') === 'true') {
+      const overlays = document.querySelectorAll("[data-radix-portal]");
+      overlays.forEach((overlay) => {
+        if (overlay.getAttribute("aria-hidden") === "true") {
           overlay.remove();
         }
       });
@@ -842,14 +848,14 @@ const DoctorDashboard = () => {
           setShowAvailabilityModal(open);
           if (!open) {
             // Immediately force cleanup when closed
-            document.body.style.pointerEvents = '';
-            document.body.classList.remove('overflow-hidden');
-            
+            document.body.style.pointerEvents = "";
+            document.body.classList.remove("overflow-hidden");
+
             // Add a small delay to ensure the modal is fully closed
             setTimeout(() => {
               const overlays = document.querySelectorAll('[role="dialog"]');
-              overlays.forEach(overlay => {
-                if (overlay.getAttribute('aria-hidden') === 'true') {
+              overlays.forEach((overlay) => {
+                if (overlay.getAttribute("aria-hidden") === "true") {
                   overlay.remove();
                 }
               });
@@ -977,7 +983,12 @@ const DoctorDashboard = () => {
                       <Input
                         type="date"
                         value={availabilitySettings.bookingStartDate}
-                        onChange={e => setAvailabilitySettings(prev => ({ ...prev, bookingStartDate: e.target.value }))}
+                        onChange={(e) =>
+                          setAvailabilitySettings((prev) => ({
+                            ...prev,
+                            bookingStartDate: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                     <div className="flex flex-col">
@@ -986,11 +997,18 @@ const DoctorDashboard = () => {
                         type="date"
                         value={availabilitySettings.bookingEndDate}
                         min={availabilitySettings.bookingStartDate}
-                        onChange={e => setAvailabilitySettings(prev => ({ ...prev, bookingEndDate: e.target.value }))}
+                        onChange={(e) =>
+                          setAvailabilitySettings((prev) => ({
+                            ...prev,
+                            bookingEndDate: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Patients can only book appointments within this date range.</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Patients can only book appointments within this date range.
+                  </p>
                 </div>
               </div>
             </div>
