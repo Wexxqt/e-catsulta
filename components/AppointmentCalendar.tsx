@@ -1088,7 +1088,10 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
               <div className="bg-dark-350 p-4 rounded-lg border-l-4 border-yellow-500">
                 <p className="text-sm text-gray-400 mb-1">Date & Time</p>
                 <p className="text-base font-medium">
-                  {formatDateTime(selectedEvent.schedule).dateTime}
+                  {
+                    formatDateTime(selectedEvent.schedule, "Asia/Manila")
+                      .dateTime
+                  }
                 </p>
               </div>
 
@@ -1222,7 +1225,10 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
                     <div className="border-l-2 border-yellow-500 pl-3 py-1">
                       <p className="text-13-medium text-gray-400">Time</p>
                       <p className="text-15-medium">
-                        {formatDateTime(appointment.schedule).timeOnly}
+                        {
+                          formatDateTime(appointment.schedule, "Asia/Manila")
+                            .timeOnly
+                        }
                       </p>
                     </div>
 

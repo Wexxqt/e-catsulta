@@ -348,7 +348,12 @@ const StaffDashboard = () => {
                         Date & Time
                       </dt>
                       <dd className="font-medium text-sm sm:text-base break-words">
-                        {formatDateTime(verifiedAppointment.schedule).dateTime}
+                        {
+                          formatDateTime(
+                            verifiedAppointment.schedule,
+                            "Asia/Manila"
+                          ).dateTime
+                        }
                       </dd>
                     </div>
                     <div className="flex flex-col">
