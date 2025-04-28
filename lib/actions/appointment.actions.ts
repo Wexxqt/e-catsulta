@@ -838,6 +838,8 @@ export const saveDoctorAvailability = async (
       console.log(
         `Updating existing settings document: ${existingSettings.documents[0].$id}`
       );
+      availability.maxAppointmentsPerDay =
+        availability.maxAppointmentsPerDay || 10;
       await databases.updateDocument(
         DATABASE_ID!,
         DOCTOR_SETTINGS_COLLECTION_ID!,
@@ -853,6 +855,8 @@ export const saveDoctorAvailability = async (
       console.log(
         `Creating new settings document for doctorId: ${standardDoctorId}`
       );
+      availability.maxAppointmentsPerDay =
+        availability.maxAppointmentsPerDay || 10;
       const newDoc = await databases.createDocument(
         DATABASE_ID!,
         DOCTOR_SETTINGS_COLLECTION_ID!,
@@ -927,7 +931,10 @@ export const getDoctorAvailability = async (doctorIdOrName: string) => {
       console.log(
         `Found availability in database: ${document.availability.substring(0, 50)}...`
       );
-      return JSON.parse(document.availability);
+      const parsedAvailability = JSON.parse(document.availability);
+      parsedAvailability.maxAppointmentsPerDay =
+        parsedAvailability.maxAppointmentsPerDay || 10;
+      return parsedAvailability;
     }
 
     console.log(

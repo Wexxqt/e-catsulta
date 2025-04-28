@@ -154,6 +154,7 @@ const DoctorDashboard = () => {
     holidays: [] as Date[],
     bookingStartDate: "",
     bookingEndDate: "",
+    maxAppointmentsPerDay: 10,
   });
 
   // Patient state
@@ -220,6 +221,8 @@ const DoctorDashboard = () => {
           holidays: doctor.availability.holidays || [],
           bookingStartDate: doctor.availability.bookingStartDate || "",
           bookingEndDate: doctor.availability.bookingEndDate || "",
+          maxAppointmentsPerDay:
+            doctor.availability.maxAppointmentsPerDay || 10,
         });
       } else {
         // Fallback to default availability from the first doctor in the list
@@ -231,6 +234,8 @@ const DoctorDashboard = () => {
           holidays: defaultDoctor.availability.holidays || [],
           bookingStartDate: defaultDoctor.availability.bookingStartDate || "",
           bookingEndDate: defaultDoctor.availability.bookingEndDate || "",
+          maxAppointmentsPerDay:
+            defaultDoctor.availability.maxAppointmentsPerDay || 10,
         });
       }
     }
@@ -545,6 +550,7 @@ const DoctorDashboard = () => {
         holidays: availabilitySettings.holidays || [],
         bookingStartDate: availabilitySettings.bookingStartDate,
         bookingEndDate: availabilitySettings.bookingEndDate,
+        maxAppointmentsPerDay: availabilitySettings.maxAppointmentsPerDay,
       };
 
       // Save to localStorage
@@ -597,6 +603,7 @@ const DoctorDashboard = () => {
             holidays: parsedSettings.holidays || [],
             bookingStartDate: parsedSettings.bookingStartDate || "",
             bookingEndDate: parsedSettings.bookingEndDate || "",
+            maxAppointmentsPerDay: parsedSettings.maxAppointmentsPerDay || 10,
           });
 
           // Also update the doctor object with these settings
@@ -613,6 +620,8 @@ const DoctorDashboard = () => {
           holidays: doctor.availability.holidays || [],
           bookingStartDate: doctor.availability.bookingStartDate || "",
           bookingEndDate: doctor.availability.bookingEndDate || "",
+          maxAppointmentsPerDay:
+            doctor.availability.maxAppointmentsPerDay || 10,
         });
       }
     };
@@ -1011,6 +1020,30 @@ const DoctorDashboard = () => {
                     Patients can only book appointments within this date range.
                   </p>
                 </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-16-medium">Max Appointments Per Day</h4>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={availabilitySettings.maxAppointmentsPerDay}
+                    onChange={(e) =>
+                      setAvailabilitySettings((prev) => ({
+                        ...prev,
+                        maxAppointmentsPerDay: Math.max(
+                          1,
+                          Math.min(100, Number(e.target.value) || 1)
+                        ),
+                      }))
+                    }
+                    className="w-32"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Patients can only book up to this number of appointments per
+                    day.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -1274,7 +1307,7 @@ const DoctorDashboard = () => {
                     </div>
                     <DataTable
                       columns={columns}
-                      data={filteredAppointments.documents}
+                      data={filteredAppointments.documents.slice(0, 10)}
                     />
                   </div>
                 )}

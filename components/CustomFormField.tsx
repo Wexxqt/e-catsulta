@@ -74,6 +74,7 @@ const AppointmentDatePicker = ({
     startTime: number;
     endTime: number;
     holidays: Date[];
+    maxAppointmentsPerDay?: number;
   }>({ days: [], startTime: 8, endTime: 17, holidays: [] });
 
   const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
@@ -236,6 +237,7 @@ const AppointmentDatePicker = ({
       startTime: doctorAvailability.startTime || 8,
       endTime: doctorAvailability.endTime || 17,
       holidays: doctorAvailability.holidays || [],
+      maxAppointmentsPerDay: doctorAvailability.maxAppointmentsPerDay || 10,
     };
 
     // Set booking range if present
@@ -279,6 +281,7 @@ const AppointmentDatePicker = ({
           startTime: newAvailability.startTime || 8,
           endTime: newAvailability.endTime || 17,
           holidays: newAvailability.holidays || [],
+          maxAppointmentsPerDay: newAvailability.maxAppointmentsPerDay || 10,
         };
 
         if (
@@ -336,7 +339,11 @@ const AppointmentDatePicker = ({
 
     // Check if date has reached the daily booking limit (10 patients per day)
     const bookedDay = bookedSlots.find((slot) => isSameDay(slot.date, date));
-    if (bookedDay && bookedDay.count >= 10) return false;
+    if (
+      bookedDay &&
+      bookedDay.count >= (availability.maxAppointmentsPerDay || 10)
+    )
+      return false;
 
     // Check if it's a working day
     return availability.days.includes(day);
@@ -371,7 +378,11 @@ const AppointmentDatePicker = ({
 
     // Check if we're at the 10-patient limit for this day
     const bookedDay = bookedSlots.find((slot) => isSameDay(slot.date, date));
-    if (bookedDay && bookedDay.count >= 10) return [];
+    if (
+      bookedDay &&
+      bookedDay.count >= (availability.maxAppointmentsPerDay || 10)
+    )
+      return [];
 
     const now = new Date();
     const isToday = isSameDay(date, now);
@@ -481,7 +492,9 @@ const AppointmentDatePicker = ({
   // Check if a date is fully booked (10 appointments)
   const isDateFullyBooked = (date: Date) => {
     const bookedDay = bookedSlots.find((slot) => isSameDay(slot.date, date));
-    return bookedDay && bookedDay.count >= 10;
+    return (
+      bookedDay && bookedDay.count >= (availability.maxAppointmentsPerDay || 10)
+    );
   };
 
   // Format date for display

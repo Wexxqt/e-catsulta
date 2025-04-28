@@ -61,7 +61,7 @@ export interface Passkey extends Models.Document {
 // New interface for doctor availability settings
 export interface DoctorSettings extends Models.Document {
   doctorId: string;
-  availability: string; // JSON stringified availability object
+  availability: string; // JSON stringified availability object, now includes maxAppointmentsPerDay
   createdAt: string;
   updatedAt: string;
 }
