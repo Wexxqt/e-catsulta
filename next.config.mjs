@@ -1,10 +1,10 @@
 // filepath: c:\Users\Jomagran\Desktop\e-catsulta\healthcare\next.config.mjs
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   images: {
     remotePatterns: [

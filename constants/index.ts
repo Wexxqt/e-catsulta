@@ -69,6 +69,7 @@ export const Doctors = [
       holidays: Holidays,
       bookingStartDate: "",
       bookingEndDate: "",
+      maxAppointmentsPerDay: 10,
     },
   },
   {
@@ -83,6 +84,7 @@ export const Doctors = [
       holidays: Holidays,
       bookingStartDate: "",
       bookingEndDate: "",
+      maxAppointmentsPerDay: 10,
     },
   },
 ];

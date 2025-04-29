@@ -3,6 +3,7 @@ import "./globals.css";
 import { Bricolage_Grotesque as FontSans } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
+import { ToastProvider } from "@/components/ui/use-toast";
 
 import { cn } from "@/lib/utils";
 
@@ -12,7 +13,8 @@ const fontSans = FontSans({
   variable: "--font-sans",
 });
 
-const description = "An online appointment system designed to make healthcare services at Catanduanes State University Infirmary more accessible and hassle-free. E-Catsulta lets students and employees schedule visits, check doctor availability, and avoid long waits—anytime, anywhere.";
+const description =
+  "An online appointment system designed to make healthcare services at Catanduanes State University Infirmary more accessible and hassle-free. E-Catsulta lets students and employees schedule visits, check doctor availability, and avoid long waits—anytime, anywhere.";
 
 export const metadata: Metadata = {
   title: "E-Catsulta",
@@ -26,7 +28,7 @@ export const metadata: Metadata = {
     "CSU infirmary",
     "student healthcare",
     "medical appointment",
-    "healthcare booking"
+    "healthcare booking",
   ],
   authors: [{ name: "E-Catsulta" }],
   creator: "E-Catsulta",
@@ -67,8 +69,8 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
 };
@@ -83,13 +85,13 @@ export default function RootLayout({
       <body
         className={cn(
           "min-h-screen bg-dark-300 font-sans antialiased",
-          fontSans.variable,
+          fontSans.variable
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="dark">
-          <RealtimeProvider>
-            {children}
-          </RealtimeProvider>
+          <ToastProvider>
+            <RealtimeProvider>{children}</RealtimeProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

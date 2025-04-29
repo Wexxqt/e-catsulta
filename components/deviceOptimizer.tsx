@@ -2,6 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { isLowEndDevice } from "../lib/utils";
+import {
+  databases,
+  DATABASE_ID,
+  APPOINTMENT_COLLECTION_ID,
+  PATIENT_COLLECTION_ID,
+} from "@/lib/appwrite.config";
+import { Query } from "node-appwrite";
+import { revalidatePath } from "next/cache";
 
 interface DeviceOptimizerProps {
   children: React.ReactNode;
@@ -146,11 +154,12 @@ export const clearDoctorAppointmentHistory = async (
 
     // Handle each appointment differently based on patient existence
     const updatePromises = appointments.documents.map(async (appointment) => {
+      const apt = appointment as any;
       try {
         // Check if patient reference exists (handle deleted patients)
         const patientExists =
-          appointment.patient && appointment.patient.$id
-            ? await checkIfPatientExists(appointment.patient.$id)
+          apt.patient && apt.patient.$id
+            ? await checkIfPatientExists(apt.patient.$id)
             : false;
 
         // If patient exists, update the appointment
@@ -158,7 +167,7 @@ export const clearDoctorAppointmentHistory = async (
           return databases.updateDocument(
             DATABASE_ID!,
             APPOINTMENT_COLLECTION_ID!,
-            appointment.$id,
+            apt.$id,
             { archived: true }
           );
         } else {
@@ -168,7 +177,7 @@ export const clearDoctorAppointmentHistory = async (
           return databases.updateDocument(
             DATABASE_ID!,
             APPOINTMENT_COLLECTION_ID!,
-            appointment.$id,
+            apt.$id,
             {
               archived: true,
               // Set patient relationship to null if patient is deleted
@@ -180,14 +189,11 @@ export const clearDoctorAppointmentHistory = async (
           // return databases.deleteDocument(
           //   DATABASE_ID!,
           //   APPOINTMENT_COLLECTION_ID!,
-          //   appointment.$id
+          //   apt.$id
           // );
         }
       } catch (error) {
-        console.error(
-          `Error processing appointment ${appointment.$id}:`,
-          error
-        );
+        console.error(`Error processing appointment ${apt.$id}:`, error);
         return null; // Skip this appointment if there's an error
       }
     });

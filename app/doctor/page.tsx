@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { useToast } from "@/components/ui/use-toast";
 
 import { StatCard } from "@/components/StatCard";
 import { DataTable } from "@/components/table/DataTable";
@@ -171,6 +172,7 @@ const DoctorDashboard = () => {
   const [clearingHistory, setClearingHistory] = useState(false);
 
   const router = useRouter();
+  const { toast } = useToast();
 
   // Function to get doctor ID from name
   const getDoctorIdFromName = (name: string) => {
@@ -566,10 +568,18 @@ const DoctorDashboard = () => {
       broadcastAvailabilityChange(doctor.id, updatedAvailability);
 
       // Success notification
-      alert("Availability settings updated successfully!");
+      toast({
+        title: "Success",
+        description: "Availability settings updated successfully!",
+        variant: "default",
+      });
     } catch (error) {
       console.error("Error saving availability settings:", error);
-      alert("Failed to save availability settings. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to save availability settings. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       // Reset button state
       const saveBtn = document.querySelector(".save-availability-btn");
@@ -639,10 +649,8 @@ const DoctorDashboard = () => {
       if (!doctorName) {
         throw new Error("Doctor not authenticated");
       }
-
       // Store the current uniquePatients before clearing
       const currentPatients = uniquePatients;
-
       // Call to backend to clear/archive appointments for this doctor
       const response = await fetch("/api/appointments/clear", {
         method: "POST",
@@ -655,15 +663,12 @@ const DoctorDashboard = () => {
           preservePatientData: true, // This indicates we want to keep patient data
         }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
           errorData.error || "Failed to clear appointment history"
         );
       }
-
-      // Only update the appointments list, NOT the uniquePatients
       setFilteredAppointments({
         documents: [],
         scheduledCount: 0,
@@ -673,18 +678,21 @@ const DoctorDashboard = () => {
         missedCount: 0,
         totalCount: 0,
       });
-
-      // Also clear all doctor appointments
       setAllDoctorAppointments([]);
-
-      // Fetch patients again to ensure we have the most up-to-date data
       await fetchPatients();
-
       setShowClearHistoryDialog(false);
-      alert("Appointment history cleared successfully!");
+      toast({
+        title: "Success",
+        description: "Appointment history cleared successfully!",
+        variant: "default",
+      });
     } catch (error) {
       console.error("Error clearing appointment history:", error);
-      alert("Failed to clear appointment history. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to clear appointment history. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setClearingHistory(false);
     }
@@ -1115,7 +1123,12 @@ const DoctorDashboard = () => {
                         ...prev,
                         holidays: [...selectedDates],
                       }));
-                      alert("Holidays added to your availability settings!");
+                      toast({
+                        title: "Success",
+                        description:
+                          "Holidays added to your availability settings!",
+                        variant: "default",
+                      });
                     }}
                     className="shad-primary-btn w-full"
                     disabled={selectedDates.length === 0}

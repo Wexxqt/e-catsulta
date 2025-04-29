@@ -1,3 +1,4 @@
+"use client";
 // Adapted from shadcn/ui toast implementation
 import { useState, useEffect, createContext, useContext } from "react";
 
@@ -34,15 +35,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 export function useToast() {
   const context = useContext(ToastContext);
-  
+
   if (!context) {
     // For now, provide a basic implementation that works without the provider
     return {
       toast: (props: ToastProps) => {
         console.log("Toast:", props);
-      }
+      },
     };
   }
-  
+
   return context;
-} 
+}
