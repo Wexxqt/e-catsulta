@@ -75,7 +75,7 @@ export const Doctors = [
   {
     id: "dr-decastro",
     name: "Genevieve S. De Castro",
-    displayName: "Genevieve S. De Castro (Dentist)",
+    displayName: "Genevieve S. De Castro (Dental)",
     image: "/assets/images/dr-decastro.png",
     availability: {
       days: [1, 2, 3, 4, 5],
