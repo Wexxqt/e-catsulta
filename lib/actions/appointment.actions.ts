@@ -20,6 +20,7 @@ import {
 } from "../utils";
 import { Doctors } from "@/constants";
 import { SEMAPHORE_API_KEY, SEMAPHORE_SENDER_ID } from "@/config/semaphore";
+import { count } from "console";
 
 /**
  * Validates and sanitizes appointment data to prevent errors from deleted patients
@@ -362,11 +363,10 @@ export const updateAppointment = async ({
     if (!updatedAppointment) throw Error;
 
     // Create the message
-    const smsMessage = `E-CatSulta. ${
+    const smsMessage =
       type === "schedule"
         ? `Your appointment is on ${formatDateTime(appointment.schedule!, "Asia/Manila").dateTime}. See you!`
-        : `We regret to inform that your appointment for ${formatDateTime(appointment.schedule!, "Asia/Manila").dateTime} is cancelled. Reason: ${appointment.cancellationReason}`
-    }.`;
+        : `We regret to inform that your appointment for ${formatDateTime(appointment.schedule!, "Asia/Manila").dateTime} is cancelled. Reason: ${appointment.cancellationReason}`;
 
     // Try to send notifications
     try {
