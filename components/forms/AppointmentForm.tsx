@@ -15,6 +15,7 @@ import {
 } from "@/lib/actions/appointment.actions";
 import { getAppointmentSchema } from "@/lib/validation";
 import { Appointment } from "@/types/appwrite.types";
+import { useToast } from "@/components/ui/use-toast";
 
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -39,6 +40,7 @@ export const AppointmentForm = ({
   const [isLoading, setIsLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [dateError, setDateError] = useState("");
+  const { toast } = useToast();
 
   const AppointmentFormValidation = getAppointmentSchema(type);
 
@@ -56,11 +58,12 @@ export const AppointmentForm = ({
   });
 
   // Watch for changes in the schedule field
-  const scheduleValue = form.watch('schedule');
+  const scheduleValue = form.watch("schedule");
   useEffect(() => {
     if (scheduleValue) {
       // Check if the date is valid
-      const isValidDate = scheduleValue instanceof Date && !isNaN(scheduleValue.getTime());
+      const isValidDate =
+        scheduleValue instanceof Date && !isNaN(scheduleValue.getTime());
       if (!isValidDate) {
         setDateError("Please select a valid appointment date and time");
       } else {
@@ -78,7 +81,11 @@ export const AppointmentForm = ({
     setBookingError("");
 
     // Double-check date validity
-    if (!values.schedule || !(values.schedule instanceof Date) || isNaN(values.schedule.getTime())) {
+    if (
+      !values.schedule ||
+      !(values.schedule instanceof Date) ||
+      isNaN(values.schedule.getTime())
+    ) {
       setBookingError("Please select a valid appointment date and time");
       setIsLoading(false);
       return;
@@ -135,22 +142,58 @@ export const AppointmentForm = ({
         if (updatedAppointment) {
           setOpen && setOpen(false);
           form.reset();
+
+          // Check for SMS status in the response
+          if (type === "cancel") {
+            // Extract SMS delivery status from response if available
+            const result = updatedAppointment as any;
+
+            if (result.smsStatus) {
+              if (result.smsStatus.success) {
+                toast({
+                  title: "SMS Notification Sent",
+                  description:
+                    "The patient has been notified of the cancellation via SMS.",
+                  variant: "default",
+                });
+              } else {
+                toast({
+                  title: "SMS Notification Failed",
+                  description:
+                    "The SMS notification failed to send. The patient was notified through Appwrite messaging instead.",
+                  variant: "destructive",
+                });
+              }
+            } else {
+              // No SMS status in response
+              toast({
+                title: "Appointment Cancelled",
+                description: "The appointment was cancelled successfully.",
+                variant: "default",
+              });
+            }
+          }
         }
       }
     } catch (error: any) {
       console.log(error);
-      if (error.message?.includes('conflict') || error.code === 409) {
-        setBookingError("This time slot has just been booked by someone else. Please select a different time.");
+      if (error.message?.includes("conflict") || error.code === 409) {
+        setBookingError(
+          "This time slot has just been booked by someone else. Please select a different time."
+        );
       } else {
-        setBookingError("There was an error booking your appointment. Please try again.");
+        setBookingError(
+          "There was an error booking your appointment. Please try again."
+        );
       }
     }
     setIsLoading(false);
   };
 
-  const selectedDate = form.watch('schedule');
-  const selectedDoctor = form.watch('primaryPhysician');
-  const hasRequiredFields = type === 'cancel' || (!!selectedDate && !!selectedDoctor);
+  const selectedDate = form.watch("schedule");
+  const selectedDoctor = form.watch("primaryPhysician");
+  const hasRequiredFields =
+    type === "cancel" || (!!selectedDate && !!selectedDoctor);
 
   let buttonLabel;
   switch (type) {
@@ -208,7 +251,7 @@ export const AppointmentForm = ({
               label="Expected appointment date"
               showTimeSelect
               dateFormat="MM/dd/yyyy  -  h:mm aa"
-              doctorId={form.watch('primaryPhysician')}
+              doctorId={form.watch("primaryPhysician")}
             />
 
             <div
@@ -251,7 +294,7 @@ export const AppointmentForm = ({
             {dateError}
           </div>
         )}
-        
+
         {/* Show booking error message if any */}
         {bookingError && (
           <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">

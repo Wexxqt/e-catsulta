@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2, FileText, User2, CreditCard } from "lucide-react";
+import { Trash2, FileText, User2, CreditCard, Info } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +29,10 @@ import {
   getPatientNotes,
   deletePatientNote,
 } from "@/lib/actions/patient-notes.actions";
-import { getRecentAppointmentList, archiveSingleAppointment } from "@/lib/actions/appointment.actions";
+import {
+  getRecentAppointmentList,
+  archiveSingleAppointment,
+} from "@/lib/actions/appointment.actions";
 
 import { AppointmentModal } from "../AppointmentModal";
 import { StatusBadge } from "../StatusBadge";
@@ -37,6 +40,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { PatientNote } from "@/types/appwrite.types";
 import { Doctors } from "@/constants";
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Extended Appointment type for the patient management view
 interface ExtendedAppointment extends Appointment {
@@ -244,7 +254,7 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
       const appointment = row.original;
       const patient = safePatientAccess(appointment);
       const [archiving, setArchiving] = useState(false);
-      
+
       const handleArchive = async () => {
         try {
           setArchiving(true);
@@ -265,21 +275,46 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
           {appointment.status !== "cancelled" &&
             appointment.status !== "completed" &&
             appointment.status !== "missed" && (
-              <AppointmentModal
-                patientId={patient.$id}
-                userId={appointment.userId}
-                appointment={appointment}
-                type="cancel"
-                buttonVariant="destructive"
-                title="Cancel Appointment"
-                description="Are you sure you want to cancel this appointment?"
-              />
+              <>
+                <AppointmentModal
+                  patientId={patient.$id}
+                  userId={appointment.userId}
+                  appointment={appointment}
+                  type="cancel"
+                  buttonVariant="destructive"
+                  title="Cancel Appointment"
+                  description="Are you sure you want to cancel this appointment?"
+                />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="ml-1 cursor-help text-slate-500 hover:text-slate-700">
+                        <Info size={16} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>
+                        When you cancel an appointment with a reason, the system
+                        will automatically send an SMS notification to the
+                        patient's phone number. If SMS fails, it will fall back
+                        to Appwrite messaging.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
             )}
-            
-          {(appointment.status === "completed" || appointment.status === "missed" || appointment.status === "cancelled") && (
+
+          {(appointment.status === "completed" ||
+            appointment.status === "missed" ||
+            appointment.status === "cancelled") && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                   <span>Archive</span>
                 </Button>
@@ -288,12 +323,13 @@ export const columns: ColumnDef<ExtendedAppointment>[] = [
                 <AlertDialogHeader>
                   <AlertDialogTitle>Archive Appointment</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to archive this appointment? It will be moved to the archived appointments section.
+                    Are you sure you want to archive this appointment? It will
+                    be moved to the archived appointments section.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
+                  <AlertDialogAction
                     onClick={handleArchive}
                     disabled={archiving}
                   >

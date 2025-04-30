@@ -19,6 +19,7 @@ import {
   generateAppointmentCode,
 } from "../utils";
 import { Doctors } from "@/constants";
+import { SEMAPHORE_API_KEY, SEMAPHORE_SENDER_ID } from "@/config/semaphore";
 
 /**
  * Validates and sanitizes appointment data to prevent errors from deleted patients
@@ -185,12 +186,156 @@ export const sendSMSNotification = async (userId: string, content: string) => {
     const message = await messaging.createSms(
       ID.unique(),
       content,
-      [],
-      [userId]
+      [], // Pass empty array for topics
+      [userId] // Pass userId as an array with one element
     );
     return parseStringify(message);
   } catch (error) {
     console.error("An error occurred while sending sms:", error);
+  }
+};
+
+//  SEND SMS VIA SEMAPHORE
+export const sendSemaphoreSMS = async (
+  phoneNumber: string,
+  message: string
+) => {
+  try {
+    console.log("sendSemaphoreSMS called with:", {
+      phoneNumber,
+      messageLength: message.length,
+    });
+    console.log("SEMAPHORE_API_KEY available:", !!SEMAPHORE_API_KEY);
+    console.log("SEMAPHORE_SENDER_ID:", SEMAPHORE_SENDER_ID);
+
+    if (!SEMAPHORE_API_KEY) {
+      console.error("Semaphore API key not configured");
+      return { success: false, error: "Semaphore API key not configured" };
+    }
+
+    // Format the phone number (ensure it starts with '63' for Philippines)
+    let formattedNumber = phoneNumber.trim();
+
+    // Strip out any non-digit characters (spaces, dashes, etc.)
+    formattedNumber = formattedNumber.replace(/\D/g, "");
+
+    // Handle different formats
+    if (formattedNumber.startsWith("+63")) {
+      formattedNumber = formattedNumber.substring(1); // Remove the +
+    } else if (formattedNumber.startsWith("63")) {
+      // Already in correct format
+    } else if (formattedNumber.startsWith("0")) {
+      formattedNumber = "63" + formattedNumber.substring(1);
+    } else if (formattedNumber.length >= 10 && formattedNumber.length <= 12) {
+      // If it's just a 10-12 digit number without prefix, assume Philippines
+      if (formattedNumber.length === 10) {
+        formattedNumber = "63" + formattedNumber;
+      } else if (formattedNumber.length === 11) {
+        // If format is like 09XXXXXXXXX
+        formattedNumber = "63" + formattedNumber.substring(1);
+      }
+      // Else leave as is if it's already 12 digits
+    }
+
+    console.log("Formatted phone number:", formattedNumber);
+
+    // Make sure we have a valid phone number
+    if (formattedNumber.length < 10) {
+      console.error("Invalid phone number format:", phoneNumber);
+      return {
+        success: false,
+        error: `Invalid phone number format: ${phoneNumber}. Must be at least 10 digits.`,
+      };
+    }
+
+    // Prepare request payload
+    const payload = {
+      apikey: SEMAPHORE_API_KEY,
+      number: formattedNumber,
+      message: message,
+      sendername: SEMAPHORE_SENDER_ID,
+    };
+
+    console.log("Sending to Semaphore API with payload:", {
+      ...payload,
+      apikey: SEMAPHORE_API_KEY ? "****" : "missing",
+      messageLength: message.length,
+    });
+
+    // Send the SMS via Semaphore API
+    const response = await fetch("https://api.semaphore.co/api/v4/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await response.text();
+
+    try {
+      // Try to parse the response as JSON
+      const result = JSON.parse(responseText);
+
+      if (!response.ok) {
+        console.error("Semaphore API error:", response.status, responseText);
+        return {
+          success: false,
+          error: `Semaphore API error: ${response.status} - ${responseText}`,
+        };
+      }
+
+      console.log("Semaphore SMS sent successfully:", result);
+      return { success: true, result };
+    } catch (parseError) {
+      // If response is not JSON, return the raw text
+      console.error("Error parsing Semaphore response:", parseError);
+      console.error("Raw response:", responseText);
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Semaphore API error: ${response.status} - ${responseText}`,
+        };
+      }
+
+      // If status was ok but response wasn't JSON, consider it a success
+      if (response.ok) {
+        return { success: true, result: responseText };
+      }
+    }
+
+    return { success: false, error: "Unknown error occurred" };
+  } catch (error) {
+    console.error("Error sending Semaphore SMS:", error);
+    return { success: false, error: String(error) };
+  }
+};
+
+// Handle cancellation notifications via Semaphore
+const sendCancellationNotification = async (
+  userId: string,
+  phoneNumber: string | undefined,
+  message: string
+) => {
+  try {
+    // If phone number is available, try Semaphore first
+    if (phoneNumber) {
+      try {
+        await sendSemaphoreSMS(phoneNumber, message);
+        return true;
+      } catch (semaphoreError) {
+        console.error("Semaphore SMS failed:", semaphoreError);
+        // Fall through to Appwrite messaging
+      }
+    }
+
+    // Use Appwrite messaging as fallback or primary method
+    await messaging.createSms(ID.unique(), message, [], [userId]);
+    return true;
+  } catch (error) {
+    console.error("Failed to send any notification:", error);
+    return false;
   }
 };
 
@@ -203,7 +348,10 @@ export const updateAppointment = async ({
   type,
 }: UpdateAppointmentParams) => {
   try {
-    // Update appointment to scheduled -> https://appwrite.io/docs/references/cloud/server-nodejs/databases#updateDocument
+    // Track the SMS delivery status
+    let smsStatus: { success: boolean; error?: string } | null = null;
+
+    // Update appointment in database
     const updatedAppointment = await databases.updateDocument(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
@@ -213,17 +361,207 @@ export const updateAppointment = async ({
 
     if (!updatedAppointment) throw Error;
 
+    // Create the message
     const smsMessage = `E-CatSulta. ${
       type === "schedule"
         ? `Your appointment is on ${formatDateTime(appointment.schedule!, "Asia/Manila").dateTime}. See you!`
-        : `We regret to inform that your appointment for ${formatDateTime(appointment.schedule!, "Asia/Manila").dateTime} is cancelled. Reason:  ${appointment.cancellationReason}`
+        : `We regret to inform that your appointment for ${formatDateTime(appointment.schedule!, "Asia/Manila").dateTime} is cancelled. Reason: ${appointment.cancellationReason}`
     }.`;
-    await sendSMSNotification(userId, smsMessage);
+
+    // Try to send notifications
+    try {
+      // For cancellations, try to use Semaphore if phone is available
+      if (type === "cancel") {
+        try {
+          // First, get the full appointment data to ensure we have the correct userId
+          const appointmentData = await databases.getDocument(
+            DATABASE_ID!,
+            APPOINTMENT_COLLECTION_ID!,
+            appointmentId
+          );
+
+          // Get the patient userId from the appointment
+          // Cast to any to access the userId field
+          const actualUserId = (appointmentData as any).userId || userId;
+
+          if (actualUserId) {
+            console.log("Looking up patient with ID:", actualUserId);
+
+            // Try to get patient details safely
+            try {
+              const patientDoc = await databases.getDocument(
+                DATABASE_ID!,
+                PATIENT_COLLECTION_ID!,
+                actualUserId
+              );
+
+              // Check if patient has phone and send via Semaphore
+              if (patientDoc && typeof patientDoc === "object") {
+                const phone = (patientDoc as any).phone;
+
+                if (phone) {
+                  console.log("Found patient phone number:", phone);
+                  const result = await sendSemaphoreSMS(phone, smsMessage);
+                  console.log("Semaphore SMS result:", result);
+
+                  // Store the SMS status
+                  smsStatus = result;
+
+                  if (result.success) {
+                    console.log(
+                      "Successfully sent cancellation SMS via Semaphore"
+                    );
+                    revalidatePath("/admin");
+                    return {
+                      ...parseStringify(updatedAppointment),
+                      smsStatus,
+                    };
+                  } else {
+                    console.error("Semaphore SMS failed:", result.error);
+                    // Fall through to Appwrite fallback
+                  }
+                } else {
+                  console.log("Patient has no phone number.");
+                  smsStatus = {
+                    success: false,
+                    error: "Patient has no phone number",
+                  };
+                }
+              }
+            } catch (patientError) {
+              console.error(
+                "Patient document not found:",
+                actualUserId,
+                patientError
+              );
+              smsStatus = {
+                success: false,
+                error: "Patient document not found",
+              };
+
+              // ALTERNATIVE LOOKUP: Try to find patient by querying
+              try {
+                console.log("Trying alternative lookup method...");
+                const patients = await databases.listDocuments(
+                  DATABASE_ID!,
+                  PATIENT_COLLECTION_ID!,
+                  [Query.limit(1)]
+                );
+
+                // Log collection structure to debug
+                if (
+                  patients &&
+                  patients.documents &&
+                  patients.documents.length > 0
+                ) {
+                  console.log(
+                    "Patient collection structure example:",
+                    Object.keys(patients.documents[0]).join(", ")
+                  );
+                }
+
+                // Try to find patient by matching userId
+                const patientsByUserId = await databases.listDocuments(
+                  DATABASE_ID!,
+                  PATIENT_COLLECTION_ID!,
+                  [Query.equal("userId", actualUserId)]
+                );
+
+                if (patientsByUserId.total > 0) {
+                  const foundPatient = patientsByUserId.documents[0];
+                  const phone = (foundPatient as any).phone;
+
+                  if (phone) {
+                    console.log("Found patient by userId query, phone:", phone);
+                    const result = await sendSemaphoreSMS(phone, smsMessage);
+
+                    // Store the SMS status
+                    smsStatus = result;
+
+                    if (result.success) {
+                      console.log(
+                        "Successfully sent cancellation SMS via Semaphore (alternative lookup)"
+                      );
+                      revalidatePath("/admin");
+                      return {
+                        ...parseStringify(updatedAppointment),
+                        smsStatus,
+                      };
+                    }
+                  }
+                } else {
+                  console.log("No patient found with userId:", actualUserId);
+                  smsStatus = {
+                    success: false,
+                    error: "No patient found with that ID",
+                  };
+                }
+              } catch (alternativeError) {
+                console.error(
+                  "Alternative patient lookup failed:",
+                  alternativeError
+                );
+                smsStatus = {
+                  success: false,
+                  error: "Alternative lookup failed",
+                };
+              }
+              // Continue to Appwrite fallback
+            }
+          }
+        } catch (error) {
+          console.error("Error during cancellation notification:", error);
+          smsStatus = {
+            success: false,
+            error: "Error during cancellation notification",
+          };
+          // Continue to Appwrite fallback
+        }
+      }
+
+      // For all other cases or as fallback, use Appwrite messaging
+      try {
+        const messageId = ID.unique();
+        await messaging.createSms(
+          messageId,
+          smsMessage,
+          [], // empty array for topics
+          [userId] // array of user IDs
+        );
+        console.log("Successfully sent notification via Appwrite");
+
+        // If SMS failed but Appwrite succeeded, update the status
+        if (smsStatus && !smsStatus.success) {
+          smsStatus = {
+            success: false,
+            error: "SMS failed, but notification sent via Appwrite messaging",
+          };
+        }
+      } catch (messagingError) {
+        console.error("Failed to send via Appwrite messaging:", messagingError);
+
+        // If both SMS and Appwrite failed
+        if (!smsStatus) {
+          smsStatus = {
+            success: false,
+            error: "Failed to send notification via both SMS and Appwrite",
+          };
+        }
+      }
+    } catch (notificationError) {
+      console.error("All notification attempts failed:", notificationError);
+      smsStatus = { success: false, error: "All notification attempts failed" };
+      // Continue with function even if notification fails
+    }
 
     revalidatePath("/admin");
-    return parseStringify(updatedAppointment);
+    return {
+      ...parseStringify(updatedAppointment),
+      smsStatus,
+    };
   } catch (error) {
-    console.error("An error occurred while scheduling an appointment:", error);
+    console.error("An error occurred while updating appointment:", error);
+    return null;
   }
 };
 
@@ -762,7 +1100,7 @@ export const ensureDoctorSettingsCollection = async () => {
           "doctorId_idx",
           "key",
           ["doctorId"],
-          true
+          []
         );
 
         console.log("Doctor settings collection created successfully");

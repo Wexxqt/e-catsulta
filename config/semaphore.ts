@@ -1,0 +1,4 @@
+export const SEMAPHORE_API_KEY =
+  process.env.SEMAPHORE_API_KEY || process.env.NEXT_PUBLIC_SEMAPHORE_API_KEY;
+export const SEMAPHORE_SENDER_ID =
+  process.env.NEXT_PUBLIC_SEMAPHORE_SENDER_ID || "E-CATSULTA";
