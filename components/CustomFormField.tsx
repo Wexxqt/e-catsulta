@@ -574,7 +574,7 @@ const AppointmentDatePicker = ({
             }
           }}
         >
-          <DialogContent className="sm:max-w-md md:max-w-lg backdrop-blur-lg bg-white/60 dark:bg-zinc-900/60 rounded-2xl shadow-2xl border border-white/20 dark:border-zinc-700/40">
+          <DialogContent className="sm:max-w-md md:max-w-lg backdrop-blur-lg bg-white/60 dark:bg-zinc-900/60 rounded-2xl shadow-2xl border border-white/20 dark:border-zinc-700/40 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Select Appointment Date & Time</DialogTitle>
               <DialogDescription>
@@ -588,83 +588,46 @@ const AppointmentDatePicker = ({
               )}
             </DialogHeader>
 
-            <div className="py-4">
+            <div className="py-4 overflow-y-auto flex justify-center w-full">
               <style jsx global>{`
-                /* Remove the booked-day class that applies red styling to days with any bookings */
+                /* Responsive adjustments for date and time picker */
+                @media (max-width: 640px) {
+                  .react-datepicker {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    width: 100% !important;
+                    max-width: 320px;
+                  }
 
-                /* Style for fully booked days (10 patients reached) */
-                .fully-booked-day,
-                .fully-booked {
-                  background-color: rgba(220, 0, 0, 0.8) !important;
-                  border-radius: 0.2rem;
-                  color: white !important;
-                  font-weight: bold;
-                  text-decoration: line-through;
-                  cursor: not-allowed !important;
+                  .react-datepicker__time-container {
+                    width: 100% !important;
+                    max-width: 280px;
+                    margin-top: 1rem;
+                    border-left: none !important;
+                    border-top: 1px solid #363d36 !important;
+                    padding-top: 1rem;
+                  }
+
+                  .react-datepicker__time-list-container {
+                    width: 100% !important;
+                    display: flex;
+                    justify-content: center;
+                  }
+
+                  .react-datepicker__time-list {
+                    width: auto !important;
+                    max-width: 200px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                  }
+
+                  .react-datepicker__time-list-item {
+                    width: 100%;
+                    text-align: center;
+                  }
                 }
-
-                /* Style for booked time slots in the time picker */
-                .react-datepicker__time-list-item--disabled {
-                  color: #ccc !important;
-                  text-decoration: line-through;
-                }
-
-                /* Add CSS for individual time slots that are booked */
-                .react-datepicker__time-list-item--booked {
-                  background-color: rgba(255, 0, 0, 0.3) !important;
-                  color: white !important;
-                  font-weight: bold;
-                  text-decoration: line-through;
-                  cursor: not-allowed !important;
-                }
-
-                /* Add CSS class for days that have reached the 10 patient limit */
-                ${bookedSlots
-                  .map((slot) => {
-                    const date = new Date(slot.date);
-                    const month = date.getMonth();
-                    const day = date.getDate();
-                    const year = date.getFullYear();
-
-                    // Only apply styling for fully booked days (10 patient limit)
-                    if (slot.count >= 10) {
-                      return `
-                    .react-datepicker__day[aria-label*="${month + 1}/${day}/${year}"] {
-                      background-color: rgba(220, 0, 0, 0.8) !important;
-                      border-radius: 0.2rem;
-                      color: white !important;
-                      font-weight: bold;
-                      text-decoration: line-through;
-                      cursor: not-allowed !important;
-                    }
-                  `;
-                    }
-
-                    // Don't apply special styling for days with some bookings but not fully booked
-                    return "";
-                  })
-                  .join("")}
-
-                /* Style for booked time slots */
-              ${bookedSlots
-                  .flatMap((slot) =>
-                    slot.slots.map((bookedTime) => {
-                      const hours = bookedTime.getHours();
-                      const minutes = bookedTime.getMinutes();
-
-                      // Create a more robust selector
-                      return `
-                    .react-datepicker__time-list-item[aria-disabled="false"]:nth-child(${hours * 2 + (minutes === 30 ? 2 : 1)}) {
-                      background-color: rgba(255, 0, 0, 0.3) !important;
-                      color: white !important;
-                      font-weight: bold;
-                      text-decoration: line-through;
-                      pointer-events: none;
-                    }
-                  `;
-                    })
-                  )
-                  .join("")}
               `}</style>
               <ReactDatePicker
                 selected={tempSelectedDate}
@@ -732,7 +695,7 @@ const AppointmentDatePicker = ({
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 rounded-full bg-red-700 opacity-90 mr-1"></div>
-                <span>Fully Booked (10/day)</span>
+                <span>Fully Booked</span>
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 rounded-full bg-gray-500 mr-1"></div>
@@ -744,8 +707,8 @@ const AppointmentDatePicker = ({
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="mt-4 flex justify-end gap-3">
+            {/* Action buttons - Fixed at bottom */}
+            <div className="sticky bottom-0 mt-4 flex justify-end gap-3 bg-white/60 dark:bg-zinc-900/60 py-4 border-t border-white/20 dark:border-zinc-700/40">
               <Button
                 variant="outline"
                 onClick={() => {
