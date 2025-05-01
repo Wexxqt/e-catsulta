@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar, dateFnsLocalizer } from "react-big-calendar";
 import {
   format,
@@ -298,6 +298,76 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
     }
     return {};
   };
+
+  // Update useEffect that initializes doctor availability:
+  useEffect(() => {
+    if (!doctorId) return;
+
+    // Find doctor by name (the doctorId param is actually the doctor's name)
+    const doctor = Doctors.find((doc) => doc.name === doctorId);
+    if (!doctor) return;
+
+    console.log("Doctor found in AppointmentCalendar:", {
+      name: doctor.name,
+      id: doctor.id,
+    });
+
+    const fetchDoctorAvailability = async () => {
+      try {
+        // Get availability from server
+        const { getDoctorAvailability } = await import(
+          "@/lib/actions/appointment.actions"
+        );
+        const serverAvailability = await getDoctorAvailability(doctor.id);
+
+        // If server has availability, use it; otherwise use default from Doctors constant
+        const doctorAvailability = serverAvailability || doctor.availability;
+
+        const newAvailability = {
+          days: doctorAvailability.days || [1, 2, 3, 4, 5],
+          startTime: doctorAvailability.startTime || 8,
+          endTime: doctorAvailability.endTime || 17,
+          holidays: doctorAvailability.holidays || [],
+          maxAppointmentsPerDay: doctorAvailability.maxAppointmentsPerDay || 10,
+        };
+
+        // Set booking range if present
+        let min = null,
+          max = null;
+        if (doctorAvailability.bookingStartDate)
+          min = new Date(doctorAvailability.bookingStartDate);
+        if (doctorAvailability.bookingEndDate)
+          max = new Date(doctorAvailability.bookingEndDate);
+        setBookingRange({ min, max });
+
+        if (JSON.stringify(availability) !== JSON.stringify(newAvailability)) {
+          setAvailability(newAvailability);
+        }
+
+        if (!dialogOpen && !selectedDate) {
+          setSelectedDate(null);
+          field.onChange(null);
+        }
+
+        generateTimeSlots({ availability: newAvailability });
+      } catch (error) {
+        console.error("Error fetching doctor availability:", error);
+        // Fallback to default availability from Doctors constant
+        const defaultAvailability = doctor.availability;
+        setAvailability({
+          days: defaultAvailability.days || [1, 2, 3, 4, 5],
+          startTime: defaultAvailability.startTime || 8,
+          endTime: defaultAvailability.endTime || 17,
+          holidays: defaultAvailability.holidays || [],
+          maxAppointmentsPerDay:
+            defaultAvailability.maxAppointmentsPerDay || 10,
+        });
+      }
+    };
+
+    fetchDoctorAvailability();
+    fetchBookedAppointments(doctorId);
+  }, [doctorId]);
 
   return (
     <div className="space-y-4">

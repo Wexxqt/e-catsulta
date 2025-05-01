@@ -214,33 +214,7 @@ export function broadcastAvailabilityChange(
       return;
     }
 
-    const previousValue = localStorage.getItem(
-      `doctorAvailability_${actualDoctorId}`
-    );
-    if (previousValue) {
-      try {
-        const previousAvailability = JSON.parse(previousValue);
-        const isEqual =
-          JSON.stringify(previousAvailability) === JSON.stringify(availability);
-        if (isEqual) {
-          // Log but DO NOT return; always sync to database and broadcast
-          console.log(
-            "Availability unchanged in localStorage, but will sync to database and broadcast."
-          );
-        }
-      } catch (err) {
-        // Continue if parsing failed
-        console.error("Error parsing previous availability:", err);
-      }
-    }
-
-    // Always store in localStorage
-    localStorage.setItem(
-      `doctorAvailability_${actualDoctorId}`,
-      JSON.stringify(availability)
-    );
-
-    // Always save to database for persistent storage (will work across all clients)
+    // Save to database for persistent storage (will work across all clients)
     import("./actions/appointment.actions").then(
       ({ saveDoctorAvailability }) => {
         saveDoctorAvailability(actualDoctorId, availability)
@@ -255,7 +229,7 @@ export function broadcastAvailabilityChange(
       }
     );
 
-    // Always broadcast event for immediate real-time updates within the same browser
+    // Broadcast event for immediate real-time updates within the same browser
     try {
       const customEvent = new CustomEvent("availabilityChange", {
         detail: {

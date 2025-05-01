@@ -212,53 +212,60 @@ const AppointmentDatePicker = ({
       id: doctor.id,
     });
 
-    // Important: Use doctor.id (like "dr-abundo") NOT the doctor.name
-    const savedSettings = localStorage.getItem(
-      `doctorAvailability_${doctor.id}`
-    );
-    let doctorAvailability;
-
-    if (savedSettings) {
+    const fetchDoctorAvailability = async () => {
       try {
-        doctorAvailability = JSON.parse(savedSettings);
-        console.log("Found saved availability in localStorage:", {
-          doctorId: doctor.id,
-          hasData: !!doctorAvailability,
-        });
-      } catch (err) {
-        doctorAvailability = doctor.availability;
-      }
-    } else {
-      doctorAvailability = doctor.availability;
-    }
+        // Get availability from server
+        const { getDoctorAvailability } = await import(
+          "@/lib/actions/appointment.actions"
+        );
+        const serverAvailability = await getDoctorAvailability(doctor.id);
 
-    const newAvailability = {
-      days: doctorAvailability.days || [1, 2, 3, 4, 5],
-      startTime: doctorAvailability.startTime || 8,
-      endTime: doctorAvailability.endTime || 17,
-      holidays: doctorAvailability.holidays || [],
-      maxAppointmentsPerDay: doctorAvailability.maxAppointmentsPerDay || 10,
+        // If server has availability, use it; otherwise use default from Doctors constant
+        const doctorAvailability = serverAvailability || doctor.availability;
+
+        const newAvailability = {
+          days: doctorAvailability.days || [1, 2, 3, 4, 5],
+          startTime: doctorAvailability.startTime || 8,
+          endTime: doctorAvailability.endTime || 17,
+          holidays: doctorAvailability.holidays || [],
+          maxAppointmentsPerDay: doctorAvailability.maxAppointmentsPerDay || 10,
+        };
+
+        // Set booking range if present
+        let min = null,
+          max = null;
+        if (doctorAvailability.bookingStartDate)
+          min = new Date(doctorAvailability.bookingStartDate);
+        if (doctorAvailability.bookingEndDate)
+          max = new Date(doctorAvailability.bookingEndDate);
+        setBookingRange({ min, max });
+
+        if (JSON.stringify(availability) !== JSON.stringify(newAvailability)) {
+          setAvailability(newAvailability);
+        }
+
+        if (!dialogOpen && !selectedDate) {
+          setSelectedDate(null);
+          field.onChange(null);
+        }
+
+        generateTimeSlots({ availability: newAvailability });
+      } catch (error) {
+        console.error("Error fetching doctor availability:", error);
+        // Fallback to default availability from Doctors constant
+        const defaultAvailability = doctor.availability;
+        setAvailability({
+          days: defaultAvailability.days || [1, 2, 3, 4, 5],
+          startTime: defaultAvailability.startTime || 8,
+          endTime: defaultAvailability.endTime || 17,
+          holidays: defaultAvailability.holidays || [],
+          maxAppointmentsPerDay:
+            defaultAvailability.maxAppointmentsPerDay || 10,
+        });
+      }
     };
 
-    // Set booking range if present
-    let min = null,
-      max = null;
-    if (doctorAvailability.bookingStartDate)
-      min = new Date(doctorAvailability.bookingStartDate);
-    if (doctorAvailability.bookingEndDate)
-      max = new Date(doctorAvailability.bookingEndDate);
-    setBookingRange({ min, max });
-
-    if (JSON.stringify(availability) !== JSON.stringify(newAvailability)) {
-      setAvailability(newAvailability);
-    }
-
-    if (!dialogOpen && !selectedDate) {
-      setSelectedDate(null);
-      field.onChange(null);
-    }
-
-    generateTimeSlots({ availability: newAvailability });
+    fetchDoctorAvailability();
     fetchBookedAppointments(doctorId);
   }, [doctorId]);
 
