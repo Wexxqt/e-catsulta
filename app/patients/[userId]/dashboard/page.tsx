@@ -21,6 +21,16 @@ import {
   LogOut,
   Eye,
   Clipboard,
+  Key,
+  ShieldCheck,
+  AlertTriangle,
+  Info,
+  Save,
+  RefreshCw,
+  Shield,
+  LockKeyhole,
+  Fingerprint,
+  ArrowLeft,
 } from "lucide-react";
 import ReactDatePicker from "react-datepicker";
 import Image from "next/image";
@@ -106,6 +116,7 @@ import {
   getPatient,
   updatePatientPersonalInfo,
   updatePatientMedical,
+  verifyPatientPasskey,
 } from "@/lib/actions/patient.actions";
 import {
   getPatientAppointments,
@@ -124,6 +135,12 @@ import { logout } from "@/lib/auth.service";
 import { getCurrentUser } from "@/lib/auth.service";
 
 import "react-datepicker/dist/react-datepicker.css";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
 
 // Personal info form schema
 const personalInfoSchema = z.object({
@@ -580,6 +597,35 @@ const PatientDashboard = () => {
 
       {/* Desktop Logout Button */}
       <div className="hidden sm:flex justify-end mb-4">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-primary border-primary hover:bg-primary/10 h-9 mr-2"
+            >
+              <Key className="h-4 w-4 mr-2" />
+              Update Passkey
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="shad-dialog sm:max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 bg-dark-300 border-dark-500">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-16-semibold sm:text-18-bold text-light-200 flex items-center gap-2">
+                <LockKeyhole className="h-5 w-5 text-primary" />
+                Update Your Passkey
+              </DialogTitle>
+              <DialogDescription className="text-gray-500 dark:text-gray-400">
+                Your passkey is required for two-factor authentication
+              </DialogDescription>
+            </DialogHeader>
+
+            <UpdatePasskeyForm
+              patientId={patient.$id}
+              idNumber={patient.identificationNumber}
+            />
+          </DialogContent>
+        </Dialog>
+
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -963,6 +1009,8 @@ const PatientDashboard = () => {
                 </div>
               </div>
             </div>
+
+            <Separator className="bg-dark-500" />
           </div>
         </div>
 
@@ -1845,6 +1893,31 @@ const PatientDashboard = () => {
 
       {/* Sticky Mobile Action Buttons */}
       <div className="dashboard-mobile-fab">
+        {/* Update Passkey Button */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className="dashboard-fab-button bg-blue-500 hover:bg-blue-600">
+              <Key className="h-6 w-6" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="shad-dialog sm:max-w-md max-h-[90vh] overflow-y-auto p-5 sm:p-6 bg-dark-300 border-dark-500">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-16-semibold sm:text-18-bold text-light-200 flex items-center gap-2">
+                <LockKeyhole className="h-5 w-5 text-primary" />
+                Update Your Passkey
+              </DialogTitle>
+              <DialogDescription className="text-gray-500 dark:text-gray-400">
+                Your passkey is required for two-factor authentication
+              </DialogDescription>
+            </DialogHeader>
+
+            <UpdatePasskeyForm
+              patientId={patient.$id}
+              idNumber={patient.identificationNumber}
+            />
+          </DialogContent>
+        </Dialog>
+
         {/* Logout Button */}
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -1883,8 +1956,358 @@ const PatientDashboard = () => {
           <Plus className="h-6 w-6" />
         </Button>
       </div>
+
+      <style jsx global>{`
+        .dashboard-mobile-fab {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          z-index: 50;
+        }
+        @media (min-width: 640px) {
+          .dashboard-mobile-fab {
+            display: none;
+          }
+        }
+      `}</style>
     </div>
   );
 };
+
+interface UpdatePasskeyFormProps {
+  patientId: string;
+  idNumber: string;
+}
+
+function UpdatePasskeyForm({ patientId, idNumber }: UpdatePasskeyFormProps) {
+  const [currentPasskey, setCurrentPasskey] = useState("");
+  const [newPasskey, setNewPasskey] = useState("");
+  const [confirmPasskey, setConfirmPasskey] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [step, setStep] = useState<"verify" | "update">("verify");
+
+  const handleVerifyStep = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    setMessage(null);
+
+    try {
+      // Validate inputs
+      if (!currentPasskey) {
+        setMessage({ type: "error", text: "Current passkey is required" });
+        setIsUpdating(false);
+        return;
+      }
+
+      if (!/^\d{6}$/.test(currentPasskey)) {
+        setMessage({ type: "error", text: "Passkey must be exactly 6 digits" });
+        setIsUpdating(false);
+        return;
+      }
+
+      // Verify the current passkey
+      const isValid = await verifyPatientPasskey(idNumber, currentPasskey);
+      if (!isValid) {
+        setMessage({ type: "error", text: "Current passkey is incorrect" });
+        setIsUpdating(false);
+        return;
+      }
+
+      // Proceed to the update step
+      setStep("update");
+    } catch (error) {
+      console.error("Error verifying passkey:", error);
+      setMessage({
+        type: "error",
+        text: "An error occurred. Please try again.",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    setMessage(null);
+
+    try {
+      // Validate inputs
+      if (!newPasskey || !confirmPasskey) {
+        setMessage({ type: "error", text: "All fields are required" });
+        setIsUpdating(false);
+        return;
+      }
+
+      if (!/^\d{6}$/.test(newPasskey)) {
+        setMessage({
+          type: "error",
+          text: "New passkey must be exactly 6 digits",
+        });
+        setIsUpdating(false);
+        return;
+      }
+
+      if (newPasskey !== confirmPasskey) {
+        setMessage({ type: "error", text: "New passkeys do not match" });
+        setIsUpdating(false);
+        return;
+      }
+
+      // Update to the new passkey
+      const response = await fetch("/api/passkey", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ idNumber, passkey: newPasskey }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ type: "success", text: "Passkey updated successfully!" });
+        // Clear the form
+        setCurrentPasskey("");
+        setNewPasskey("");
+        setConfirmPasskey("");
+        // Reset to verify step after a short delay
+        setTimeout(() => {
+          setStep("verify");
+        }, 3000);
+      } else {
+        setMessage({
+          type: "error",
+          text: result.message || "Failed to update passkey",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating passkey:", error);
+      setMessage({
+        type: "error",
+        text: "An error occurred. Please try again.",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {message && (
+        <div
+          className={`p-3 rounded-md text-sm flex items-start gap-2 ${
+            message.type === "success"
+              ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+              : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+          }`}
+        >
+          {message.type === "success" ? (
+            <Check className="h-4 w-4 mt-0.5" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 mt-0.5" />
+          )}
+          {message.text}
+        </div>
+      )}
+
+      {step === "verify" ? (
+        <form onSubmit={handleVerifyStep} className="space-y-5">
+          <div className="bg-dark-400 rounded-lg p-4 border border-dark-500/50">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Key className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-15-medium text-light-200">
+                Verify Current Passkey
+              </p>
+            </div>
+            <p className="text-13-regular text-dark-600 mb-4">
+              To protect your account, please verify your current passkey before
+              setting a new one.
+            </p>
+
+            <div className="space-y-3">
+              <Label
+                htmlFor="currentPasskey"
+                className="text-gray-300 text-14-medium"
+              >
+                Current Passkey
+              </Label>
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={currentPasskey}
+                  onChange={setCurrentPasskey}
+                  id="currentPasskey"
+                  autoFocus
+                >
+                  <InputOTPGroup>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <InputOTPSlot
+                        key={i}
+                        index={i}
+                        className="border-2 border-dark-500 bg-dark-300 text-light-200"
+                      />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-4">
+              <Info className="h-3 w-3" />
+              You'll need to verify your current passkey before changing it.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="submit"
+              className="w-full bg-primary hover:bg-primary/90"
+              disabled={isUpdating || currentPasskey.length !== 6}
+            >
+              {isUpdating ? (
+                <div className="flex items-center justify-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Verifying...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Verify Passkey</span>
+                </div>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      ) : (
+        <form onSubmit={handleUpdate} className="space-y-5">
+          <div className="bg-dark-400 rounded-lg p-4 border border-dark-500/50">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <LockKeyhole className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-15-medium text-light-200">
+                Create New Passkey
+              </p>
+            </div>
+            <p className="text-13-regular text-dark-600 mb-4">
+              Choose a new 6-digit passkey that will be used for two-factor
+              authentication.
+            </p>
+
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <Label
+                  htmlFor="newPasskey"
+                  className="text-gray-300 text-14-medium"
+                >
+                  New Passkey (6 digits)
+                </Label>
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    value={newPasskey}
+                    onChange={setNewPasskey}
+                    id="newPasskey"
+                    autoFocus
+                  >
+                    <InputOTPGroup>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <InputOTPSlot
+                          key={i}
+                          index={i}
+                          className="border-2 border-dark-500 bg-dark-300 text-light-200"
+                        />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label
+                  htmlFor="confirmPasskey"
+                  className="text-gray-300 text-14-medium"
+                >
+                  Confirm New Passkey
+                </Label>
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    value={confirmPasskey}
+                    onChange={setConfirmPasskey}
+                    id="confirmPasskey"
+                  >
+                    <InputOTPGroup>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <InputOTPSlot
+                          key={i}
+                          index={i}
+                          className="border-2 border-dark-500 bg-dark-300 text-light-200"
+                        />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-4">
+              <Info className="h-3 w-3" />
+              Your passkey must be exactly 6 digits and will be securely hashed.
+            </p>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-dark-500 bg-dark-400 text-light-200 hover:bg-dark-500"
+              onClick={() => setStep("verify")}
+              disabled={isUpdating}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1 bg-primary hover:bg-primary/90"
+              disabled={
+                isUpdating ||
+                newPasskey.length !== 6 ||
+                confirmPasskey.length !== 6
+              }
+            >
+              {isUpdating ? (
+                <div className="flex items-center justify-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Updating...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2">
+                  <Save className="h-4 w-4" />
+                  <span>Update Passkey</span>
+                </div>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      )}
+    </div>
+  );
+}
 
 export default PatientDashboard;

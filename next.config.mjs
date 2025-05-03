@@ -18,6 +18,18 @@ const nextConfig = {
         hostname: "cloud.appwrite.io",
         pathname: "**",
       },
+      {
+        protocol: "https",
+        hostname: "secure.gravatar.com",
+        port: "",
+        pathname: "/avatar/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.googleusercontent.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
   // Add webpack optimization for chunk loading

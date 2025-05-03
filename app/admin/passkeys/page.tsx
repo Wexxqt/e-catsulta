@@ -38,6 +38,25 @@ import {
 } from "@/components/ui/input-otp";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
+import {
+  Settings,
+  Users,
+  Key,
+  Upload,
+  Save,
+  Trash2,
+  Edit,
+  RefreshCw,
+  Lock,
+  ShieldCheck,
+  FileSpreadsheet,
+  Info,
+  AlertTriangle,
+  BarChart,
+  Download,
+  Database,
+  Wand2,
+} from "lucide-react";
 
 export default function PasskeyAdmin() {
   const [idNumber, setIdNumber] = useState("");
@@ -283,69 +302,36 @@ export default function PasskeyAdmin() {
   };
 
   return (
-    <div className="admin-main">
-      <div className="flex-between w-full mb-6">
-        <h1 className="header flex items-center gap-2">
-          <Image
-            src="/assets/icons/lock.svg"
-            height={28}
-            width={28}
-            alt="passkey"
-          />
+    <div className="space-y-6">
+      <div className="flex flex-col space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
           Passkey Management
         </h1>
-        <Button
-          onClick={fetchPasskeys}
-          variant="outline"
-          disabled={loadingPasskeys}
-          className="flex items-center gap-2"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={loadingPasskeys ? "animate-spin" : ""}
-          >
-            <path d="M21 2v6h-6"></path>
-            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
-            <path d="M3 12a9 9 0 0 0 15 6.7L21 16"></path>
-            <path d="M21 22v-6h-6"></path>
-          </svg>
-          {loadingPasskeys ? "Refreshing..." : "Refresh"}
-        </Button>
+        <p className="text-gray-500 dark:text-muted-foreground">
+          Manage secure passkeys for patient authentication
+        </p>
       </div>
 
-      <div className="dashboard-layout w-full mb-8">
-        <div className="dashboard-card">
-          <h2 className="sub-header mb-4 flex items-center gap-2">
-            <Image
-              src="/assets/icons/plus.svg"
-              height={20}
-              width={20}
-              alt="add"
-            />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Add New Passkey */}
+        <div className="bg-white dark:bg-dark-300 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <Key className="h-5 w-5 text-primary" />
             Add New Passkey
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="shad-input-label" htmlFor="idNumber">
+              <label
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                htmlFor="idNumber"
+              >
                 ID Number
               </label>
-              <div className="flex rounded-md border border-dark-500 bg-dark-400">
-                <Image
-                  src="/assets/icons/user.svg"
-                  height={24}
-                  width={24}
-                  alt="id"
-                  className="ml-2"
-                />
+              <div className="mt-1 relative rounded-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Users className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                </div>
                 <Input
                   id="idNumber"
                   type="text"
@@ -354,13 +340,16 @@ export default function PasskeyAdmin() {
                   onChange={(e) => setIdNumber(e.target.value)}
                   maxLength={10}
                   required
-                  className="shad-input border-0"
+                  className="pl-10"
                 />
               </div>
             </div>
 
             <div>
-              <label className="shad-input-label" htmlFor="passkey">
+              <label
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                htmlFor="passkey"
+              >
                 Passkey (6 digits)
               </label>
               <div className="mt-2">
@@ -369,52 +358,35 @@ export default function PasskeyAdmin() {
                   value={passkey}
                   onChange={(value) => setPasskey(value)}
                 >
-                  <InputOTPGroup className="shad-otp">
-                    <InputOTPSlot className="shad-otp-slot" index={0} />
-                    <InputOTPSlot className="shad-otp-slot" index={1} />
-                    <InputOTPSlot className="shad-otp-slot" index={2} />
-                    <InputOTPSlot className="shad-otp-slot" index={3} />
-                    <InputOTPSlot className="shad-otp-slot" index={4} />
-                    <InputOTPSlot className="shad-otp-slot" index={5} />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
                   </InputOTPGroup>
                 </InputOTP>
-                <p className="text-12-regular text-dark-600 mt-1 flex items-center gap-1">
-                  <Image
-                    src="/assets/icons/info.svg"
-                    height={14}
-                    width={14}
-                    alt="info"
-                  />
-                  Must be exactly 6 digits. Will be securely hashed before
-                  storage.
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Must be exactly 6 digits. Will be securely hashed.
                 </p>
               </div>
             </div>
 
             <Button
               type="submit"
-              className="shad-primary-btn w-full"
+              className="w-full bg-primary hover:bg-primary/90"
               disabled={isLoading}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <Image
-                    src="/assets/icons/loader.svg"
-                    alt="loader"
-                    width={20}
-                    height={20}
-                    className="animate-spin"
-                  />
+                  <RefreshCw className="h-4 w-4 animate-spin" />
                   <span>Processing...</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
-                  <Image
-                    src="/assets/icons/save.svg"
-                    alt="save"
-                    width={18}
-                    height={18}
-                  />
+                  <Save className="h-4 w-4" />
                   <span>Add/Update Passkey</span>
                 </div>
               )}
@@ -423,411 +395,262 @@ export default function PasskeyAdmin() {
 
           {message && (
             <div
-              className={`mt-4 p-3 rounded text-sm ${message.startsWith("✅") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+              className={`mt-4 p-3 rounded text-sm ${message.startsWith("✅") ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"}`}
             >
               {message}
             </div>
           )}
         </div>
 
-        <div className="dashboard-card">
-          <h2 className="sub-header mb-4 flex items-center gap-2">
-            <Image
-              src="/assets/icons/upload.svg"
-              height={20}
-              width={20}
-              alt="upload"
-            />
+        {/* Bulk Import */}
+        <div className="bg-white dark:bg-dark-300 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <Upload className="h-5 w-5 text-primary" />
             Bulk Import
           </h2>
 
           <div className="space-y-4">
-            <div>
-              <h3 className="text-16-semibold mb-2 flex items-center gap-2">
-                <Image
-                  src="/assets/icons/database.svg"
-                  height={16}
-                  width={16}
-                  alt="import"
-                />
-                Import Passkeys from CSV File
-              </h3>
-              <p className="text-14-regular text-dark-700 mb-3">
-                Upload a CSV file with ID numbers and passkeys for bulk import.
-                The file must have these column headers: <code>idNumber</code>,{" "}
-                <code>passkey</code>
-              </p>
+            <h3 className="text-base font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4 text-primary" />
+              Import Passkeys from CSV
+            </h3>
 
-              <div className="file-upload mb-4" onClick={handleBrowseClick}>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept=".csv"
-                  disabled={isImporting}
-                />
-                <Image
-                  src="/assets/icons/csv.svg"
-                  height={32}
-                  width={32}
-                  alt="csv"
-                />
-                <div className="file-upload_label">
-                  {importFile ? (
-                    <p>{importFile.name}</p>
-                  ) : (
-                    <>
-                      <p className="text-14-medium">Click to select CSV file</p>
-                      <p className="text-12-regular">or drag and drop</p>
-                    </>
-                  )}
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Upload a CSV file with ID numbers and passkeys for bulk import.
+              Required headers:{" "}
+              <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">
+                idNumber
+              </code>
+              ,{" "}
+              <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">
+                passkey
+              </code>
+            </p>
+
+            <div
+              className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-primary dark:hover:border-primary transition-colors"
+              onClick={handleBrowseClick}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept=".csv"
+                disabled={isImporting}
+              />
+              <FileSpreadsheet className="h-10 w-10 text-gray-400 dark:text-gray-500 mb-2" />
+              <div className="text-center">
+                {importFile ? (
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {importFile.name}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Click to select CSV file
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      or drag and drop
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {importFile && (
+              <div className="space-y-4">
+                {isImporting && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                      <span>Importing passkeys...</span>
+                      <span>{importProgress}%</span>
+                    </div>
+                    <Progress value={importProgress} className="h-2" />
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                    onClick={() => {
+                      setImportFile(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                    disabled={isImporting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 bg-primary hover:bg-primary/90 flex items-center justify-center gap-2"
+                    onClick={handleBulkImport}
+                    disabled={isImporting}
+                  >
+                    {isImporting ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>Importing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        <span>Import Passkeys</span>
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
+            )}
 
-              {importFile && (
-                <div className="space-y-4">
-                  {isImporting && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-12-regular">
-                        <span>Importing passkeys...</span>
-                        <span>{importProgress}%</span>
-                      </div>
-                      <Progress value={importProgress} className="h-2" />
-                    </div>
-                  )}
+            {!importFile && (
+              <Button
+                className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center gap-2"
+                onClick={handleBrowseClick}
+                disabled={isImporting}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                <span>Browse for CSV File</span>
+              </Button>
+            )}
 
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setImportFile(null);
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = "";
-                        }
-                      }}
-                      disabled={isImporting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      className="shad-primary-btn flex-1 flex items-center justify-center gap-2"
-                      onClick={handleBulkImport}
-                      disabled={isImporting}
-                    >
-                      {isImporting ? (
-                        <>
-                          <Image
-                            src="/assets/icons/loader.svg"
-                            alt="loader"
-                            width={20}
-                            height={20}
-                            className="animate-spin"
-                          />
-                          <span>Importing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Image
-                            src="/assets/icons/upload.svg"
-                            alt="import"
-                            width={18}
-                            height={18}
-                          />
-                          <span>Import Passkeys</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {!importFile && (
-                <Button
-                  className="shad-primary-btn w-full flex items-center justify-center gap-2"
-                  onClick={handleBrowseClick}
-                  disabled={isImporting}
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-2">
+                <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                CSV Format Example
+              </h4>
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2 max-h-40 overflow-y-auto">
+                <pre className="text-xs text-gray-700 dark:text-gray-300">
+                  idNumber,passkey
+                  <br />
+                  2023-0001,123456
+                  <br />
+                  EMP-1234,789012
+                  <br />
+                  2022-9876,456789
+                  <br />
+                  ...
+                </pre>
+              </div>
+              <div className="mt-2">
+                <a
+                  href="/assets/sample-passkeys.csv"
+                  download="sample-passkeys.csv"
+                  className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
                 >
-                  <Image
-                    src="/assets/icons/file.svg"
-                    alt="browse"
-                    width={18}
-                    height={18}
-                  />
-                  <span>Browse for CSV File</span>
-                </Button>
-              )}
-
-              <div className="mt-4">
-                <h4 className="text-14-medium flex items-center gap-2 mb-2">
-                  <Image
-                    src="/assets/icons/info.svg"
-                    height={14}
-                    width={14}
-                    alt="info"
-                  />
-                  CSV Format Example
-                </h4>
-                <div className="bg-dark-300 rounded-md max-h-60 overflow-y-auto">
-                  <pre className="text-12-regular text-dark-700">
-                    idNumber,passkey
-                    <br />
-                    2023-0001,123456
-                    <br />
-                    EMP-1234,789012
-                    <br />
-                    2022-9876,456789
-                    <br />
-                    ...
-                  </pre>
-                </div>
-                <div className="mt-3">
-                  <a
-                    href="/assets/sample-passkeys.csv"
-                    download="sample-passkeys.csv"
-                    className="flex items-center gap-2 text-14-medium text-green-500 hover:text-green-400 transition-colors"
-                  >
-                    <Image
-                      src="/assets/icons/download.svg"
-                      height={16}
-                      width={16}
-                      alt="download"
-                    />
-                    Download sample CSV template
-                  </a>
-                </div>
+                  <Download className="h-4 w-4" />
+                  Download sample CSV
+                </a>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="dashboard-card">
-          <h2 className="sub-header mb-4 flex items-center gap-2">
-            <Image
-              src="/assets/icons/settings.svg"
-              height={20}
-              width={20}
-              alt="actions"
-            />
-            Quick Actions
+        {/* Security Information Card */}
+        <div className="bg-white dark:bg-dark-300 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            Security Information
           </h2>
 
           <div className="space-y-4">
-            <div>
-              <h3 className="text-16-semibold mb-2 flex items-center gap-2">
-                <Image
-                  src="/assets/icons/database.svg"
-                  height={16}
-                  width={16}
-                  alt="initialize"
-                />
-                Initialize Test Passkeys
-              </h3>
-              <p className="text-14-regular text-dark-700 mb-3">
-                This will add 5 test passkeys to the database with bcrypt
-                hashing:
-              </p>
-              <ul className="text-12-regular text-dark-600 mb-4 space-y-1">
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/key.svg"
-                    height={12}
-                    width={12}
-                    alt="key"
-                  />
-                  ID: 2023-0456, Passkey: 123456
-                </li>
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/key.svg"
-                    height={12}
-                    width={12}
-                    alt="key"
-                  />
-                  ID: EMP-0123, Passkey: 654321
-                </li>
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/key.svg"
-                    height={12}
-                    width={12}
-                    alt="key"
-                  />
-                  ID: 2023-1234, Passkey: 111111
-                </li>
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/key.svg"
-                    height={12}
-                    width={12}
-                    alt="key"
-                  />
-                  ID: 2022-5678, Passkey: 222222
-                </li>
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/key.svg"
-                    height={12}
-                    width={12}
-                    alt="key"
-                  />
-                  ID: 2021-9012, Passkey: 333333
-                </li>
-              </ul>
-              <Button
-                className="shad-primary-btn w-full"
-                onClick={handleInitDefault}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <Image
-                      src="/assets/icons/loader.svg"
-                      alt="loader"
-                      width={20}
-                      height={20}
-                      className="animate-spin"
-                    />
-                    <span>Processing...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <Image
-                      src="/assets/icons/magic.svg"
-                      alt="initialize"
-                      width={18}
-                      height={18}
-                    />
-                    <span>Initialize Default Test Passkeys</span>
-                  </div>
-                )}
-              </Button>
-            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Passkeys are securely managed and stored in the database with
+              multiple security measures in place:
+            </p>
 
-            <div className="mt-6">
-              <h3 className="text-16-semibold mb-2 flex items-center gap-2">
-                <Image
-                  src="/assets/icons/shield.svg"
-                  height={16}
-                  width={16}
-                  alt="security"
-                />
-                Security Information
-              </h3>
-              <ul className="text-12-regular text-dark-600 space-y-2">
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/check.svg"
-                    height={12}
-                    width={12}
-                    alt="check"
-                  />
-                  Passkeys are hashed using bcrypt with salting
-                </li>
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/check.svg"
-                    height={12}
-                    width={12}
-                    alt="check"
-                  />
-                  Original passkeys are never stored in the database
-                </li>
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/check.svg"
-                    height={12}
-                    width={12}
-                    alt="check"
-                  />
-                  Bcrypt's slow algorithm prevents brute force attacks
-                </li>
-                <li className="flex items-center gap-2">
-                  <Image
-                    src="/assets/icons/check.svg"
-                    height={12}
-                    width={12}
-                    alt="check"
-                  />
-                  Each salt is unique, even for identical passkeys
-                </li>
-              </ul>
+            <ul className="space-y-3 pl-5">
+              <li className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <span>
+                  All passkeys are{" "}
+                  <span className="font-medium">securely hashed</span> using
+                  bcrypt with unique salt values
+                </span>
+              </li>
+              <li className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <span>
+                  Original passkey values are{" "}
+                  <span className="font-medium">never stored</span> in plaintext
+                </span>
+              </li>
+              <li className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <span>
+                  Bcrypt's slow algorithm naturally{" "}
+                  <span className="font-medium">
+                    prevents brute force attacks
+                  </span>
+                </span>
+              </li>
+              <li className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <span>
+                  Each passkey uses a{" "}
+                  <span className="font-medium">unique salt</span>, ensuring
+                  identical passkeys have different hashes
+                </span>
+              </li>
+            </ul>
+
+            <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/20 rounded-md">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  These security measures ensure the confidentiality and
+                  integrity of patient passkeys.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="dashboard-card-full dashboard-card w-full">
-        <h2 className="sub-header mb-4 flex items-center gap-2">
-          <Image
-            src="/assets/icons/table.svg"
-            height={20}
-            width={20}
-            alt="database"
-          />
+      {/* Passkey Database - Full Width */}
+      <div className="bg-white dark:bg-dark-300 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-6">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+          <Database className="h-5 w-5 text-primary" />
           Passkey Database
         </h2>
 
         {errorMessage && (
-          <div className="mb-4 p-3 rounded bg-red-100 text-red-800 text-14-regular flex items-center gap-2">
-            <Image
-              src="/assets/icons/alert.svg"
-              height={16}
-              width={16}
-              alt="error"
-            />
+          <div className="mb-4 p-3 rounded bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
             {errorMessage}
           </div>
         )}
 
         {loadingPasskeys ? (
           <div className="text-center py-8">
-            <Image
-              src="/assets/icons/loader.svg"
-              alt="loader"
-              width={32}
-              height={32}
-              className="mx-auto animate-spin"
-            />
-            <p className="mt-2 text-14-regular text-dark-600">
+            <RefreshCw className="h-8 w-8 mx-auto animate-spin text-primary" />
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Loading passkeys...
             </p>
           </div>
         ) : passkeys.length === 0 ? (
-          <div className="text-center py-8 text-14-regular text-dark-600 flex flex-col items-center gap-2">
-            <Image
-              src="/assets/icons/empty.svg"
-              height={48}
-              width={48}
-              alt="empty"
-            />
-            <p>
-              No passkeys found. Add some passkeys or initialize the default
-              test passkeys.
-            </p>
+          <div className="text-center py-8 text-gray-600 dark:text-gray-400 flex flex-col items-center gap-2">
+            <Database className="h-12 w-12 text-gray-400 dark:text-gray-600" />
+            <p>No passkeys found. Add some passkeys using the form above.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table className="shad-table">
+            <Table>
               <TableCaption>
                 <div className="flex items-center gap-2 justify-center">
-                  <Image
-                    src="/assets/icons/info.svg"
-                    height={14}
-                    width={14}
-                    alt="info"
-                  />
-                  <span>
-                    List of passkeys in the database. The actual passkeys are
-                    securely hashed.
+                  <Info className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Showing all passkeys. The actual passkey values are securely
+                    hashed.
                   </span>
                 </div>
               </TableCaption>
               <TableHeader>
-                <TableRow className="shad-table-row-header">
+                <TableRow>
                   <TableHead>ID Number</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Updated</TableHead>
@@ -836,35 +659,18 @@ export default function PasskeyAdmin() {
               </TableHeader>
               <TableBody>
                 {passkeys.map((passkeyItem) => (
-                  <TableRow key={passkeyItem.$id} className="shad-table-row">
+                  <TableRow key={passkeyItem.$id}>
                     <TableCell className="font-medium flex items-center gap-2">
-                      <Image
-                        src="/assets/icons/user-id.svg"
-                        width={16}
-                        height={16}
-                        alt="ID"
-                      />
+                      <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                       {passkeyItem.idNumber}
                     </TableCell>
-                    <TableCell className="flex items-center gap-2">
-                      <Image
-                        src="/assets/icons/calendar.svg"
-                        width={14}
-                        height={14}
-                        alt="Created"
-                      />
+                    <TableCell className="text-gray-600 dark:text-gray-400">
                       {new Date(passkeyItem.createdAt).toLocaleString()}
                     </TableCell>
-                    <TableCell className="flex items-center gap-2">
-                      <Image
-                        src="/assets/icons/clock.svg"
-                        width={14}
-                        height={14}
-                        alt="Updated"
-                      />
+                    <TableCell className="text-gray-600 dark:text-gray-400">
                       {new Date(passkeyItem.updatedAt).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-right table-actions">
+                    <TableCell className="text-right">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -873,28 +679,18 @@ export default function PasskeyAdmin() {
                           setPasskey("");
                         }}
                         title="Edit"
-                        className="doctor-table-icon"
+                        className="text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800"
                       >
-                        <Image
-                          src="/assets/icons/edit.svg"
-                          width={20}
-                          height={20}
-                          alt="Edit"
-                        />
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => prepareDelete(passkeyItem.$id)}
                         title="Delete"
-                        className="doctor-table-icon text-red-500"
+                        className="text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30"
                       >
-                        <Image
-                          src="/assets/icons/delete.svg"
-                          width={20}
-                          height={20}
-                          alt="Delete"
-                        />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -907,42 +703,25 @@ export default function PasskeyAdmin() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="shad-alert-dialog">
+        <AlertDialogContent className="bg-white dark:bg-dark-300 border-gray-200 dark:border-gray-800">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-18-bold flex items-center gap-2">
-              <Image
-                src="/assets/icons/warning.svg"
-                width={20}
-                height={20}
-                alt="Warning"
-              />
-              Are you sure?
+            <AlertDialogTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Delete this passkey?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-14-regular">
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
               This will permanently delete this passkey. This action cannot be
               undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="flex items-center gap-1 hover:bg-gray-100 hover:border-gray-300 transition-colors">
-              <Image
-                src="/assets/icons/cancel.svg"
-                width={16}
-                height={16}
-                alt="Cancel"
-              />
+            <AlertDialogCancel className="text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="shad-danger-btn flex items-center gap-1"
+              className="bg-red-500 hover:bg-red-600 text-white"
             >
-              <Image
-                src="/assets/icons/delete.svg"
-                width={16}
-                height={16}
-                alt="Delete"
-              />
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -951,30 +730,21 @@ export default function PasskeyAdmin() {
 
       {/* Delete Result Dialog */}
       <Dialog open={showDeleteResult} onOpenChange={setShowDeleteResult}>
-        <DialogContent className="shad-dialog">
+        <DialogContent className="bg-white dark:bg-dark-300 border-gray-200 dark:border-gray-800">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Image
-                src="/assets/icons/info.svg"
-                width={18}
-                height={18}
-                alt="Result"
-              />
+            <DialogTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" />
               Delete Result
             </DialogTitle>
-            <DialogDescription>{deleteResultMessage}</DialogDescription>
+            <DialogDescription className="text-gray-600 dark:text-gray-400">
+              {deleteResultMessage}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               onClick={() => setShowDeleteResult(false)}
-              className="shad-primary-btn flex items-center gap-1"
+              className="bg-primary hover:bg-primary/90"
             >
-              <Image
-                src="/assets/icons/check.svg"
-                width={16}
-                height={16}
-                alt="Ok"
-              />
               OK
             </Button>
           </DialogFooter>
@@ -983,18 +753,13 @@ export default function PasskeyAdmin() {
 
       {/* Import Results Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="shad-dialog max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-white dark:bg-dark-300 border-gray-200 dark:border-gray-800 max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-18-bold flex items-center gap-2">
-              <Image
-                src="/assets/icons/chart.svg"
-                width={20}
-                height={20}
-                alt="Result"
-              />
+            <DialogTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+              <BarChart className="h-5 w-5 text-primary" />
               Import Results
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-gray-600 dark:text-gray-400">
               Summary of the passkey import operation
             </DialogDescription>
           </DialogHeader>
@@ -1002,27 +767,35 @@ export default function PasskeyAdmin() {
           {importResults && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-dark-300 p-3 rounded-md">
-                  <div className="text-14-semibold">Total</div>
-                  <div className="text-24-bold">
+                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Total
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
                     {importResults.results.total}
                   </div>
                 </div>
-                <div className="bg-dark-300 p-3 rounded-md">
-                  <div className="text-14-semibold">Processed</div>
-                  <div className="text-24-bold">
+                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Processed
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
                     {importResults.results.processed}
                   </div>
                 </div>
-                <div className="bg-green-900/30 p-3 rounded-md">
-                  <div className="text-14-semibold">Successful</div>
-                  <div className="text-24-bold text-green-500">
+                <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-md">
+                  <div className="text-sm font-medium text-green-700 dark:text-green-300">
+                    Successful
+                  </div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {importResults.results.successful}
                   </div>
                 </div>
-                <div className="bg-red-900/30 p-3 rounded-md">
-                  <div className="text-14-semibold">Failed</div>
-                  <div className="text-24-bold text-red-500">
+                <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-md">
+                  <div className="text-sm font-medium text-red-700 dark:text-red-300">
+                    Failed
+                  </div>
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                     {importResults.results.failed}
                   </div>
                 </div>
@@ -1030,13 +803,19 @@ export default function PasskeyAdmin() {
 
               {importResults.results.failed > 0 && (
                 <div>
-                  <h3 className="text-16-semibold mb-2">Error Details</h3>
-                  <div className="bg-dark-300 rounded-md max-h-60 overflow-y-auto">
+                  <h3 className="text-base font-medium text-gray-800 dark:text-gray-200 mb-2">
+                    Error Details
+                  </h3>
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden">
                     <table className="w-full">
                       <thead>
-                        <tr className="bg-dark-500 text-14-medium">
-                          <th className="py-2 px-3 text-left">ID Number</th>
-                          <th className="py-2 px-3 text-left">Error</th>
+                        <tr className="bg-gray-200 dark:bg-gray-700 text-sm">
+                          <th className="py-2 px-3 text-left text-gray-700 dark:text-gray-300">
+                            ID Number
+                          </th>
+                          <th className="py-2 px-3 text-left text-gray-700 dark:text-gray-300">
+                            Error
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1044,10 +823,12 @@ export default function PasskeyAdmin() {
                           (error: any, index: number) => (
                             <tr
                               key={index}
-                              className="border-t border-dark-500 text-12-regular"
+                              className="border-t border-gray-300 dark:border-gray-700 text-xs"
                             >
-                              <td className="py-2 px-3">{error.idNumber}</td>
-                              <td className="py-2 px-3 text-red-400">
+                              <td className="py-2 px-3 text-gray-700 dark:text-gray-300">
+                                {error.idNumber}
+                              </td>
+                              <td className="py-2 px-3 text-red-600 dark:text-red-400">
                                 {error.error}
                               </td>
                             </tr>
@@ -1064,7 +845,7 @@ export default function PasskeyAdmin() {
           <DialogFooter>
             <Button
               onClick={() => setShowImportDialog(false)}
-              className="shad-primary-btn"
+              className="bg-primary hover:bg-primary/90"
             >
               Close
             </Button>

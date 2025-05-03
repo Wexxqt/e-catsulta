@@ -17,6 +17,7 @@ import {
   LogOut,
   Moon,
   Sun,
+  Key,
 } from "lucide-react";
 import { decryptKey } from "@/lib/utils";
 import { validatePasskey } from "@/lib/utils/validatePasskey";
@@ -57,6 +58,11 @@ const sidebarNavItems = [
     title: "Doctors",
     href: "/admin/scheduling",
     icon: <ClipboardList className="h-5 w-5" />,
+  },
+  {
+    title: "Passkeys",
+    href: "/admin/passkeys",
+    icon: <Key className="h-5 w-5" />,
   },
 ];
 

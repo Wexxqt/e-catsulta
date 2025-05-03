@@ -9,7 +9,9 @@ import {
   AlertTriangle,
   TrendingUp,
   Activity,
+  Settings,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import AppointmentChart from "@/components/AppointmentChart";
 import { getRecentAppointmentList } from "@/lib/actions/appointment.actions";
