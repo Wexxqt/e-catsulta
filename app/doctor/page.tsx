@@ -194,6 +194,7 @@ const DoctorDashboard = () => {
   const [uniquePatients, setUniquePatients] = useState<{
     [patientId: string]: Appointment;
   }>({});
+  const [patientCategoryFilter, setPatientCategoryFilter] = useState("all");
 
   // Clear history state
   const [showClearHistoryDialog, setShowClearHistoryDialog] = useState(false);
@@ -1787,11 +1788,57 @@ const DoctorDashboard = () => {
               <TabsContent value="patients" className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-semibold">Patient Management</h2>
-                  <Input
-                    placeholder="Search patients..."
-                    className="max-w-xs"
-                    onChange={(e) => setPatientSearch(e.target.value)}
-                  />
+                  <div className="flex items-center gap-3">
+                    <Input
+                      placeholder="Search patients..."
+                      className="max-w-xs"
+                      value={patientSearch}
+                      onChange={(e) => setPatientSearch(e.target.value)}
+                    />
+                    <Select
+                      value={patientCategoryFilter}
+                      onValueChange={setPatientCategoryFilter}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filter by category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="student">Students</SelectItem>
+                        <SelectItem value="employee">Employees</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-600 hover:bg-blue-50"
+                      onClick={() => {
+                        setPatientSearch("");
+                        setPatientCategoryFilter("all");
+                      }}
+                      disabled={
+                        !patientSearch &&
+                        (!patientCategoryFilter ||
+                          patientCategoryFilter === "all")
+                      }
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mr-1"
+                      >
+                        <path d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"></path>
+                      </svg>
+                      Reset Filters
+                    </Button>
+                  </div>
                 </div>
 
                 {loading ? (
@@ -1802,10 +1849,21 @@ const DoctorDashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <h3 className="text-16-medium">
-                      Total Unique Patients:{" "}
-                      {Object.keys(uniquePatients).length}
-                    </h3>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-16-medium">
+                        Total Unique Patients:{" "}
+                        {Object.keys(uniquePatients).length}
+                      </h3>
+                      {patientCategoryFilter !== "all" && (
+                        <div className="bg-blue-100 dark:bg-blue-900/20 px-3 py-1.5 rounded-md text-sm text-blue-700 dark:text-blue-300">
+                          Showing{" "}
+                          {patientCategoryFilter === "student"
+                            ? "Students"
+                            : "Employees"}{" "}
+                          only
+                        </div>
+                      )}
+                    </div>
                     <DataTable
                       columns={columns.filter(
                         (col) =>
@@ -1814,16 +1872,51 @@ const DoctorDashboard = () => {
                             col.accessorKey === "patientDetails")
                       )}
                       data={Object.values(uniquePatients).filter(
-                        (appointment) =>
-                          !patientSearch ||
-                          (appointment.patient?.name &&
-                            appointment.patient.name
-                              .toLowerCase()
-                              .includes(patientSearch.toLowerCase())) ||
-                          (appointment.patient?.email &&
-                            appointment.patient.email
-                              .toLowerCase()
-                              .includes(patientSearch.toLowerCase()))
+                        (appointment) => {
+                          // Apply category filter
+                          if (patientCategoryFilter !== "all") {
+                            const patientCategory =
+                              appointment.patient?.category?.toLowerCase() ||
+                              "";
+                            if (
+                              patientCategoryFilter === "student" &&
+                              !patientCategory.includes("student")
+                            ) {
+                              return false;
+                            }
+                            if (
+                              patientCategoryFilter === "employee" &&
+                              !patientCategory.includes("employee")
+                            ) {
+                              return false;
+                            }
+                          }
+
+                          // Apply search filter
+                          if (!patientSearch) {
+                            return true;
+                          }
+
+                          const searchLower = patientSearch.toLowerCase();
+                          return (
+                            (appointment.patient?.name &&
+                              appointment.patient.name
+                                .toLowerCase()
+                                .includes(searchLower)) ||
+                            (appointment.patient?.email &&
+                              appointment.patient.email
+                                .toLowerCase()
+                                .includes(searchLower)) ||
+                            (appointment.patient?.studentId &&
+                              appointment.patient.studentId
+                                .toLowerCase()
+                                .includes(searchLower)) ||
+                            (appointment.patient?.employeeId &&
+                              appointment.patient.employeeId
+                                .toLowerCase()
+                                .includes(searchLower))
+                          );
+                        }
                       )}
                     />
                   </div>
