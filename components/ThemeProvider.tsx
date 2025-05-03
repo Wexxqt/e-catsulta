@@ -36,12 +36,14 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
     // Only run on client
     if (typeof window !== "undefined") {
       // Check for reduced motion preference
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+
       // Check for data saver mode
       const connection = (navigator as any).connection;
       const prefersReducedData = connection ? connection.saveData : false;
-      
+
       // Set device optimization state
       setDeviceState({
         isLowEndDevice: isLowEndDevice(),
@@ -54,13 +56,13 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       if (isLowEndDevice() || prefersReducedData) {
         // Disable non-essential animations
         document.documentElement.classList.add("reduced-motion");
-        
+
         // Set low-quality images flag
         document.documentElement.classList.add("low-quality-images");
-        
+
         // Reduce UI complexity
         document.documentElement.classList.add("simplified-ui");
-        
+
         console.log("🔧 Performance optimizations applied for low-end device");
       }
     }
@@ -68,7 +70,9 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
 
   return (
     <DeviceContext.Provider value={deviceState}>
-      <NextThemesProvider {...props}>{children}</NextThemesProvider>
+      <NextThemesProvider forcedTheme="dark" {...props}>
+        {children}
+      </NextThemesProvider>
     </DeviceContext.Provider>
   );
 }
