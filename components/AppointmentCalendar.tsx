@@ -887,6 +887,7 @@ const AppointmentCalendar = ({
         </div>
       </div>
 
+      {/* Remove the legend section */}
       {/* Calendar Component */}
       <div className="h-[650px] bg-dark-400 p-4 rounded-lg border border-dark-500 shadow-md">
         {/* Custom styling for the calendar to match dark theme */}
@@ -1192,22 +1193,6 @@ const AppointmentCalendar = ({
             Next
             <ChevronRight className="h-4 w-4" />
           </Button>
-        </div>
-
-        {/* Add a legend to show what the colors mean in the calendar header */}
-        <div className="flex justify-start items-center gap-4 mb-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-[#24AE7C]"></div>
-            <span>Appointments</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-[#E11D48] bg-[repeating-linear-gradient(45deg,rgba(225,29,72,0.1),rgba(225,29,72,0.1)_10px,rgba(0,0,0,0)_10px,rgba(0,0,0,0)_20px)]"></div>
-            <span>Blocked Times</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-[#24AE7C] bg-[repeating-linear-gradient(45deg,rgba(225,29,72,0.1),rgba(225,29,72,0.1)_10px,rgba(0,0,0,0)_10px,rgba(0,0,0,0)_20px)]"></div>
-            <span>Both</span>
-          </div>
         </div>
 
         <Calendar

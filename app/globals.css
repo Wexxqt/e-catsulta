@@ -24,6 +24,27 @@
     /* background: #1e2238; */
     background: transparent;
   }
+
+  /* Dark mode text color defaults */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark body {
+    @apply bg-dark-300 text-light-200;
+  }
+
+  /* Ensure inputs and form elements keep their text color in dark mode */
+  .dark input,
+  .dark select,
+  .dark textarea {
+    @apply text-light-200;
+  }
+
+  /* Fix radix dialog components that might turn black */
+  .dark [data-radix-popper-content-wrapper] * {
+    @apply text-light-200;
+  }
 }
 
 @layer utilities {

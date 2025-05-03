@@ -85,6 +85,13 @@ const config = {
         "collapsible-down": "collapsible-down 0.2s ease-in-out",
         "collapsible-up": "collapsible-up 0.2s ease-in-out",
       },
+      textColor: {
+        dark: {
+          DEFAULT: "#E8E9E9",
+          muted: "#76828D",
+          accent: "#79B5EC",
+        },
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
