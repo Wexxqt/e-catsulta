@@ -114,8 +114,21 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
         return;
       }
 
-      // Validate passkey through API
-      const isValid = await validatePasskeyAPI(passkey, doctorType);
+      // Define fallback passkeys in case API call fails
+      const fallbackPasskeys = {
+        dr_abundo: "000000",
+        dr_decastro: "555555",
+      };
+
+      // First try API validation
+      let isValid = false;
+      try {
+        isValid = await validatePasskeyAPI(passkey, doctorType);
+      } catch (apiError) {
+        console.error("API validation failed, using fallback:", apiError);
+        // If API call fails, use fallback validation
+        isValid = passkey === fallbackPasskeys[doctorType];
+      }
 
       if (isValid) {
         // Store authentication data in localStorage

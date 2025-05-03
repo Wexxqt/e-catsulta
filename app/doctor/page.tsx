@@ -30,7 +30,7 @@ import {
   formatDateTime,
   broadcastAvailabilityChange,
 } from "@/lib/utils";
-import { validatePasskey } from "@/lib/utils/validatePasskey";
+import { validatePasskey as validatePasskeyAPI } from "@/lib/utils/validatePasskey";
 
 // Import the UI components
 import {
@@ -524,7 +524,7 @@ const DoctorDashboard = () => {
       }
 
       // Validate passkey through API
-      const isValid = await validatePasskey(passkey, doctorType);
+      const isValid = await validatePasskeyAPI(passkey, doctorType);
 
       if (isValid) {
         const encryptedKey = encryptKey(passkey);
