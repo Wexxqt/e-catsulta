@@ -70,7 +70,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
 
   return (
     <DeviceContext.Provider value={deviceState}>
-      <NextThemesProvider forcedTheme="dark" {...props}>
+      <NextThemesProvider defaultTheme="dark" {...props}>
         {children}
       </NextThemesProvider>
     </DeviceContext.Provider>
