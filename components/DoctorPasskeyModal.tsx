@@ -35,6 +35,7 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
   const [error, setError] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
 
   // For debugging
   const [debugInfo, setDebugInfo] = useState("");
@@ -88,6 +89,8 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
     }
 
     setIsSubmitting(true);
+    setError("");
+    setDebugInfo("");
 
     try {
       // Determine which doctor type to validate
@@ -104,28 +107,50 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
         return;
       }
 
+      // Log for debugging in production
+      if (debugMode) {
+        setDebugInfo(`Validating ${doctorType} passkey...`);
+      }
+
       // Validate passkey through API
-      const isValid = await validatePasskeyAPI(passkey, doctorType);
+      try {
+        const isValid = await validatePasskeyAPI(passkey, doctorType);
 
-      if (isValid) {
-        const encryptedKey = encryptKey(passkey);
-        localStorage.setItem("doctorAccessKey", encryptedKey);
-        localStorage.setItem("doctorName", selectedDoctor);
+        if (isValid) {
+          const encryptedKey = encryptKey(passkey);
+          localStorage.setItem("doctorAccessKey", encryptedKey);
+          localStorage.setItem("doctorName", selectedDoctor);
 
-        setOpen(false);
+          setOpen(false);
 
-        // Call the onSuccess callback if provided
-        if (onSuccess) {
-          onSuccess();
+          // Call the onSuccess callback if provided
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            // Use router.push as fallback
+            router.push("/doctor");
+          }
         } else {
-          // Use router.push as fallback
-          router.push("/doctor");
+          if (debugMode) {
+            setDebugInfo(`Invalid passkey returned from API (${doctorType})`);
+          }
+          setError("Invalid passkey. Please try again.");
+          setPasskey(""); // Clear the passkey on error
         }
-      } else {
-        setError("Invalid passkey. Please try again.");
-        setPasskey(""); // Clear the passkey on error
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (debugMode) {
+          setDebugInfo(`API error: ${errorMessage}`);
+        }
+        setError("Server error validating passkey. Please try again.");
+        setPasskey("");
       }
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (debugMode) {
+        setDebugInfo(`General error: ${errorMessage}`);
+      }
       setError("An error occurred. Please try again.");
       setPasskey(""); // Clear the passkey on error
     } finally {
@@ -174,7 +199,7 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
           <div className="space-y-2">
             <label
               htmlFor="doctor-select"
-              className="text-sm font-medium text-gray-700"
+              className="text-sm font-medium text-gray-700 dark:text-gray-300"
             ></label>
             <select
               id="doctor-select"
@@ -207,12 +232,30 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
               disabled={!selectedDoctor || isSubmitting}
             >
               <InputOTPGroup className="shad-otp">
-                <InputOTPSlot className="shad-otp-slot" index={0} />
-                <InputOTPSlot className="shad-otp-slot" index={1} />
-                <InputOTPSlot className="shad-otp-slot" index={2} />
-                <InputOTPSlot className="shad-otp-slot" index={3} />
-                <InputOTPSlot className="shad-otp-slot" index={4} />
-                <InputOTPSlot className="shad-otp-slot" index={5} />
+                <InputOTPSlot
+                  className="shad-otp-slot responsiveOtpSlot"
+                  index={0}
+                />
+                <InputOTPSlot
+                  className="shad-otp-slot responsiveOtpSlot"
+                  index={1}
+                />
+                <InputOTPSlot
+                  className="shad-otp-slot responsiveOtpSlot"
+                  index={2}
+                />
+                <InputOTPSlot
+                  className="shad-otp-slot responsiveOtpSlot"
+                  index={3}
+                />
+                <InputOTPSlot
+                  className="shad-otp-slot responsiveOtpSlot"
+                  index={4}
+                />
+                <InputOTPSlot
+                  className="shad-otp-slot responsiveOtpSlot"
+                  index={5}
+                />
               </InputOTPGroup>
             </InputOTP>
 
@@ -221,6 +264,21 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
                 {error}
               </p>
             )}
+
+            {debugInfo && debugMode && (
+              <p className="text-12-regular mt-2 text-blue-500">
+                Debug: {debugInfo}
+              </p>
+            )}
+
+            <div className="mt-3 text-center">
+              <button
+                onClick={() => setDebugMode(!debugMode)}
+                className="text-12-regular text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              >
+                {debugMode ? "Hide Debug" : "Troubleshoot"}
+              </button>
+            </div>
           </div>
         </div>
         <AlertDialogFooter>
