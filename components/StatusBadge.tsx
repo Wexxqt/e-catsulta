@@ -95,7 +95,7 @@ export const StatusBadge = ({ status }: { status: Status }) => {
           "bg-blue-100 border-2 border-blue-400": status === "completed",
           "bg-red-100 border-2 border-red-400": status === "cancelled",
           "bg-amber-100 border-2 border-amber-400": status === "pending",
-          "bg-purple-100 border-2 border-purple-400": status === "missed",
+          "bg-gray-100 border-2 border-gray-400": status === "missed",
         }
       )}
     >
@@ -106,7 +106,7 @@ export const StatusBadge = ({ status }: { status: Status }) => {
           "text-blue-800": status === "completed",
           "text-red-800": status === "cancelled",
           "text-amber-800": status === "pending",
-          "text-purple-800": status === "missed",
+          "text-gray-800": status === "missed",
         })}
       >
         {getStatusLabel()}

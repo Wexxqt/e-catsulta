@@ -8,8 +8,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { redirect } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,33 +26,60 @@ import { validatePasskey } from "@/lib/utils/validatePasskey";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  requiresAuth?: boolean;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  requiresAuth = false,
 }: DataTableProps<TData, TValue>) {
-  const encryptedKey =
-    typeof window !== "undefined"
-      ? window.localStorage.getItem("accessKey")
-      : null;
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(requiresAuth);
 
   useEffect(() => {
-    const checkAccess = async () => {
-      if (encryptedKey) {
-        const decryptedKey = decryptKey(encryptedKey);
-        const isValid = await validatePasskey(decryptedKey, "admin");
+    // Only perform auth check if requiresAuth is true
+    if (requiresAuth) {
+      const checkAccess = async () => {
+        try {
+          const encryptedKey =
+            typeof window !== "undefined"
+              ? window.localStorage.getItem("accessKey")
+              : null;
 
-        if (!isValid) {
-          redirect("/");
+          if (encryptedKey) {
+            const decryptedKey = decryptKey(encryptedKey);
+            const isValid = await validatePasskey(decryptedKey, "admin");
+
+            if (!isValid) {
+              router.push("/");
+            }
+          } else {
+            router.push("/");
+          }
+        } catch (error) {
+          console.error("Authentication error:", error);
+          // Don't redirect on error to prevent unhandled promise rejections
+          // The user can be redirected elsewhere by navigation or timeout
+        } finally {
+          setIsLoading(false);
         }
-      } else {
-        redirect("/");
-      }
-    };
+      };
 
-    checkAccess();
-  }, [encryptedKey]);
+      checkAccess();
+    }
+  }, [requiresAuth, router]);
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="data-table">
+        <div className="p-8 text-center">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const table = useReactTable({
     data,
