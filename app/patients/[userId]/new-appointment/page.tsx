@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { AppointmentForm } from "@/components/forms/AppointmentForm";
 import { getPatient } from "@/lib/actions/patient.actions";
@@ -49,7 +50,3 @@ const Appointment = async ({ params: { userId } }: SearchParamProps) => {
 };
 
 export default Appointment;
-function redirect(arg0: string) {
-  throw new Error("Function not implemented.");
-}
-

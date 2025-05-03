@@ -2,7 +2,7 @@
 
 import { ID, InputFile, Query } from "node-appwrite";
 import { revalidatePath } from "next/cache";
-import bcrypt from 'bcrypt';
+import bcrypt from "bcrypt";
 
 import {
   BUCKET_ID,
@@ -45,7 +45,8 @@ interface RegisterUserParams extends CreateUserParams {
 }
 
 // Define the collection ID for patient notes
-const PATIENT_NOTES_COLLECTION_ID = process.env.PATIENT_NOTES_COLLECTION_ID || "patient_notes";
+const PATIENT_NOTES_COLLECTION_ID =
+  process.env.PATIENT_NOTES_COLLECTION_ID || "patient_notes";
 
 // Constants for passkey collection
 const PASSKEY_COLLECTION_ID = process.env.PASSKEY_COLLECTION_ID || "passkeys";
@@ -97,16 +98,16 @@ export const registerPatient = async (patient: RegisterUserParams) => {
     if (!DATABASE_ID || !PATIENT_COLLECTION_ID) {
       console.error("Missing critical environment variables:", {
         DATABASE_ID: Boolean(DATABASE_ID),
-        PATIENT_COLLECTION_ID: Boolean(PATIENT_COLLECTION_ID)
+        PATIENT_COLLECTION_ID: Boolean(PATIENT_COLLECTION_ID),
       });
       throw new Error("Server configuration error. Please contact support.");
     }
 
     // Create patient in database
     const newPatient = await databases.createDocument(
-          DATABASE_ID!,
-          PATIENT_COLLECTION_ID!,
-          ID.unique(),
+      DATABASE_ID!,
+      PATIENT_COLLECTION_ID!,
+      ID.unique(),
       {
         userId: patient.userId,
         name: patient.name,
@@ -140,17 +141,17 @@ export const registerPatient = async (patient: RegisterUserParams) => {
 // GET PATIENT
 export const getPatient = async (userId: string) => {
   try {
-    console.log('getPatient called with userId:', userId);
-    
+    console.log("getPatient called with userId:", userId);
+
     if (!userId) {
-      console.error('getPatient: No userId provided');
+      console.error("getPatient: No userId provided");
       return null;
     }
 
     if (!DATABASE_ID || !PATIENT_COLLECTION_ID) {
-      console.error('getPatient: Missing database configuration', {
+      console.error("getPatient: Missing database configuration", {
         DATABASE_ID,
-        PATIENT_COLLECTION_ID
+        PATIENT_COLLECTION_ID,
       });
       return null;
     }
@@ -159,39 +160,37 @@ export const getPatient = async (userId: string) => {
     const response = await databases.listDocuments(
       DATABASE_ID,
       PATIENT_COLLECTION_ID,
-      [
-        Query.equal("userId", userId)
-      ]
+      [Query.equal("userId", userId)]
     );
 
-    console.log('getPatient database response:', {
+    console.log("getPatient database response:", {
       total: response.total,
-      documentsFound: response.documents.length
+      documentsFound: response.documents.length,
     });
 
     // For new users, this should return null
     if (!response.documents.length) {
-      console.log('getPatient: No patient found for userId:', userId);
+      console.log("getPatient: No patient found for userId:", userId);
       return null;
     }
 
     const patient = response.documents[0] as Patient;
-    console.log('getPatient: Found patient:', {
+    console.log("getPatient: Found patient:", {
       patientId: patient.$id,
-      userId: patient.userId
+      userId: patient.userId,
     });
 
     return patient;
   } catch (error) {
-    console.error('getPatient error:', error);
+    console.error("getPatient error:", error);
     // Log detailed error information
     if (error instanceof Error) {
-      console.error('Error details:', {
+      console.error("Error details:", {
         message: error.message,
         stack: error.stack,
         userId,
         databaseId: DATABASE_ID,
-        collectionId: PATIENT_COLLECTION_ID
+        collectionId: PATIENT_COLLECTION_ID,
       });
     }
     return null;
@@ -199,17 +198,21 @@ export const getPatient = async (userId: string) => {
 };
 
 // UPDATE PATIENT INFORMATION
-export const updatePatient = async (patientId: string, updatedData: Partial<Patient>) => {
+export const updatePatient = async (
+  patientId: string,
+  updatedData: Partial<Patient>
+) => {
   try {
     if (!DATABASE_ID || !PATIENT_COLLECTION_ID) {
       throw new Error("Database ID or Collection ID is not defined");
     }
 
     // Handle any avatar uploads first if present
-    const hasAvatarUpload = updatedData.avatarDocument && 
-                          typeof updatedData.avatarDocument !== 'string' && 
-                          'get' in updatedData.avatarDocument;
-    
+    const hasAvatarUpload =
+      updatedData.avatarDocument &&
+      typeof updatedData.avatarDocument !== "string" &&
+      "get" in updatedData.avatarDocument;
+
     if (hasAvatarUpload) {
       try {
         const avatarFormData = updatedData.avatarDocument as FormData;
@@ -218,11 +221,11 @@ export const updatePatient = async (patientId: string, updatedData: Partial<Pati
 
         if (fileObject && fileName) {
           // Get existing patient to check for existing avatar
-          const existingPatient = await databases.getDocument(
+          const existingPatient = (await databases.getDocument(
             DATABASE_ID,
             PATIENT_COLLECTION_ID,
             patientId
-          ) as unknown as Patient;
+          )) as unknown as Patient;
 
           // Delete old avatar if it exists
           if (existingPatient.avatarId) {
@@ -237,7 +240,11 @@ export const updatePatient = async (patientId: string, updatedData: Partial<Pati
 
           // Upload new avatar
           const inputFile = InputFile.fromBlob(fileObject, fileName);
-          const file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+          const file = await storage.createFile(
+            BUCKET_ID!,
+            ID.unique(),
+            inputFile
+          );
           const avatarUrl = `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`;
 
           // Add avatar information to update data
@@ -266,7 +273,7 @@ export const updatePatient = async (patientId: string, updatedData: Partial<Pati
     const updatedPatient = await databases.updateDocument(
       DATABASE_ID,
       PATIENT_COLLECTION_ID,
-          patientId,
+      patientId,
       cleanedData
     );
 
@@ -278,7 +285,7 @@ export const updatePatient = async (patientId: string, updatedData: Partial<Pati
   }
 };
 
-// DELETE PATIENT 
+// DELETE PATIENT
 export const deletePatient = async (patientId: string, userId: string) => {
   try {
     if (!patientId) {
@@ -296,13 +303,12 @@ export const deletePatient = async (patientId: string, userId: string) => {
     if ((patient as any).identificationDocumentIds) {
       try {
         // Parse the JSON string to get the array of document IDs
-        const documentIds = JSON.parse((patient as any).identificationDocumentIds);
+        const documentIds = JSON.parse(
+          (patient as any).identificationDocumentIds
+        );
         // Delete each document ID
         for (const docId of documentIds) {
-        await storage.deleteFile(
-          BUCKET_ID!,
-            docId
-        );
+          await storage.deleteFile(BUCKET_ID!, docId);
         }
       } catch (fileError) {
         console.error("Error deleting identification documents:", fileError);
@@ -339,43 +345,41 @@ export const getAllPatients = async ({
 }) => {
   try {
     const queries: any[] = [];
-    
+
     // Add category filter if specified
     if (category) {
       queries.push(Query.equal("category", category));
     }
-    
+
     // Add search query if specified - try a different approach
     if (searchQuery && searchQuery.trim() !== "") {
-      // First try: Instead of using Query.search which might be problematic, 
+      // First try: Instead of using Query.search which might be problematic,
       // let's use Query.startsWith which is more reliable
-      queries.push(
-        Query.startsWith("name", searchQuery.trim())
-      );
-      
+      queries.push(Query.startsWith("name", searchQuery.trim()));
+
       // If this doesn't work as expected, try Query.equal for exact matches
     }
-    
+
     // Add pagination
     const offset = (page - 1) * limit;
     queries.push(Query.limit(limit));
     queries.push(Query.offset(offset));
-    
+
     console.log("Search query params:", { searchQuery, category, page, limit });
     console.log("Executing search with queries:", JSON.stringify(queries));
-    
+
     // Fetch patients from the database
     const patients = await databases.listDocuments(
       DATABASE_ID!,
       PATIENT_COLLECTION_ID!,
       queries
     );
-    
+
     // Count total patients for pagination
     let totalPatients = patients.total;
-    
+
     console.log(`Found ${totalPatients} patients matching criteria`);
-    
+
     return {
       patients: patients.documents,
       totalPatients,
@@ -492,16 +496,21 @@ export async function updatePatientMedical({
     if (bloodType !== undefined) updatedData.bloodType = bloodType;
     if (allergies !== undefined) updatedData.allergies = allergies;
     if (medication !== undefined) updatedData.medication = medication;
-    if (pastMedicalHistory !== undefined) updatedData.pastMedicalHistory = pastMedicalHistory;
+    if (pastMedicalHistory !== undefined)
+      updatedData.pastMedicalHistory = pastMedicalHistory;
     if (familyHistory !== undefined) updatedData.familyHistory = familyHistory;
     if (symptoms !== undefined) updatedData.symptoms = symptoms;
-    if (lifestyleHabits !== undefined) updatedData.lifestyleHabits = lifestyleHabits;
+    if (lifestyleHabits !== undefined)
+      updatedData.lifestyleHabits = lifestyleHabits;
     if (smoker !== undefined) updatedData.smoker = smoker;
-    if (alcoholConsumption !== undefined) updatedData.alcoholConsumption = alcoholConsumption;
+    if (alcoholConsumption !== undefined)
+      updatedData.alcoholConsumption = alcoholConsumption;
     if (height !== undefined) updatedData.height = height;
     if (weight !== undefined) updatedData.weight = weight;
-    if (currentMedication !== undefined) updatedData.currentMedication = currentMedication;
-    if (familyMedicalHistory !== undefined) updatedData.familyMedicalHistory = familyMedicalHistory;
+    if (currentMedication !== undefined)
+      updatedData.currentMedication = currentMedication;
+    if (familyMedicalHistory !== undefined)
+      updatedData.familyMedicalHistory = familyMedicalHistory;
     if (signsSymptoms !== undefined) updatedData.signsSymptoms = signsSymptoms;
 
     // Update the patient document
@@ -531,7 +540,9 @@ export async function updatePatientMedical({
     console.error("Error updating patient medical information:", error);
     return {
       status: "error",
-      message: (error as Error).message || "An error occurred while updating the medical information",
+      message:
+        (error as Error).message ||
+        "An error occurred while updating the medical information",
     };
   }
 }
@@ -544,11 +555,11 @@ export async function updatePatientMedical({
 export const safeDeletePatient = async (patientId: string) => {
   try {
     // Get the patient to access related files
-    const patient = await databases.getDocument(
+    const patient = (await databases.getDocument(
       DATABASE_ID!,
       PATIENT_COLLECTION_ID!,
       patientId
-    ) as unknown as Patient;
+    )) as unknown as Patient;
 
     // Delete avatar if it exists
     if (patient.avatarId) {
@@ -567,8 +578,8 @@ export const safeDeletePatient = async (patientId: string) => {
       PATIENT_COLLECTION_ID!,
       patientId,
       {
-          archived: true,
-        archivedAt: new Date().toISOString()
+        archived: true,
+        archivedAt: new Date().toISOString(),
       }
     );
 
@@ -581,42 +592,45 @@ export const safeDeletePatient = async (patientId: string) => {
 };
 
 // Verify passkey against ID number using Appwrite database
-export const verifyPatientPasskey = async (idNumber: string, passkey: string): Promise<boolean> => {
+export const verifyPatientPasskey = async (
+  idNumber: string,
+  passkey: string
+): Promise<boolean> => {
   try {
     console.log(`Verifying passkey for ID: ${idNumber}`);
-    
+
     if (!DATABASE_ID) {
       throw new Error("Database configuration missing");
     }
-    
+
     // Query the passkey collection for this ID number
     const response = await databases.listDocuments(
       DATABASE_ID,
       PASSKEY_COLLECTION_ID,
       [Query.equal("idNumber", idNumber)]
     );
-    
+
     // If no passkey found for this ID
     if (!response.documents.length) {
       console.log("ID not found in passkey database");
-      
+
       // For development/testing only - allow any 6-digit passkey for IDs not in our database
       // Remove this in production!
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== "production") {
         return passkey.length === 6 && /^\d{6}$/.test(passkey);
       }
-      
+
       return false;
     }
-    
+
     // Get the stored hashed passkey
     const passkeyDoc = response.documents[0] as Passkey;
     const hashedPasskey = passkeyDoc.passkey;
-    
+
     // Use bcrypt.compare to securely compare the provided passkey with the stored hash
     const isValid = await bcrypt.compare(passkey, hashedPasskey);
     console.log(`Passkey validation result: ${isValid}`);
-    
+
     return isValid;
   } catch (error) {
     console.error("Error validating passkey:", error);
@@ -625,47 +639,50 @@ export const verifyPatientPasskey = async (idNumber: string, passkey: string): P
 };
 
 // Add or update a passkey in the database
-export const setPatientPasskey = async (idNumber: string, passkey: string): Promise<boolean> => {
+export const setPatientPasskey = async (
+  idNumber: string,
+  passkey: string
+): Promise<boolean> => {
   try {
     if (!DATABASE_ID) {
       throw new Error("Database configuration missing");
     }
-    
+
     // Validate input
     if (!idNumber || !passkey) {
       throw new Error("ID number and passkey are required");
     }
-    
+
     // Validate passkey format (6 digits)
     if (!/^\d{6}$/.test(passkey)) {
       throw new Error("Passkey must be 6 digits");
     }
-    
+
     // Generate salt and hash the passkey
     const salt = await bcrypt.genSalt(10);
     const hashedPasskey = await bcrypt.hash(passkey, salt);
-    
+
     // Check if a passkey already exists for this ID
     const existingPasskeys = await databases.listDocuments(
       DATABASE_ID,
       PASSKEY_COLLECTION_ID,
       [Query.equal("idNumber", idNumber)]
     );
-    
+
     if (existingPasskeys.documents.length > 0) {
       // Update existing passkey
       const existingDoc = existingPasskeys.documents[0] as Passkey;
-      
+
       await databases.updateDocument(
         DATABASE_ID,
         PASSKEY_COLLECTION_ID,
         existingDoc.$id,
         {
           passkey: hashedPasskey,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         }
       );
-      
+
       console.log(`Updated passkey for ID: ${idNumber}`);
     } else {
       // Create new passkey document
@@ -677,42 +694,44 @@ export const setPatientPasskey = async (idNumber: string, passkey: string): Prom
           idNumber: idNumber,
           passkey: hashedPasskey,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         }
       );
-      
+
       console.log(`Created new passkey for ID: ${idNumber}`);
     }
-    
+
     return true;
   } catch (error) {
     console.error("Error setting passkey:", error);
-    throw new Error(`Failed to set passkey: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to set passkey: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 };
 
 // Initialize default passkeys for testing (use only in development)
 export const initializeDefaultPasskeys = async (): Promise<void> => {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     console.log("Skipping passkey initialization in production");
     return;
   }
-  
+
   try {
     const defaultPasskeys = [
       { idNumber: "2023-0456", passkey: "123456" },
       { idNumber: "EMP-0123", passkey: "654321" },
       { idNumber: "2023-1234", passkey: "111111" },
       { idNumber: "2022-5678", passkey: "222222" },
-      { idNumber: "2021-9012", passkey: "333333" }
+      { idNumber: "2021-9012", passkey: "333333" },
     ];
-    
+
     console.log("Initializing default passkeys for testing...");
-    
+
     for (const entry of defaultPasskeys) {
       await setPatientPasskey(entry.idNumber, entry.passkey);
     }
-    
+
     console.log("Default passkeys initialized successfully");
   } catch (error) {
     console.error("Error initializing default passkeys:", error);

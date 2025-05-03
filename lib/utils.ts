@@ -127,13 +127,24 @@ export function md5(d: string): string {
 export function getGravatarUrl(
   email: string = "",
   size: number = 200,
-  defaultImage: string = "robohash"
+  defaultImage: string = "robohash",
+  uniqueId?: string
 ): string {
   // Trim and lowercase the email if it exists, otherwise use empty string
   const cleanEmail = email ? email.trim().toLowerCase() : "";
 
-  // Generate MD5 hash or use 'default' for empty emails
-  const hash = cleanEmail ? md5(cleanEmail) : "default";
+  // Generate MD5 hash or use unique identifier
+  let hash;
+  if (cleanEmail) {
+    // If email exists, use it for hash
+    hash = md5(cleanEmail);
+  } else if (uniqueId) {
+    // If no email but uniqueId provided, use uniqueId to ensure unique avatars
+    hash = md5(`patient-${uniqueId}`);
+  } else {
+    // Fallback to random seed to prevent identical default avatars
+    hash = md5(`anonymous-${Math.random().toString(36).substring(2, 15)}`);
+  }
 
   // Return the Gravatar URL
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=${defaultImage}`;

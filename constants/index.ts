@@ -55,6 +55,29 @@ export const Holidays = [
   new Date("2025-06-17"), // Eid'l Adha (Feast of Sacrifice)
 ];
 
+export interface Doctor {
+  id: string;
+  name: string;
+  specialty: string;
+  image: string;
+  description: string;
+  availability: {
+    days: number[];
+    startTime: number;
+    endTime: number;
+    holidays: Date[];
+    bookingStartDate?: string;
+    bookingEndDate?: string;
+    maxAppointmentsPerDay?: number;
+    blockedTimeSlots?: Array<{
+      date: string;
+      startTime: string;
+      endTime: string;
+      reason: string;
+    }>;
+  };
+}
+
 // Updated to ensure consistent doctor data structure
 export const Doctors = [
   {
@@ -70,6 +93,7 @@ export const Doctors = [
       bookingStartDate: "",
       bookingEndDate: "",
       maxAppointmentsPerDay: 10,
+      blockedTimeSlots: [],
     },
   },
   {
@@ -85,6 +109,7 @@ export const Doctors = [
       bookingStartDate: "",
       bookingEndDate: "",
       maxAppointmentsPerDay: 10,
+      blockedTimeSlots: [],
     },
   },
 ];

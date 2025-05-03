@@ -27,6 +27,7 @@ import {
 
 import { getAppointmentByCode } from "@/lib/actions/appointment.actions";
 import { formatDateTime, decryptKey } from "@/lib/utils";
+import { validatePasskey } from "@/lib/utils/validatePasskey";
 import { Doctors } from "@/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -44,17 +45,21 @@ const StaffDashboard = () => {
 
   useEffect(() => {
     // Check if user is authenticated
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const encryptedKey =
         typeof window !== "undefined"
           ? window.localStorage.getItem("staffAccessKey")
           : null;
 
-      const hasValidKey =
-        encryptedKey &&
-        decryptKey(encryptedKey) === process.env.NEXT_PUBLIC_STAFF_PASSKEY;
+      if (!encryptedKey) {
+        setAuthenticated(false);
+        return false;
+      }
 
-      if (!hasValidKey) {
+      const decryptedKey = decryptKey(encryptedKey);
+      const isValid = await validatePasskey(decryptedKey, "staff");
+
+      if (!isValid) {
         setAuthenticated(false);
         return false;
       }
@@ -63,14 +68,18 @@ const StaffDashboard = () => {
       return true;
     };
 
-    if (checkAuth()) {
-      // Check if we have a code in the URL from the scanner
-      const code = searchParams.get("code");
-      if (code) {
-        setSearchCode(code);
-        verifyAppointment(code);
+    const initialize = async () => {
+      if (await checkAuth()) {
+        // Check if we have a code in the URL from the scanner
+        const code = searchParams.get("code");
+        if (code) {
+          setSearchCode(code);
+          verifyAppointment(code);
+        }
       }
-    }
+    };
+
+    initialize();
   }, [searchParams]);
 
   const verifyAppointment = async (codeToVerify?: any) => {

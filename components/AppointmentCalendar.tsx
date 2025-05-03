@@ -23,6 +23,8 @@ import { formatDateTime } from "@/lib/utils";
 import { Appointment } from "@/types/appwrite.types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Doctors } from "@/constants";
+import { fetchDoctorAvailability } from "@/lib/api";
 
 // Setup the localizer for the calendar
 const locales = {
@@ -75,6 +77,7 @@ const eventStyleGetter = (event: any) => {
 
 interface AppointmentCalendarProps {
   appointments: Appointment[];
+  doctorId?: string; // Make doctorId optional
 }
 
 // Add a function to generate appointment codes if they don't exist
@@ -120,7 +123,25 @@ const getBorderColorByStatus = (status: string) => {
   }
 };
 
-const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
+// Update the availability state to explicitly include blockedTimeSlots
+type AvailabilityState = {
+  days: number[];
+  startTime: number;
+  endTime: number;
+  holidays: Date[];
+  maxAppointmentsPerDay: number;
+  blockedTimeSlots: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+    reason: string;
+  }>;
+};
+
+const AppointmentCalendar = ({
+  appointments,
+  doctorId: propDoctorId,
+}: AppointmentCalendarProps) => {
   const [selectedEvent, setSelectedEvent] = useState<Appointment | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [dateAppointments, setDateAppointments] = useState<Appointment[]>([]);
@@ -131,6 +152,19 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
     cancelled: true,
     missed: true,
   });
+  const [doctorId, setDoctorId] = useState<string | undefined>(propDoctorId);
+  const [availability, setAvailability] = useState<AvailabilityState>({
+    days: [1, 2, 3, 4, 5],
+    startTime: 8,
+    endTime: 17,
+    holidays: [] as Date[],
+    maxAppointmentsPerDay: 10,
+    blockedTimeSlots: [],
+  });
+  const [bookingRange, setBookingRange] = useState<{
+    min: Date | null;
+    max: Date | null;
+  }>({ min: null, max: null });
 
   // Count appointments by status
   const appointmentCounts = React.useMemo(() => {
@@ -282,21 +316,97 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
     setCurrentDate((prevDate) => addMonths(prevDate, 1));
   };
 
-  // dayPropGetter function to style calendar cells with appointments
+  // Modify the isTimeBlocked function to use the properly typed availability
+  const isTimeBlocked = (date: Date, time: string): boolean => {
+    // Format the date to match our stored format
+    const formattedDate = format(date, "MMM dd, yyyy");
+
+    // Find if any blocked slots match this date
+    const blockedSlotsForDate = availability.blockedTimeSlots.filter(
+      (slot) => slot.date === formattedDate
+    );
+
+    if (blockedSlotsForDate.length === 0) return false;
+
+    // Check if the time falls within any of the blocked ranges
+    return blockedSlotsForDate.some((slot) => {
+      // Convert all times to minutes for easier comparison
+      const timeToMinutes = (timeString: string): number => {
+        const [hours, minutes] = timeString.split(":").map(Number);
+        return hours * 60 + minutes;
+      };
+
+      const startMinutes = timeToMinutes(slot.startTime);
+      const endMinutes = timeToMinutes(slot.endTime);
+      const checkTimeMinutes = timeToMinutes(time);
+
+      return checkTimeMinutes >= startMinutes && checkTimeMinutes < endMinutes;
+    });
+  };
+
+  // Modify the dayPropGetter function to use the properly typed availability
   const dayPropGetter = (date: Date) => {
-    // Check if there are any appointments on this day (regardless of status)
+    // Check for appointments
     const hasAppointments = calendarEvents.some((event) =>
       isSameDay(new Date(event.start), date)
     );
 
-    if (hasAppointments) {
+    // Check for blocked times
+    const formattedDate = format(date, "MMM dd, yyyy");
+    const hasBlockedTimes = availability.blockedTimeSlots.some(
+      (slot) => slot.date === formattedDate
+    );
+
+    if (hasBlockedTimes && hasAppointments) {
+      // Day has both appointments and blocked times
       return {
         style: {
-          border: "2px solid #24AE7C", // Green border for days with appointments
+          border: "2px solid #24AE7C", // Green border for appointments
+          background:
+            "repeating-linear-gradient(45deg, rgba(225, 29, 72, 0.1), rgba(225, 29, 72, 0.1) 10px, rgba(0, 0, 0, 0) 10px, rgba(0, 0, 0, 0) 20px)", // Diagonal stripes for blocked times
+        },
+      };
+    } else if (hasBlockedTimes) {
+      // Day only has blocked times
+      return {
+        style: {
+          border: "2px solid #E11D48", // Red border for blocked times
+          background:
+            "repeating-linear-gradient(45deg, rgba(225, 29, 72, 0.1), rgba(225, 29, 72, 0.1) 10px, rgba(0, 0, 0, 0) 10px, rgba(0, 0, 0, 0) 20px)", // Diagonal stripes for blocked times
+        },
+      };
+    } else if (hasAppointments) {
+      // Day only has appointments
+      return {
+        style: {
+          border: "2px solid #24AE7C", // Green border for appointments
         },
       };
     }
+
     return {};
+  };
+
+  // Get the doctorId from localStorage if not provided as a prop
+  useEffect(() => {
+    if (!propDoctorId) {
+      const storedDoctorName = localStorage.getItem("doctorName");
+      if (storedDoctorName) {
+        setDoctorId(storedDoctorName);
+      }
+    }
+  }, [propDoctorId]);
+
+  // Add stub for generating time slots
+  const generateTimeSlots = ({ availability }: { availability: any }) => {
+    // This is a stub - implement the actual logic if needed
+    console.log("Generating time slots with availability:", availability);
+  };
+
+  // Add stub for fetching booked appointments
+  const fetchBookedAppointments = async (docId: string) => {
+    // This is a stub - implement the actual logic if needed
+    console.log("Fetching booked appointments for doctor:", docId);
   };
 
   // Update useEffect that initializes doctor availability:
@@ -323,12 +433,14 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
         // If server has availability, use it; otherwise use default from Doctors constant
         const doctorAvailability = serverAvailability || doctor.availability;
 
-        const newAvailability = {
+        // Ensure we properly handle the blockedTimeSlots property
+        const newAvailability: AvailabilityState = {
           days: doctorAvailability.days || [1, 2, 3, 4, 5],
           startTime: doctorAvailability.startTime || 8,
           endTime: doctorAvailability.endTime || 17,
           holidays: doctorAvailability.holidays || [],
           maxAppointmentsPerDay: doctorAvailability.maxAppointmentsPerDay || 10,
+          blockedTimeSlots: (doctorAvailability as any).blockedTimeSlots || [],
         };
 
         // Set booking range if present
@@ -340,13 +452,17 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
           max = new Date(doctorAvailability.bookingEndDate);
         setBookingRange({ min, max });
 
-        if (JSON.stringify(availability) !== JSON.stringify(newAvailability)) {
+        // Only update if there's a difference to avoid an infinite loop
+        const currentAvailabilityStr = JSON.stringify(availability);
+        const newAvailabilityStr = JSON.stringify(newAvailability);
+
+        if (currentAvailabilityStr !== newAvailabilityStr) {
           setAvailability(newAvailability);
         }
 
-        if (!dialogOpen && !selectedDate) {
+        // Remove references to dialogOpen and field.onChange
+        if (selectedDate === null) {
           setSelectedDate(null);
-          field.onChange(null);
         }
 
         generateTimeSlots({ availability: newAvailability });
@@ -361,6 +477,8 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
           holidays: defaultAvailability.holidays || [],
           maxAppointmentsPerDay:
             defaultAvailability.maxAppointmentsPerDay || 10,
+          blockedTimeSlots:
+            (defaultAvailability as any)?.blockedTimeSlots || [],
         });
       }
     };
@@ -368,6 +486,94 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
     fetchDoctorAvailability();
     fetchBookedAppointments(doctorId);
   }, [doctorId]);
+
+  // Function to add a new blocked time slot
+  const addBlockedTimeSlot = () => {
+    const dateInput = document.getElementById("block-date") as HTMLInputElement;
+    const startTimeInput = document.getElementById(
+      "block-start-time"
+    ) as HTMLInputElement;
+    const endTimeInput = document.getElementById(
+      "block-end-time"
+    ) as HTMLInputElement;
+    const reasonInput = document.getElementById(
+      "block-reason"
+    ) as HTMLInputElement;
+
+    if (!dateInput.value || !startTimeInput.value || !endTimeInput.value) {
+      alert("Please select a date, start time, and end time");
+      return;
+    }
+
+    // Format the date for display
+    const selectedDate = new Date(dateInput.value);
+    const formattedDate = format(selectedDate, "MMM dd, yyyy");
+
+    const newBlockedSlot = {
+      date: formattedDate,
+      startTime: startTimeInput.value,
+      endTime: endTimeInput.value,
+      reason: reasonInput.value || "",
+    };
+
+    // Add the new blocked slot to the availability
+    const updatedAvailability = {
+      ...availability,
+      blockedTimeSlots: [...availability.blockedTimeSlots, newBlockedSlot],
+    };
+
+    // Update state
+    setAvailability(updatedAvailability);
+
+    // Save to database
+    saveBlockedTimeSlotsToDatabase(updatedAvailability);
+
+    // Clear the form
+    dateInput.value = "";
+    startTimeInput.value = "";
+    endTimeInput.value = "";
+    reasonInput.value = "";
+  };
+
+  // Function to remove a blocked time slot
+  const removeBlockedTimeSlot = (index: number) => {
+    const updatedBlockedSlots = [...availability.blockedTimeSlots];
+    updatedBlockedSlots.splice(index, 1);
+
+    const updatedAvailability = {
+      ...availability,
+      blockedTimeSlots: updatedBlockedSlots,
+    };
+
+    // Update state
+    setAvailability(updatedAvailability);
+
+    // Save to database
+    saveBlockedTimeSlotsToDatabase(updatedAvailability);
+  };
+
+  // Function to save blocked time slots to the database
+  const saveBlockedTimeSlotsToDatabase = async (updatedAvailability: any) => {
+    if (!doctorId) return;
+
+    // Find doctor by name
+    const doctor = Doctors.find((doc) => doc.name === doctorId);
+    if (!doctor) return;
+
+    try {
+      // Get availability from server
+      const { saveDoctorAvailability } = await import(
+        "@/lib/actions/appointment.actions"
+      );
+
+      // Save updated availability
+      await saveDoctorAvailability(doctor.id, updatedAvailability);
+
+      console.log("Blocked time slots saved successfully");
+    } catch (error) {
+      console.error("Error saving blocked time slots:", error);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -769,6 +975,132 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
         </div>
       </div>
 
+      {/* Time Blocking Controls */}
+      <div className="p-5 bg-dark-400 rounded-lg border border-dark-500 shadow-md mb-4">
+        <h3 className="text-lg font-semibold text-white flex items-center mb-4">
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          Block Time Slots
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Date
+            </label>
+            <input
+              type="date"
+              className="w-full rounded-md border-gray-600 bg-dark-300 text-white"
+              id="block-date"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Start Time
+            </label>
+            <input
+              type="time"
+              className="w-full rounded-md border-gray-600 bg-dark-300 text-white"
+              id="block-start-time"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              End Time
+            </label>
+            <input
+              type="time"
+              className="w-full rounded-md border-gray-600 bg-dark-300 text-white"
+              id="block-end-time"
+            />
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Reason (optional)
+          </label>
+          <input
+            type="text"
+            className="w-full rounded-md border-gray-600 bg-dark-300 text-white"
+            id="block-reason"
+            placeholder="e.g., Staff meeting, Conference, Personal time"
+          />
+        </div>
+
+        <Button
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          onClick={addBlockedTimeSlot}
+        >
+          Block This Time Slot
+        </Button>
+
+        {/* Display existing blocked time slots */}
+        {availability.blockedTimeSlots.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-base font-medium text-white mb-2">
+              Currently Blocked Time Slots:
+            </h4>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {availability.blockedTimeSlots.map((slot, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center p-2 bg-dark-300 rounded-md"
+                >
+                  <div>
+                    <span className="font-medium">{slot.date}</span>
+                    <span className="mx-2 text-gray-400">|</span>
+                    <span>
+                      {slot.startTime} - {slot.endTime}
+                    </span>
+                    {slot.reason && (
+                      <p className="text-sm text-gray-400 mt-1">
+                        {slot.reason}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-500 hover:text-red-400"
+                    onClick={() => removeBlockedTimeSlot(index)}
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Calendar Component */}
       <div className="h-[650px] bg-dark-400 p-4 rounded-lg border border-dark-500 shadow-md">
         {/* Custom styling for the calendar to match dark theme */}
@@ -1076,6 +1408,22 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
           </Button>
         </div>
 
+        {/* Add a legend to show what the colors mean in the calendar header */}
+        <div className="flex justify-start items-center gap-4 mb-4 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-[#24AE7C]"></div>
+            <span>Appointments</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-[#E11D48] bg-[repeating-linear-gradient(45deg,rgba(225,29,72,0.1),rgba(225,29,72,0.1)_10px,rgba(0,0,0,0)_10px,rgba(0,0,0,0)_20px)]"></div>
+            <span>Blocked Times</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-[#24AE7C] bg-[repeating-linear-gradient(45deg,rgba(225,29,72,0.1),rgba(225,29,72,0.1)_10px,rgba(0,0,0,0)_10px,rgba(0,0,0,0)_20px)]"></div>
+            <span>Both</span>
+          </div>
+        </div>
+
         <Calendar
           localizer={localizer}
           events={calendarEvents}
@@ -1227,7 +1575,7 @@ const AppointmentCalendar = ({ appointments }: AppointmentCalendarProps) => {
 
       {/* Daily Appointments Dialog - shows all appointments for a selected date */}
       <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto border-2 border-dark-500">
+        <DialogContent className="sm:max-w-[600px] overflow-y-auto bg-white dark:bg-dark-300 text-gray-900 dark:text-white border-gray-200 dark:border-dark-400">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-xl font-bold mb-1">
               {selectedDate ? format(selectedDate, "MMMM d, yyyy") : ""}

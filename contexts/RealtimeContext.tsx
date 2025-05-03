@@ -16,6 +16,9 @@ import {
 } from "@/lib/appwrite-client";
 import { getDoctorAvailability } from "@/lib/actions/appointment.actions";
 
+// Check if we're running in a browser environment
+const isBrowser = typeof window !== "undefined";
+
 interface RealtimeContextType {
   subscribeToAppointments: (callback: (appointment: any) => void) => () => void;
   subscribeToAvailabilityChanges: (
@@ -114,6 +117,27 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       );
+
+      // Check if unsubscribe is actually a Promise (from the enhanced subscribe function)
+      if (unsubscribe instanceof Promise) {
+        // Handle promise-based unsubscribe
+        unsubscribe
+          .then((actualUnsubscribe) => {
+            if (
+              isMounted.current &&
+              activeSubscriptions.current[subscriptionId]
+            ) {
+              // Replace the promise with the actual unsubscribe function
+              safeSetUnsubscribeCallbacks((prev) =>
+                prev.map((fn) => (fn === unsubscribe ? actualUnsubscribe : fn))
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Error setting up appointment subscription:", error);
+            activeSubscriptions.current[subscriptionId] = false;
+          });
+      }
     } catch (error) {
       console.error("Error creating appointment subscription:", error);
       // Return a no-op function if subscription fails
@@ -128,7 +152,14 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
       // Mark subscription as inactive
       activeSubscriptions.current[subscriptionId] = false;
       try {
-        unsubscribe();
+        // Handle both Promise and function cases
+        if (unsubscribe instanceof Promise) {
+          unsubscribe
+            .then((fn) => fn())
+            .catch((e) => console.error("Error calling unsubscribe:", e));
+        } else {
+          unsubscribe();
+        }
       } catch (error) {
         console.error("Error unsubscribing from appointments:", error);
       }
@@ -158,8 +189,9 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
         // If we found availability in the database and component is still mounted
         if (availability && isMounted.current) {
           callback(availability);
-        } else {
+        } else if (isBrowser) {
           // Fallback to localStorage for backwards compatibility during transition
+          // Only try to access localStorage in browser environment
           const currentSettings = localStorage.getItem(
             `doctorAvailability_${doctorId}`
           );
@@ -211,6 +243,27 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       );
+
+      // Check if unsubscribe is actually a Promise (from the enhanced subscribe function)
+      if (unsubscribe instanceof Promise) {
+        // Handle promise-based unsubscribe
+        unsubscribe
+          .then((actualUnsubscribe) => {
+            if (
+              isMounted.current &&
+              activeSubscriptions.current[subscriptionId]
+            ) {
+              // Replace the promise with the actual unsubscribe function
+              safeSetUnsubscribeCallbacks((prev) =>
+                prev.map((fn) => (fn === unsubscribe ? actualUnsubscribe : fn))
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("Error setting up availability subscription:", error);
+            activeSubscriptions.current[subscriptionId] = false;
+          });
+      }
     } catch (error) {
       console.error("Error creating availability subscription:", error);
       // Return a no-op function if subscription fails
@@ -238,24 +291,39 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Add event listener for custom events
-    window.addEventListener(
-      "availabilityChange",
-      handleAvailabilityChange as EventListener
-    );
+    // Add event listener for custom events - only in browser
+    if (isBrowser) {
+      window.addEventListener(
+        "availabilityChange",
+        handleAvailabilityChange as EventListener
+      );
+    }
 
     // Return cleanup function
     return () => {
       // Mark subscription as inactive
       activeSubscriptions.current[subscriptionId] = false;
-      try {
+
+      // Remove custom event listener - only in browser
+      if (isBrowser) {
         window.removeEventListener(
           "availabilityChange",
           handleAvailabilityChange as EventListener
         );
-        unsubscribe();
+      }
+
+      // Call the unsubscribe function from Appwrite
+      try {
+        // Handle both Promise and function cases
+        if (unsubscribe instanceof Promise) {
+          unsubscribe
+            .then((fn) => fn())
+            .catch((e) => console.error("Error calling unsubscribe:", e));
+        } else {
+          unsubscribe();
+        }
       } catch (error) {
-        console.error("Error removing availability event listener:", error);
+        console.error("Error unsubscribing from availability changes:", error);
       }
     };
   };

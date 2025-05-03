@@ -511,7 +511,16 @@ const PatientDetailModal = ({ patient }: { patient: any }) => {
               <div className="flex justify-center mb-4">
                 <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-300">
                   <Image
-                    src={getGravatarUrl(patient.email, 200)}
+                    src={
+                      patient.email
+                        ? getGravatarUrl(patient.email, 200)
+                        : getGravatarUrl(
+                            "",
+                            200,
+                            "robohash",
+                            patient.$id || patient.userId
+                          )
+                    }
                     alt={patient.name}
                     fill
                     className="object-cover"

@@ -26,6 +26,8 @@ export interface Patient extends Models.Document {
   avatarUrl?: string;
   avatarUpdateTimestamp?: string;
   privacyConsent: boolean;
+  archived?: boolean;
+  archivedAt?: string;
 }
 
 export interface Appointment extends Models.Document {
@@ -62,6 +64,7 @@ export interface Passkey extends Models.Document {
 export interface DoctorSettings extends Models.Document {
   doctorId: string;
   availability: string; // JSON stringified availability object, now includes maxAppointmentsPerDay
+  settingsType: string;
   createdAt: string;
   updatedAt: string;
 }

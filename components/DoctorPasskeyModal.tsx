@@ -19,6 +19,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { decryptKey, encryptKey } from "@/lib/utils";
+import { validatePasskey as validatePasskeyAPI } from "@/lib/utils/validatePasskey";
 import { Doctors } from "@/constants";
 
 interface DoctorPasskeyModalProps {
@@ -89,26 +90,24 @@ export const DoctorPasskeyModal = ({ onSuccess }: DoctorPasskeyModalProps) => {
     setIsSubmitting(true);
 
     try {
-      // Get doctor passkey from environment variables
-      let doctorPasskey = "";
+      // Determine which doctor type to validate
+      let doctorType: "dr_abundo" | "dr_decastro";
 
       /* cspell:disable-next-line */
       if (doctor.id === "dr-abundo") {
-        doctorPasskey = process.env.NEXT_PUBLIC_DR_ABUNDO_PASSKEY || "";
+        doctorType = "dr_abundo";
       } else if (doctor.id === "dr-decastro") {
-        doctorPasskey = process.env.NEXT_PUBLIC_DR_DECASTRO_PASSKEY || "";
-      }
-
-      // Fallback to empty string if env variable is not defined
-      if (!doctorPasskey) {
-        console.error(`Passkey not configured for ${doctor.id}`);
-        setError(
-          "Doctor authentication is not properly configured. Please contact administrator."
-        );
+        doctorType = "dr_decastro";
+      } else {
+        setError("Doctor not configured properly.");
+        setIsSubmitting(false);
         return;
       }
 
-      if (passkey === doctorPasskey) {
+      // Validate passkey through API
+      const isValid = await validatePasskeyAPI(passkey, doctorType);
+
+      if (isValid) {
         const encryptedKey = encryptKey(passkey);
         localStorage.setItem("doctorAccessKey", encryptedKey);
         localStorage.setItem("doctorName", selectedDoctor);

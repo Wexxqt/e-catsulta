@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 import { StatCard } from "@/components/StatCard";
 import { DataTable } from "@/components/table/DataTable";
@@ -14,6 +15,8 @@ import { columns } from "@/components/table/doctor-columns";
 import {
   getRecentAppointmentList,
   getDoctorAppointments,
+  getDoctorAvailability,
+  saveDoctorAvailability,
 } from "@/lib/actions/appointment.actions";
 import {
   createPatientNote,
@@ -27,6 +30,7 @@ import {
   formatDateTime,
   broadcastAvailabilityChange,
 } from "@/lib/utils";
+import { validatePasskey } from "@/lib/utils/validatePasskey";
 
 // Import the UI components
 import {
@@ -115,6 +119,28 @@ interface AppointmentListResponse {
   totalCount: number;
 }
 
+interface AvailabilitySettings {
+  days: number[];
+  startTime: number;
+  endTime: number;
+  holidays: Date[];
+  bookingStartDate: string;
+  bookingEndDate: string;
+  maxAppointmentsPerDay: number;
+  blockedTimeSlots: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+    reason: string;
+  }>;
+  newBlockedSlot?: {
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+    reason?: string;
+  };
+}
+
 const DoctorDashboard = () => {
   const [allAppointments, setAllAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] =
@@ -148,15 +174,17 @@ const DoctorDashboard = () => {
 
   // Calendar state
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [availabilitySettings, setAvailabilitySettings] = useState({
-    days: [1, 2, 3, 4, 5],
-    startTime: 8,
-    endTime: 17,
-    holidays: [] as Date[],
-    bookingStartDate: "",
-    bookingEndDate: "",
-    maxAppointmentsPerDay: 10,
-  });
+  const [availabilitySettings, setAvailabilitySettings] =
+    useState<AvailabilitySettings>({
+      days: [1, 2, 3, 4, 5],
+      startTime: 8,
+      endTime: 17,
+      holidays: [],
+      bookingStartDate: "",
+      bookingEndDate: "",
+      maxAppointmentsPerDay: 10,
+      blockedTimeSlots: [],
+    });
 
   // Patient state
   const [patientSearch, setPatientSearch] = useState("");
@@ -225,6 +253,7 @@ const DoctorDashboard = () => {
           bookingEndDate: doctor.availability.bookingEndDate || "",
           maxAppointmentsPerDay:
             doctor.availability.maxAppointmentsPerDay || 10,
+          blockedTimeSlots: doctor.availability.blockedTimeSlots || [],
         });
       } else {
         // Fallback to default availability from the first doctor in the list
@@ -238,6 +267,7 @@ const DoctorDashboard = () => {
           bookingEndDate: defaultDoctor.availability.bookingEndDate || "",
           maxAppointmentsPerDay:
             defaultDoctor.availability.maxAppointmentsPerDay || 10,
+          blockedTimeSlots: defaultDoctor.availability.blockedTimeSlots || [],
         });
       }
     }
@@ -479,27 +509,24 @@ const DoctorDashboard = () => {
     setIsSubmitting(true);
 
     try {
-      // Get doctor passkey from environment variables
-      let doctorPasskey = "";
+      // Determine which doctor type to validate
+      let doctorType: "dr_abundo" | "dr_decastro";
 
       /* cspell:disable-next-line */
       if (doctor.id === "dr-abundo") {
-        doctorPasskey = process.env.NEXT_PUBLIC_DR_ABUNDO_PASSKEY || "";
+        doctorType = "dr_abundo";
       } else if (doctor.id === "dr-decastro") {
-        doctorPasskey = process.env.NEXT_PUBLIC_DR_DECASTRO_PASSKEY || "";
-      }
-
-      // Fallback to empty string if env variable is not defined
-      if (!doctorPasskey) {
-        console.error(`Passkey not configured for ${doctor.id}`);
-        setError(
-          "Doctor authentication is not properly configured. Please contact administrator."
-        );
+        doctorType = "dr_decastro";
+      } else {
+        setError("Doctor not configured properly.");
         setIsSubmitting(false);
         return;
       }
 
-      if (passkey === doctorPasskey) {
+      // Validate passkey through API
+      const isValid = await validatePasskey(passkey, doctorType);
+
+      if (isValid) {
         const encryptedKey = encryptKey(passkey);
         localStorage.setItem("doctorAccessKey", encryptedKey);
         localStorage.setItem("doctorName", selectedDoctor);
@@ -553,9 +580,10 @@ const DoctorDashboard = () => {
         bookingStartDate: availabilitySettings.bookingStartDate,
         bookingEndDate: availabilitySettings.bookingEndDate,
         maxAppointmentsPerDay: availabilitySettings.maxAppointmentsPerDay,
+        blockedTimeSlots: availabilitySettings.blockedTimeSlots || [],
       };
 
-      // Save to localStorage
+      // Save to localStorage for immediate feedback
       localStorage.setItem(
         `doctorAvailability_${doctor.id}`,
         JSON.stringify(updatedAvailability)
@@ -563,6 +591,18 @@ const DoctorDashboard = () => {
 
       // Update the doctor object in memory
       doctor.availability = updatedAvailability;
+
+      // Save to the backend database using the API
+      const result = await saveDoctorAvailability(
+        doctor.id,
+        updatedAvailability
+      );
+
+      if (!result.success) {
+        throw new Error(
+          result.error || "Failed to save availability to database"
+        );
+      }
 
       // Broadcast the availability change for real-time updates
       broadcastAvailabilityChange(doctor.id, updatedAvailability);
@@ -592,47 +632,91 @@ const DoctorDashboard = () => {
 
   // Add a useEffect to load saved availability settings from localStorage
   useEffect(() => {
-    const loadSavedAvailability = () => {
+    const loadSavedAvailability = async () => {
       const doctorName = localStorage.getItem("doctorName");
       if (!doctorName) return;
 
       const doctor = Doctors.find((doc) => doc.name === doctorName);
       if (!doctor) return;
 
-      // Check for saved settings in localStorage
-      const savedSettings = localStorage.getItem(
-        `doctorAvailability_${doctor.id}`
-      );
-      if (savedSettings) {
-        try {
-          const parsedSettings = JSON.parse(savedSettings);
+      try {
+        // First try to get availability from the backend database
+        const dbAvailability = await getDoctorAvailability(doctor.id);
+
+        if (dbAvailability) {
+          // Use the database settings if available
           setAvailabilitySettings({
-            days: parsedSettings.days || [1, 2, 3, 4, 5],
-            startTime: parsedSettings.startTime || 8,
-            endTime: parsedSettings.endTime || 17,
-            holidays: parsedSettings.holidays || [],
-            bookingStartDate: parsedSettings.bookingStartDate || "",
-            bookingEndDate: parsedSettings.bookingEndDate || "",
-            maxAppointmentsPerDay: parsedSettings.maxAppointmentsPerDay || 10,
+            days: dbAvailability.days || [1, 2, 3, 4, 5],
+            startTime: dbAvailability.startTime || 8,
+            endTime: dbAvailability.endTime || 17,
+            holidays: dbAvailability.holidays || [],
+            bookingStartDate: dbAvailability.bookingStartDate || "",
+            bookingEndDate: dbAvailability.bookingEndDate || "",
+            maxAppointmentsPerDay: dbAvailability.maxAppointmentsPerDay || 10,
+            blockedTimeSlots: dbAvailability.blockedTimeSlots || [],
           });
 
           // Also update the doctor object with these settings
-          doctor.availability = parsedSettings;
-        } catch (err) {
-          console.error("Error parsing saved availability settings:", err);
+          doctor.availability = dbAvailability;
+
+          // Save to localStorage as a backup
+          localStorage.setItem(
+            `doctorAvailability_${doctor.id}`,
+            JSON.stringify(dbAvailability)
+          );
+
+          console.log("Loaded doctor availability from database");
+          return;
         }
-      } else if (doctor.availability) {
-        // Use the doctor's default availability from constants
-        setAvailabilitySettings({
-          days: doctor.availability.days,
-          startTime: doctor.availability.startTime,
-          endTime: doctor.availability.endTime,
-          holidays: doctor.availability.holidays || [],
-          bookingStartDate: doctor.availability.bookingStartDate || "",
-          bookingEndDate: doctor.availability.bookingEndDate || "",
-          maxAppointmentsPerDay:
-            doctor.availability.maxAppointmentsPerDay || 10,
-        });
+
+        // If no database settings, check for saved settings in localStorage
+        const savedSettings = localStorage.getItem(
+          `doctorAvailability_${doctor.id}`
+        );
+
+        if (savedSettings) {
+          try {
+            const parsedSettings = JSON.parse(savedSettings);
+            setAvailabilitySettings({
+              days: parsedSettings.days || [1, 2, 3, 4, 5],
+              startTime: parsedSettings.startTime || 8,
+              endTime: parsedSettings.endTime || 17,
+              holidays: parsedSettings.holidays || [],
+              bookingStartDate: parsedSettings.bookingStartDate || "",
+              bookingEndDate: parsedSettings.bookingEndDate || "",
+              maxAppointmentsPerDay: parsedSettings.maxAppointmentsPerDay || 10,
+              blockedTimeSlots: parsedSettings.blockedTimeSlots || [],
+            });
+
+            // Also update the doctor object with these settings
+            doctor.availability = parsedSettings;
+
+            // Save to database for future use
+            await saveDoctorAvailability(doctor.id, parsedSettings);
+            console.log("Saved local availability to database");
+          } catch (err) {
+            console.error("Error parsing saved availability settings:", err);
+          }
+        } else if (doctor.availability) {
+          // Use the doctor's default availability from constants
+          setAvailabilitySettings({
+            days: doctor.availability.days,
+            startTime: doctor.availability.startTime,
+            endTime: doctor.availability.endTime,
+            holidays: doctor.availability.holidays || [],
+            bookingStartDate: doctor.availability.bookingStartDate || "",
+            bookingEndDate: doctor.availability.bookingEndDate || "",
+            maxAppointmentsPerDay:
+              doctor.availability.maxAppointmentsPerDay || 10,
+            blockedTimeSlots: doctor.availability.blockedTimeSlots || [],
+          });
+
+          // Save default settings to database for future use
+          await saveDoctorAvailability(doctor.id, doctor.availability);
+          console.log("Saved default availability to database");
+        }
+      } catch (error) {
+        console.error("Error loading doctor availability:", error);
       }
     };
 
@@ -899,34 +983,43 @@ const DoctorDashboard = () => {
                   <h4 className="text-16-medium">Working Days</h4>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      "Sunday",
-                      "Monday",
-                      "Tuesday",
-                      "Wednesday",
-                      "Thursday",
-                      "Friday",
-                      "Saturday",
-                    ].map((day, index) => (
-                      <div key={day} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`day-${index}`}
-                          checked={availabilitySettings.days.includes(index)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setAvailabilitySettings((prev) => ({
-                                ...prev,
-                                days: [...prev.days, index].sort(),
-                              }));
-                            } else {
-                              setAvailabilitySettings((prev) => ({
-                                ...prev,
-                                days: prev.days.filter((d) => d !== index),
-                              }));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`day-${index}`}>{day}</Label>
-                      </div>
+                      { day: 0, label: "Sun" },
+                      { day: 1, label: "Mon" },
+                      { day: 2, label: "Tue" },
+                      { day: 3, label: "Wed" },
+                      { day: 4, label: "Thu" },
+                      { day: 5, label: "Fri" },
+                      { day: 6, label: "Sat" },
+                    ].map(({ day, label }) => (
+                      <Button
+                        key={day}
+                        type="button"
+                        variant={
+                          availabilitySettings.days.includes(day)
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        className={cn(
+                          "h-9",
+                          availabilitySettings.days.includes(day)
+                            ? "bg-gray-900 text-white dark:bg-gray-200 dark:text-gray-900"
+                            : "bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white"
+                        )}
+                        onClick={() => {
+                          const newDays = availabilitySettings.days.includes(
+                            day
+                          )
+                            ? availabilitySettings.days.filter((d) => d !== day)
+                            : [...availabilitySettings.days, day].sort();
+                          setAvailabilitySettings({
+                            ...availabilitySettings,
+                            days: newDays,
+                          });
+                        }}
+                      >
+                        {label}
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -943,21 +1036,23 @@ const DoctorDashboard = () => {
                         }));
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white">
                         <SelectValue placeholder="Select start time" />
                       </SelectTrigger>
                       <SelectContent>
-                        {[...Array(24)].map((_, i) => (
-                          <SelectItem key={i} value={i.toString()}>
-                            {i === 0
-                              ? "12:00 AM"
-                              : i < 12
-                                ? `${i}:00 AM`
-                                : i === 12
-                                  ? "12:00 PM"
-                                  : `${i - 12}:00 PM`}
-                          </SelectItem>
-                        ))}
+                        {Array.from({ length: 13 }, (_, i) => i + 7).map(
+                          (hour) => (
+                            <SelectItem key={hour} value={hour.toString()}>
+                              {hour === 0
+                                ? "12:00 AM"
+                                : hour < 12
+                                  ? `${hour}:00 AM`
+                                  : hour === 12
+                                    ? "12:00 PM"
+                                    : `${hour - 12}:00 PM`}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -973,21 +1068,23 @@ const DoctorDashboard = () => {
                         }));
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white">
                         <SelectValue placeholder="Select end time" />
                       </SelectTrigger>
                       <SelectContent>
-                        {[...Array(24)].map((_, i) => (
-                          <SelectItem key={i} value={i.toString()}>
-                            {i === 0
-                              ? "12:00 AM"
-                              : i < 12
-                                ? `${i}:00 AM`
-                                : i === 12
-                                  ? "12:00 PM"
-                                  : `${i - 12}:00 PM`}
-                          </SelectItem>
-                        ))}
+                        {Array.from({ length: 13 }, (_, i) => i + 12).map(
+                          (hour) => (
+                            <SelectItem key={hour} value={hour.toString()}>
+                              {hour === 0
+                                ? "12:00 AM"
+                                : hour < 12
+                                  ? `${hour}:00 AM`
+                                  : hour === 12
+                                    ? "12:00 PM"
+                                    : `${hour - 12}:00 PM`}
+                            </SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1052,6 +1149,205 @@ const DoctorDashboard = () => {
                     day.
                   </p>
                 </div>
+
+                {/* Blocked Time Slots Section */}
+                <div className="space-y-2 mt-6">
+                  <h4 className="text-16-medium">Blocked Time Slots</h4>
+                  <p className="text-xs text-gray-500">
+                    Block specific time slots that should not be available for
+                    appointments.
+                  </p>
+
+                  {/* Add new blocked time slot */}
+                  <div className="border rounded-md p-3 space-y-3">
+                    <h5 className="text-sm font-medium">
+                      Add New Blocked Time Slot
+                    </h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm block mb-1">Date</label>
+                        <Input
+                          type="date"
+                          className="w-full"
+                          onChange={(e) => {
+                            setAvailabilitySettings((prev) => ({
+                              ...prev,
+                              newBlockedSlot: {
+                                ...(prev.newBlockedSlot || {}),
+                                date: e.target.value,
+                              },
+                            }));
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm block mb-1">Start Time</label>
+                        <Input
+                          type="time"
+                          className="w-full"
+                          onChange={(e) => {
+                            setAvailabilitySettings((prev) => ({
+                              ...prev,
+                              newBlockedSlot: {
+                                ...(prev.newBlockedSlot || {}),
+                                startTime: e.target.value,
+                              },
+                            }));
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm block mb-1">End Time</label>
+                        <Input
+                          type="time"
+                          className="w-full"
+                          onChange={(e) => {
+                            setAvailabilitySettings((prev) => ({
+                              ...prev,
+                              newBlockedSlot: {
+                                ...(prev.newBlockedSlot || {}),
+                                endTime: e.target.value,
+                              },
+                            }));
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm block mb-1">Reason</label>
+                        <Input
+                          type="text"
+                          placeholder="Lunch, Meeting, etc."
+                          className="w-full"
+                          onChange={(e) => {
+                            setAvailabilitySettings((prev) => ({
+                              ...prev,
+                              newBlockedSlot: {
+                                ...(prev.newBlockedSlot || {}),
+                                reason: e.target.value,
+                              },
+                            }));
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      className="w-full mt-2"
+                      onClick={() => {
+                        // Add new blocked slot to the list
+                        if (
+                          availabilitySettings.newBlockedSlot?.date &&
+                          availabilitySettings.newBlockedSlot?.startTime &&
+                          availabilitySettings.newBlockedSlot?.endTime
+                        ) {
+                          const newSlot = {
+                            date: format(
+                              new Date(
+                                availabilitySettings.newBlockedSlot.date
+                              ),
+                              "MMM dd, yyyy"
+                            ),
+                            startTime:
+                              availabilitySettings.newBlockedSlot.startTime,
+                            endTime:
+                              availabilitySettings.newBlockedSlot.endTime,
+                            reason:
+                              availabilitySettings.newBlockedSlot.reason ||
+                              "Unavailable",
+                          };
+
+                          setAvailabilitySettings((prev) => ({
+                            ...prev,
+                            blockedTimeSlots: [
+                              ...prev.blockedTimeSlots,
+                              newSlot,
+                            ],
+                            newBlockedSlot: undefined,
+                          }));
+                        }
+                      }}
+                    >
+                      Add Blocked Time Slot
+                    </Button>
+                  </div>
+
+                  {/* List of blocked time slots */}
+                  <div className="mt-4">
+                    <h5 className="text-sm font-medium mb-2">
+                      Current Blocked Time Slots
+                    </h5>
+
+                    {!availabilitySettings.blockedTimeSlots ||
+                    availabilitySettings.blockedTimeSlots.length === 0 ? (
+                      <p className="text-14-regular text-dark-600 dark:text-gray-400">
+                        No time slots blocked
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {availabilitySettings.blockedTimeSlots.map(
+                          (slot, i) => (
+                            <div
+                              key={i}
+                              className="rounded-md border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-400 shadow-sm overflow-hidden"
+                            >
+                              <div className="bg-gray-50 dark:bg-dark-300 px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-dark-500">
+                                <span className="font-medium text-sm text-gray-900 dark:text-white">
+                                  {slot.date}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setAvailabilitySettings((prev) => ({
+                                      ...prev,
+                                      blockedTimeSlots:
+                                        prev.blockedTimeSlots.filter(
+                                          (_, index) => index !== i
+                                        ),
+                                    }));
+                                  }}
+                                  className="h-6 w-6 p-0 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                  </svg>
+                                </Button>
+                              </div>
+                              <div className="p-3">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    Time:
+                                  </span>
+                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    {slot.startTime} - {slot.endTime}
+                                  </span>
+                                </div>
+                                <div className="flex items-start">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Reason:
+                                  </span>
+                                  <span className="text-sm ml-1 flex-1 text-gray-700 dark:text-gray-200">
+                                    {slot.reason}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1061,16 +1357,23 @@ const DoctorDashboard = () => {
               </h3>
               <div className="dashboard-card p-4">
                 <div className="border rounded-md p-3 mb-3">
-                  <p className="text-sm text-dark-600 mb-2">
+                  <p className="text-sm text-dark-600 dark:text-gray-300 mb-2">
                     Select dates to mark as holidays:
                   </p>
                   <Input
                     type="date"
-                    className="mb-2"
+                    className="mb-2 bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white"
                     onChange={(e) => {
                       const selectedDate = new Date(e.target.value);
                       if (!isNaN(selectedDate.getTime())) {
-                        setSelectedDates((prev) => [...prev, selectedDate]);
+                        // Check if date already exists
+                        const exists = selectedDates.some(
+                          (date) =>
+                            date.toDateString() === selectedDate.toDateString()
+                        );
+                        if (!exists) {
+                          setSelectedDates((prev) => [...prev, selectedDate]);
+                        }
                       }
                     }}
                   />
@@ -1080,7 +1383,7 @@ const DoctorDashboard = () => {
                   <h4 className="text-16-medium">Selected Dates</h4>
                   <div className="max-h-40 overflow-y-auto">
                     {selectedDates.length === 0 ? (
-                      <p className="text-14-regular text-dark-600">
+                      <p className="text-14-regular text-dark-600 dark:text-gray-400">
                         No dates selected
                       </p>
                     ) : (
@@ -1088,9 +1391,11 @@ const DoctorDashboard = () => {
                         {selectedDates.map((date, i) => (
                           <div
                             key={i}
-                            className="flex justify-between items-center"
+                            className="flex justify-between items-center bg-gray-50 dark:bg-dark-400 p-2 rounded-md"
                           >
-                            <span>{format(date, "MMM dd, yyyy")}</span>
+                            <span className="text-gray-900 dark:text-white">
+                              {format(date, "MMM dd, yyyy")}
+                            </span>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1101,13 +1406,22 @@ const DoctorDashboard = () => {
                                   )
                                 );
                               }}
+                              className="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
                             >
-                              <Image
-                                src="/assets/icons/close.svg"
-                                alt="remove"
-                                width={16}
-                                height={16}
-                              />
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                              </svg>
                             </Button>
                           </div>
                         ))}
@@ -1130,7 +1444,7 @@ const DoctorDashboard = () => {
                         variant: "default",
                       });
                     }}
-                    className="shad-primary-btn w-full"
+                    className="bg-gray-900 hover:bg-gray-800 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900 w-full"
                     disabled={selectedDates.length === 0}
                   >
                     Add Selected Dates as Holidays
@@ -1140,10 +1454,11 @@ const DoctorDashboard = () => {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button
               variant="outline"
               onClick={() => setShowAvailabilityModal(false)}
+              className="bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-dark-500"
             >
               Cancel
             </Button>
@@ -1152,7 +1467,7 @@ const DoctorDashboard = () => {
                 saveAvailabilitySettings();
                 setShowAvailabilityModal(false);
               }}
-              className="save-availability-btn shad-primary-btn"
+              className="save-availability-btn bg-gray-900 hover:bg-gray-800 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900"
             >
               Save Availability Settings
             </Button>

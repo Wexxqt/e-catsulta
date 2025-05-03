@@ -4,7 +4,7 @@ import Image from "next/image";
 import ReactDatePicker from "react-datepicker";
 import { Control } from "react-hook-form";
 import PhoneInput from "react-phone-number-input";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Doctors } from "@/constants";
 import { Checkbox } from "./ui/checkbox";
 import {
@@ -27,6 +27,8 @@ import {
 import { Button } from "./ui/button";
 import { getDoctorAppointments } from "@/lib/actions/appointment.actions";
 import { useRealtime } from "@/contexts/RealtimeContext";
+import { format, isSameDay } from "date-fns";
+import { cn } from "@/lib/utils";
 
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -39,6 +41,19 @@ export enum FormFieldType {
   SELECT = "select",
   SKELETON = "skeleton",
 }
+
+// Add a cache for doctor availability
+const availabilityCache = new Map<
+  string,
+  {
+    data: any;
+    timestamp: number;
+    expiresAt: number;
+  }
+>();
+
+// Cache TTL in milliseconds (5 minutes)
+const CACHE_TTL = 5 * 60 * 1000;
 
 interface CustomProps {
   control: Control<any>;
@@ -75,7 +90,21 @@ const AppointmentDatePicker = ({
     endTime: number;
     holidays: Date[];
     maxAppointmentsPerDay?: number;
-  }>({ days: [], startTime: 8, endTime: 17, holidays: [] });
+    bookingStartDate?: string;
+    bookingEndDate?: string;
+    blockedTimeSlots?: {
+      date: string;
+      startTime: string;
+      endTime: string;
+      reason: string;
+    }[];
+  }>({
+    days: [],
+    startTime: 8,
+    endTime: 17,
+    holidays: [],
+    blockedTimeSlots: [],
+  });
 
   const [availableTimes, setAvailableTimes] = useState<Date[]>([]);
   const [bookedSlots, setBookedSlots] = useState<
@@ -117,69 +146,25 @@ const AppointmentDatePicker = ({
     }
   }, [dialogOpen]);
 
-  // Function to fetch booked appointments - moved outside the effect
-  const fetchBookedAppointments = async (doctorName: string) => {
-    if (!doctorName) return;
+  // Define utility functions at the top to avoid reference errors
+  const isSameDay = useCallback((date1: Date, date2: Date) => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  }, []);
 
-    console.log(`Fetching appointments for doctor: ${doctorName}`);
+  // Helper function to convert time strings to minutes for comparison
+  const timeToMinutes = useCallback((timeString: string): number => {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    return hours * 60 + minutes;
+  }, []);
 
-    // Find the doctor by name to get the ID
-    const doctor = Doctors.find((doc) => doc.name === doctorName);
-    if (!doctor) {
-      console.log(`Doctor not found with name: ${doctorName}`);
-      return;
-    }
+  // Define generateTimeSlots first, before processAvailabilityData
+  const generateTimeSlots = useCallback((doctor: any) => {
+    if (!doctor || !doctor.availability) return;
 
-    setIsLoading(true);
-    try {
-      // Use doctorName for this function since that's how appointments are stored
-      const appointments = await getDoctorAppointments(doctorName);
-
-      console.log(
-        `Retrieved ${appointments.length} appointments for ${doctorName} (ID: ${doctor.id})`
-      );
-
-      // Group appointments by date
-      const bookedByDate = appointments.reduce(
-        (
-          acc: { date: Date; slots: Date[]; count: number }[],
-          appointment: any
-        ) => {
-          const appointmentDate = new Date(appointment.schedule);
-
-          // Find if we already have this date in our accumulator
-          const existingDateIndex = acc.findIndex((item) =>
-            isSameDay(item.date, appointmentDate)
-          );
-
-          if (existingDateIndex >= 0) {
-            // Add this time to existing date's slots
-            acc[existingDateIndex].slots.push(appointmentDate);
-            acc[existingDateIndex].count += 1;
-          } else {
-            // Create new date entry with this slot
-            acc.push({
-              date: appointmentDate,
-              slots: [appointmentDate],
-              count: 1,
-            });
-          }
-
-          return acc;
-        },
-        []
-      );
-
-      setBookedSlots(bookedByDate);
-    } catch (error) {
-      console.error("Error fetching booked appointments:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Generate available time slots - moved outside the effect
-  const generateTimeSlots = (doctor: any) => {
     const times: Date[] = [];
     const availability = doctor.availability;
 
@@ -197,7 +182,179 @@ const AppointmentDatePicker = ({
     }
 
     setAvailableTimes(times);
-  };
+  }, []);
+
+  // Extract the processing logic into a separate function
+  const processAvailabilityData = useCallback(
+    (doctorAvailability: any) => {
+      const newAvailability = {
+        days: doctorAvailability.days || [1, 2, 3, 4, 5],
+        startTime: doctorAvailability.startTime || 8,
+        endTime: doctorAvailability.endTime || 17,
+        holidays: doctorAvailability.holidays || [],
+        maxAppointmentsPerDay: doctorAvailability.maxAppointmentsPerDay || 10,
+        blockedTimeSlots: doctorAvailability.blockedTimeSlots || [],
+      };
+
+      // Set booking range if present
+      let min = null,
+        max = null;
+      if (doctorAvailability.bookingStartDate)
+        min = new Date(doctorAvailability.bookingStartDate);
+      if (doctorAvailability.bookingEndDate)
+        max = new Date(doctorAvailability.bookingEndDate);
+      setBookingRange({ min, max });
+
+      // Only update state if values have changed
+      if (JSON.stringify(availability) !== JSON.stringify(newAvailability)) {
+        setAvailability(newAvailability);
+        generateTimeSlots({ availability: newAvailability });
+      }
+
+      if (!dialogOpen && !selectedDate) {
+        setSelectedDate(null);
+        field.onChange(null);
+      }
+    },
+    [availability, dialogOpen, selectedDate, field, generateTimeSlots]
+  );
+
+  // Optimize fetchDoctorAvailability with caching
+  const fetchDoctorAvailability = useCallback(async () => {
+    if (!doctorId) return;
+
+    // Find doctor by name
+    const doctor = Doctors.find((doc) => doc.name === doctorId);
+    if (!doctor) return;
+
+    // Check if we have a valid cache entry
+    const cacheKey = `doctor-availability-${doctor.id}`;
+    const now = Date.now();
+    const cachedData = availabilityCache.get(cacheKey);
+
+    if (cachedData && cachedData.expiresAt > now) {
+      console.log(
+        `Using cached availability for ${doctor.name} (ID: ${doctor.id})`
+      );
+
+      // Use cached data
+      const doctorAvailability = cachedData.data;
+      processAvailabilityData(doctorAvailability);
+      return;
+    }
+
+    console.log(
+      `Fetching fresh availability for ${doctor.name} (ID: ${doctor.id})`
+    );
+    setIsLoading(true);
+
+    try {
+      // Get availability from server
+      const { getDoctorAvailability } = await import(
+        "@/lib/actions/appointment.actions"
+      );
+      const serverAvailability = await getDoctorAvailability(doctor.id);
+
+      // If server has availability, use it; otherwise use default from Doctors constant
+      const doctorAvailability = serverAvailability || doctor.availability;
+
+      // Cache the availability data
+      availabilityCache.set(cacheKey, {
+        data: doctorAvailability,
+        timestamp: now,
+        expiresAt: now + CACHE_TTL,
+      });
+
+      // Process the data
+      processAvailabilityData(doctorAvailability);
+    } catch (error) {
+      console.error("Error fetching doctor availability:", error);
+      // Fallback to default availability from Doctors constant
+      processAvailabilityData(doctor.availability);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [doctorId]);
+
+  // Optimize the fetchBookedAppointments function
+  const fetchBookedAppointments = useCallback(async (doctorName: string) => {
+    if (!doctorName) return;
+
+    // Find the doctor by name to get the ID
+    const doctor = Doctors.find((doc) => doc.name === doctorName);
+    if (!doctor) {
+      console.log(`Doctor not found with name: ${doctorName}`);
+      return;
+    }
+
+    // Check if we have a valid cache entry
+    const cacheKey = `doctor-appointments-${doctor.id}`;
+    const now = Date.now();
+    const cachedData = availabilityCache.get(cacheKey);
+
+    if (cachedData && cachedData.expiresAt > now) {
+      console.log(`Using cached appointments for ${doctorName}`);
+      setBookedSlots(cachedData.data);
+      return;
+    }
+
+    console.log(`Fetching fresh appointments for ${doctorName}`);
+    setIsLoading(true);
+
+    try {
+      // Use doctorName for this function since that's how appointments are stored
+      const appointments = await getDoctorAppointments(doctorName);
+
+      // Process appointments in batches for better performance
+      const batchSize = 50;
+      const bookedByDate: { date: Date; slots: Date[]; count: number }[] = [];
+
+      for (let i = 0; i < appointments.length; i += batchSize) {
+        const batch = appointments.slice(i, i + batchSize);
+
+        // Process this batch
+        batch.forEach((appointment: any) => {
+          const appointmentDate = new Date(appointment.schedule);
+
+          // Find if we already have this date in our accumulator
+          const existingDateIndex = bookedByDate.findIndex((item) =>
+            isSameDay(item.date, appointmentDate)
+          );
+
+          if (existingDateIndex >= 0) {
+            // Add this time to existing date's slots
+            bookedByDate[existingDateIndex].slots.push(appointmentDate);
+            bookedByDate[existingDateIndex].count += 1;
+          } else {
+            // Create new date entry with this slot
+            bookedByDate.push({
+              date: appointmentDate,
+              slots: [appointmentDate],
+              count: 1,
+            });
+          }
+        });
+
+        // Allow UI to breathe if we have many appointments
+        if (i + batchSize < appointments.length) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+
+      // Cache the processed data
+      availabilityCache.set(cacheKey, {
+        data: bookedByDate,
+        timestamp: now,
+        expiresAt: now + CACHE_TTL,
+      });
+
+      setBookedSlots(bookedByDate);
+    } catch (error) {
+      console.error("Error fetching booked appointments:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Update useEffect that initializes doctor availability:
   useEffect(() => {
@@ -211,59 +368,6 @@ const AppointmentDatePicker = ({
       name: doctor.name,
       id: doctor.id,
     });
-
-    const fetchDoctorAvailability = async () => {
-      try {
-        // Get availability from server
-        const { getDoctorAvailability } = await import(
-          "@/lib/actions/appointment.actions"
-        );
-        const serverAvailability = await getDoctorAvailability(doctor.id);
-
-        // If server has availability, use it; otherwise use default from Doctors constant
-        const doctorAvailability = serverAvailability || doctor.availability;
-
-        const newAvailability = {
-          days: doctorAvailability.days || [1, 2, 3, 4, 5],
-          startTime: doctorAvailability.startTime || 8,
-          endTime: doctorAvailability.endTime || 17,
-          holidays: doctorAvailability.holidays || [],
-          maxAppointmentsPerDay: doctorAvailability.maxAppointmentsPerDay || 10,
-        };
-
-        // Set booking range if present
-        let min = null,
-          max = null;
-        if (doctorAvailability.bookingStartDate)
-          min = new Date(doctorAvailability.bookingStartDate);
-        if (doctorAvailability.bookingEndDate)
-          max = new Date(doctorAvailability.bookingEndDate);
-        setBookingRange({ min, max });
-
-        if (JSON.stringify(availability) !== JSON.stringify(newAvailability)) {
-          setAvailability(newAvailability);
-        }
-
-        if (!dialogOpen && !selectedDate) {
-          setSelectedDate(null);
-          field.onChange(null);
-        }
-
-        generateTimeSlots({ availability: newAvailability });
-      } catch (error) {
-        console.error("Error fetching doctor availability:", error);
-        // Fallback to default availability from Doctors constant
-        const defaultAvailability = doctor.availability;
-        setAvailability({
-          days: defaultAvailability.days || [1, 2, 3, 4, 5],
-          startTime: defaultAvailability.startTime || 8,
-          endTime: defaultAvailability.endTime || 17,
-          holidays: defaultAvailability.holidays || [],
-          maxAppointmentsPerDay:
-            defaultAvailability.maxAppointmentsPerDay || 10,
-        });
-      }
-    };
 
     fetchDoctorAvailability();
     fetchBookedAppointments(doctorId);
@@ -289,6 +393,7 @@ const AppointmentDatePicker = ({
           endTime: newAvailability.endTime || 17,
           holidays: newAvailability.holidays || [],
           maxAppointmentsPerDay: newAvailability.maxAppointmentsPerDay || 10,
+          blockedTimeSlots: newAvailability.blockedTimeSlots || [],
         };
 
         if (
@@ -324,141 +429,202 @@ const AppointmentDatePicker = ({
     }
   }, [selectedDate]);
 
-  // Check if a date is available based on doctor's working days and holidays
-  const isDateAvailable = (date: Date) => {
-    const day = date.getDay();
-    const now = new Date();
-
-    // Check if the date is in the past
-    if (date < now) return false;
-
-    // Check if it's today but past working hours
-    if (isSameDay(date, now)) {
-      const currentHour = now.getHours();
-      if (currentHour >= availability.endTime) return false;
-    }
-
-    // Check if it's a holiday
-    const isHoliday = availability.holidays?.some((holiday) =>
-      isSameDay(new Date(holiday), date)
-    );
-    if (isHoliday) return false;
-
-    // Check if date has reached the daily booking limit (10 patients per day)
-    const bookedDay = bookedSlots.find((slot) => isSameDay(slot.date, date));
-    if (
-      bookedDay &&
-      bookedDay.count >= (availability.maxAppointmentsPerDay || 10)
-    )
-      return false;
-
-    // Check if it's a working day
-    return availability.days.includes(day);
-  };
-
-  // Helper function to check if two dates are the same day
-  const isSameDay = (date1: Date, date2: Date) => {
-    return (
-      date1.getFullYear() === date2.getFullYear() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getDate() === date2.getDate()
-    );
-  };
-
-  // Check if a specific date and time slot is booked
-  const isTimeBooked = (date: Date) => {
-    if (!date) return false;
-
-    const bookedDay = bookedSlots.find((slot) => isSameDay(slot.date, date));
-    if (!bookedDay) return false;
-
-    return bookedDay.slots.some(
-      (bookedTime) =>
-        bookedTime.getHours() === date.getHours() &&
-        bookedTime.getMinutes() === date.getMinutes()
-    );
-  };
-
-  // Get available time slots for a specific date
-  const getAvailableTimesForDate = (date: Date) => {
-    if (!isDateAvailable(date)) return [];
-
-    // Check if we're at the 10-patient limit for this day
-    const bookedDay = bookedSlots.find((slot) => isSameDay(slot.date, date));
-    if (
-      bookedDay &&
-      bookedDay.count >= (availability.maxAppointmentsPerDay || 10)
-    )
-      return [];
-
-    const now = new Date();
-    const isToday = isSameDay(date, now);
-
-    return availableTimes.filter((time) => {
-      const slotDateTime = new Date(date);
-      slotDateTime.setHours(time.getHours(), time.getMinutes());
-
-      // For today, only show future time slots with a 30-minute buffer
-      if (isToday) {
-        // Add a 30-minute buffer to current time
-        const bufferTime = new Date(now);
-        bufferTime.setMinutes(bufferTime.getMinutes() + 30);
-
-        if (slotDateTime <= bufferTime) return false;
+  // First, add the isTimeBlocked function before it's used in the dependency array
+  // Function to check if a time is within a blocked time slot
+  const isTimeBlocked = useCallback(
+    (date: Date, timeString: string): boolean => {
+      if (
+        !availability?.blockedTimeSlots ||
+        availability.blockedTimeSlots.length === 0
+      ) {
+        return false;
       }
 
-      // Exclude lunch time (12:00 PM to 1:00 PM)
-      if (time.getHours() === 12) return false;
+      // Get blocked time slots for the specific date
+      const formattedDate = format(date, "MMM dd, yyyy");
+      const blockedSlotsForDate = availability.blockedTimeSlots.filter(
+        (slot) => slot.date === formattedDate
+      );
 
-      // Check if the slot is booked
-      return !isTimeBooked(slotDateTime);
-    });
-  };
+      if (blockedSlotsForDate.length === 0) {
+        return false;
+      }
 
-  // Custom day renderer to apply specific classes to days
-  const renderDayContents = (day: number, date: Date) => {
-    // Check if this date is fully booked (10 appointments)
-    const fullyBooked = isDateFullyBooked(date);
-    if (fullyBooked) {
-      return <div className="fully-booked">{day}</div>;
-    }
-    // No longer adding special styling for days with bookings that aren't fully booked
-    return day;
-  };
+      // Convert time strings to minutes for easier comparison
+      const checkTimeString = timeString;
+      const checkTimeMinutes = timeToMinutes(checkTimeString);
 
-  // Function to customize time slots display
-  const renderTimeListItem = ({
-    time,
-    date,
-    handleClick,
-    isSelected,
-    disabled,
-  }: any) => {
-    // Check if this time slot is booked
-    const timeDate = new Date(date);
-    const hour = parseInt(time.split(":")[0]);
-    const minute = time.includes("30") ? 30 : 0;
-    timeDate.setHours(hour, minute);
+      return blockedSlotsForDate.some(
+        (slot: { startTime: string; endTime: string }) => {
+          const startMinutes = timeToMinutes(slot.startTime);
+          const endMinutes = timeToMinutes(slot.endTime);
+          return (
+            checkTimeMinutes >= startMinutes && checkTimeMinutes < endMinutes
+          );
+        }
+      );
+    },
+    [availability]
+  );
 
-    const isBooked = isTimeBooked(timeDate);
+  // Add the hasBookedSlots and isDateFullyBooked functions before they're used
+  // Function to check if a date has any booked slots
+  const hasBookedSlots = useCallback(
+    (date: Date): boolean => {
+      return bookedSlots.some((slot) => isSameDay(slot.date, date));
+    },
+    [bookedSlots, isSameDay]
+  );
 
-    const className = isBooked
-      ? "react-datepicker__time-list-item--booked"
-      : isSelected
-        ? "react-datepicker__time-list-item--selected"
-        : disabled
-          ? "react-datepicker__time-list-item--disabled"
-          : "";
+  // Function to check if a date has reached max appointments
+  const isDateFullyBooked = useCallback(
+    (date: Date): boolean => {
+      if (!availability) return false;
 
-    return (
-      <li
-        onClick={isBooked || disabled ? undefined : handleClick}
-        className={`react-datepicker__time-list-item ${className}`}
-      >
-        {time}
-      </li>
-    );
-  };
+      const maxAppointments = availability.maxAppointmentsPerDay || 10;
+      const dateBookings = bookedSlots.filter((slot) =>
+        isSameDay(slot.date, date)
+      ).length;
+
+      return dateBookings >= maxAppointments;
+    },
+    [availability, bookedSlots, isSameDay]
+  );
+
+  // Use useCallback for expensive time slot filtering operations
+  const getAvailableTimesForDate = useCallback(
+    (date: Date) => {
+      if (!date || !availability) return [];
+
+      const day = date.getDay();
+      const isAvailable = availability.days.includes(day);
+
+      if (!isAvailable) return [];
+
+      // Check if the date falls on a holiday
+      const isHoliday = availability.holidays?.some((holiday) =>
+        isSameDay(new Date(holiday), date)
+      );
+
+      if (isHoliday) return [];
+
+      return availableTimes.filter((time) => {
+        // Skip if time is blocked in doctor's settings
+        if (isTimeBlocked(date, format(time, "HH:mm"))) {
+          return false;
+        }
+
+        // Combine date and time
+        const dateTime = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          time.getHours(),
+          time.getMinutes()
+        );
+
+        // Skip times in the past
+        if (dateTime < new Date()) return false;
+
+        // Skip if slot is already booked
+        return !bookedSlots.some((bookedDate) => {
+          return bookedDate.slots.some((bookedTime) => {
+            const timeObj = new Date(bookedTime);
+            return (
+              isSameDay(timeObj, date) &&
+              timeObj.getHours() === time.getHours() &&
+              timeObj.getMinutes() === time.getMinutes()
+            );
+          });
+        });
+      });
+    },
+    [bookedSlots, isTimeBlocked, isSameDay, availability, availableTimes]
+  );
+
+  // Replace the isDateAvailable function with this version that doesn't reference itself in the dependency array
+  const isDateAvailable = useCallback(
+    (date: Date): boolean => {
+      if (!date || !availability) return false;
+
+      // Check if date falls within the doctor's booking range
+      if (availability.bookingStartDate && availability.bookingEndDate) {
+        const bookingStart = new Date(availability.bookingStartDate);
+        const bookingEnd = new Date(availability.bookingEndDate);
+        bookingStart.setHours(0, 0, 0, 0);
+        bookingEnd.setHours(23, 59, 59, 999);
+
+        if (date < bookingStart || date > bookingEnd) {
+          return false;
+        }
+      }
+
+      // Check if it's a working day
+      const day = date.getDay();
+      if (!availability.days.includes(day)) return false;
+
+      // Check if it's a holiday
+      const isHoliday = availability.holidays?.some((holiday) =>
+        isSameDay(new Date(holiday), date)
+      );
+      if (isHoliday) return false;
+
+      // Check if the date is fully booked
+      if (isDateFullyBooked(date)) return false;
+
+      // Make sure there are available time slots
+      return getAvailableTimesForDate(date).length > 0;
+    },
+    [
+      hasBookedSlots,
+      getAvailableTimesForDate,
+      isDateFullyBooked,
+      availability,
+      isSameDay,
+    ]
+  );
+
+  // Optimize isTimeBooked with useCallback
+  const isTimeBooked = useCallback(
+    (date: Date) => {
+      // First check if time is blocked - this is faster to check
+      if (isTimeBlocked(date, format(date, "HH:mm"))) return true;
+
+      // Check if it falls on a booked time slot
+      return bookedSlots.some((bookedDate) => {
+        return bookedDate.slots.some((slot) => {
+          const slotDate = new Date(slot);
+          return (
+            date.getHours() === slotDate.getHours() &&
+            date.getMinutes() === slotDate.getMinutes() &&
+            isSameDay(date, slotDate)
+          );
+        });
+      });
+    },
+    [bookedSlots, isTimeBlocked, isSameDay]
+  );
+
+  // Optimize the renderDayContents function with useCallback
+  const renderDayContents = useCallback(
+    (day: number, date: Date) => {
+      const hasBookings = hasBookedSlots(date);
+      const isFullyBooked = isDateFullyBooked(date);
+
+      return (
+        <div
+          className={cn("w-full h-full flex items-center justify-center", {
+            "bg-red-100 dark:bg-red-900/20": isFullyBooked,
+            "bg-yellow-50 dark:bg-yellow-900/10": hasBookings && !isFullyBooked,
+            "text-gray-400": !isDateAvailable(date),
+          })}
+        >
+          {day}
+        </div>
+      );
+    },
+    [hasBookedSlots, isDateAvailable, isDateFullyBooked]
+  );
 
   // Handle date selection in dialog
   const handleDateChange = (date: Date) => {
@@ -491,19 +657,6 @@ const AppointmentDatePicker = ({
     setDateSelectionError("");
   };
 
-  // Check if a date has any booked slots
-  const hasBookedSlots = (date: Date) => {
-    return bookedSlots.some((slot) => isSameDay(slot.date, date));
-  };
-
-  // Check if a date is fully booked (10 appointments)
-  const isDateFullyBooked = (date: Date) => {
-    const bookedDay = bookedSlots.find((slot) => isSameDay(slot.date, date));
-    return (
-      bookedDay && bookedDay.count >= (availability.maxAppointmentsPerDay || 10)
-    );
-  };
-
   // Format date for display
   const formatDateDisplay = (date: Date | null) => {
     if (!date) return "Select date and time";
@@ -516,35 +669,10 @@ const AppointmentDatePicker = ({
 
   return (
     <div className="flex flex-col">
-      {/* Doctor unavailable warning */}
-      {doctorId && availability.days.length === 0 && (
-        <div className="flex items-center gap-2 p-3 mb-2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 text-yellow-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z"
-            />
-          </svg>
-          <span>
-            This doctor is currently not available for appointments. Please
-            check back later or contact the clinic.
-          </span>
-        </div>
-      )}
       {/* Date/Time Display and Trigger */}
       <div
-        className={`flex rounded-md border border-dark-500 bg-dark-400 ${availability.days.length === 0 ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
-        onClick={() =>
-          doctorId && availability.days.length > 0 && setDialogOpen(true)
-        }
+        className="flex rounded-md border border-dark-500 bg-dark-400 cursor-pointer"
+        onClick={() => doctorId && setDialogOpen(true)}
       >
         <Image
           src="/assets/icons/calendar.svg"
@@ -585,6 +713,28 @@ const AppointmentDatePicker = ({
                 <p className="text-sm text-gray-500">
                   Loading real-time availability...
                 </p>
+              )}
+              {doctorId && availability.days.length === 0 && (
+                <div className="flex items-center gap-2 p-3 mt-2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-yellow-600 flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01M21 12A9 9 0 113 12a9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-sm">
+                    This doctor is currently not available for appointments.
+                    Please check back later or contact the clinic.
+                  </span>
+                </div>
               )}
             </DialogHeader>
 
@@ -746,7 +896,9 @@ const AppointmentDatePicker = ({
           <p className="text-12-regular text-dark-600 mt-1">
             {isLoading
               ? "Loading availability..."
-              : "Please select an available date and time"}
+              : availability.days.length === 0
+                ? "Click to select a date and time (note: doctor availability may be limited)"
+                : "Please select an available date and time"}
           </p>
         )
       ) : (

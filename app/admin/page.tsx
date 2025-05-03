@@ -2,15 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Calendar, X } from "lucide-react";
+import {
+  Users,
+  Calendar,
+  X,
+  AlertTriangle,
+  TrendingUp,
+  Activity,
+} from "lucide-react";
 
-import { columns } from "@/components/table/columns";
-import { DataTable } from "@/components/table/DataTable";
 import AppointmentChart from "@/components/AppointmentChart";
 import { getRecentAppointmentList } from "@/lib/actions/appointment.actions";
 import { decryptKey } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 // Define the type for appointments data
 interface AppointmentsData {
@@ -22,6 +34,7 @@ interface AppointmentsData {
   todayCount: number;
   studentCount: number;
   employeeCount: number;
+  missedCount?: number;
 }
 
 const AdminPage = () => {
@@ -58,155 +71,158 @@ const AdminPage = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-lg">Loading...</p>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-gray-500 dark:text-muted-foreground">
+            Loading data...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <main className="transition-all duration-300 py-6 w-full px-4 lg:px-3 xl:px-4 max-w-full">
-      <section className="w-full mb-8">
-        <h1 className="text-32-bold text-white">Dashboard</h1>
-      </section>
+    <div className="space-y-6">
+      <div className="flex flex-col space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+          Overview
+        </h1>
+        <p className="text-gray-500 dark:text-muted-foreground">
+          Dashboard and statistics for your clinic management system.
+        </p>
+      </div>
 
-      <section
-        className={cn(
-          "w-full grid transition-all duration-300",
-          "grid-cols-1 sm:grid-cols-2 gap-3",
-          "lg:grid-cols-2 xl:grid-cols-4 lg:gap-2 xl:gap-3",
-          "max-w-full"
-        )}
-      >
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {/* Total Patients */}
-        <div className="bg-dark-300 rounded-lg p-5 shadow hover:shadow-md transition-shadow border border-dark-400 w-full h-full flex-1">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-gray-400 text-sm">Total Patients</p>
-              <h3 className="text-2xl sm:text-3xl font-bold mt-2 text-white">
-                {(appointments?.studentCount || 0) +
-                  (appointments?.employeeCount || 0)}
-              </h3>
-              <div className="flex flex-col sm:flex-row sm:gap-2 mt-1">
-                <span className="text-blue-400 text-xs font-medium">
-                  Students: {appointments?.studentCount || 0}
-                </span>
-                <span className="text-purple-400 text-xs font-medium">
-                  Employees: {appointments?.employeeCount || 0}
-                </span>
-              </div>
+        <Card className="bg-white dark:bg-dark-300 border-gray-200 dark:border-dark-400 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500 dark:text-muted-foreground">
+              Total Patients
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-gradient-to-br dark:from-blue-500/20 dark:to-blue-700/20 shadow-inner">
+              <Users className="text-blue-600 dark:text-blue-400 h-4 w-4" />
             </div>
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-700/20 shadow-inner">
-              <Users className="text-blue-400 h-6 w-6" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {(appointments?.studentCount || 0) +
+                (appointments?.employeeCount || 0)}
             </div>
-          </div>
-        </div>
+            <div className="flex flex-wrap gap-2 mt-1">
+              <span className="text-blue-600 dark:text-blue-400 text-xs font-medium flex items-center">
+                <span className="inline-block h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400 mr-1"></span>
+                Students: {appointments?.studentCount || 0}
+              </span>
+              <span className="text-purple-600 dark:text-purple-400 text-xs font-medium flex items-center">
+                <span className="inline-block h-2 w-2 rounded-full bg-purple-600 dark:bg-purple-400 mr-1"></span>
+                Employees: {appointments?.employeeCount || 0}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Today's Appointments */}
-        <div className="bg-dark-300 rounded-lg p-5 shadow hover:shadow-md transition-shadow border border-dark-400 w-full h-full flex-1">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-gray-400 text-sm">Today's Appointments</p>
-              <h3 className="text-2xl sm:text-3xl font-bold mt-2 text-white">
-                {appointments?.todayCount || 0}
-              </h3>
-              {appointments?.pendingCount ? (
-                <p className="text-yellow-400 text-xs font-medium mt-1">
-                  {appointments.pendingCount} pending confirmation
-                </p>
-              ) : (
-                <p className="text-gray-400 text-xs font-medium mt-1">
-                  No pending appointments
-                </p>
-              )}
+        <Card className="bg-white dark:bg-dark-300 border-gray-200 dark:border-dark-400 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500 dark:text-muted-foreground">
+              Today's Appointments
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-yellow-100 dark:bg-gradient-to-br dark:from-yellow-500/20 dark:to-yellow-700/20 shadow-inner">
+              <Calendar className="text-yellow-600 dark:text-yellow-400 h-4 w-4" />
             </div>
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-yellow-500/20 to-yellow-700/20 shadow-inner">
-              <Calendar className="text-yellow-400 h-6 w-6" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {appointments?.todayCount || 0}
             </div>
-          </div>
-        </div>
+            {appointments?.pendingCount ? (
+              <p className="text-yellow-600 dark:text-yellow-400 text-xs font-medium mt-1 flex items-center">
+                <Activity className="h-3 w-3 mr-1" />
+                {appointments.pendingCount} pending confirmation
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
 
         {/* Scheduled Appointments */}
-        <div className="bg-dark-300 rounded-lg p-5 shadow hover:shadow-md transition-shadow border border-dark-400 w-full h-full flex-1">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-gray-400 text-sm">Scheduled Appointments</p>
-              <h3 className="text-2xl sm:text-3xl font-bold mt-2 text-white">
-                {appointments?.scheduledCount || 0}
-              </h3>
-              <p className="text-green-400 text-xs font-medium mt-1">
-                Confirmed appointments
-              </p>
+        <Card className="bg-white dark:bg-dark-300 border-gray-200 dark:border-dark-400 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500 dark:text-muted-foreground">
+              Scheduled Appointments
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-gradient-to-br dark:from-green-500/20 dark:to-green-700/20 shadow-inner">
+              <Calendar className="text-green-600 dark:text-green-400 h-4 w-4" />
             </div>
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-green-500/20 to-green-700/20 shadow-inner">
-              <Calendar className="text-green-400 h-6 w-6" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {appointments?.scheduledCount || 0}
             </div>
-          </div>
-        </div>
+            <p className="text-green-600 dark:text-green-400 text-xs font-medium mt-1 flex items-center">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Confirmed appointments
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Cancelled Appointments */}
-        <div className="bg-dark-300 rounded-lg p-5 shadow hover:shadow-md transition-shadow border border-dark-400 w-full h-full flex-1">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-gray-400 text-sm">Cancelled Appointments</p>
-              <h3 className="text-2xl sm:text-3xl font-bold mt-2 text-white">
-                {appointments?.cancelledCount || 0}
-              </h3>
-              <p className="text-red-400 text-xs font-medium mt-1">
-                Total cancelled
-              </p>
+        <Card className="bg-white dark:bg-dark-300 border-gray-200 dark:border-dark-400 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500 dark:text-muted-foreground">
+              Cancelled Appointments
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-gradient-to-br dark:from-red-500/20 dark:to-red-700/20 shadow-inner">
+              <X className="text-red-600 dark:text-red-400 h-4 w-4" />
             </div>
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-red-500/20 to-red-700/20 shadow-inner">
-              <X className="text-red-400 h-6 w-6" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {appointments?.cancelledCount || 0}
             </div>
-          </div>
-        </div>
-      </section>
+            <p className="text-red-600 dark:text-red-400 text-xs font-medium mt-1">
+              Total cancelled
+            </p>
+          </CardContent>
+        </Card>
 
-      <section className="mt-8 w-full">
-        <AppointmentChart className="mb-8" />
-
-        <div className="bg-dark-300 p-4 sm:p-6 rounded-lg border border-dark-400 shadow-md">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-            <h3 className="text-lg font-semibold text-white">
-              Upcoming Appointments
-            </h3>
-
-            <div className="flex items-center space-x-2 bg-dark-400 rounded-md p-1 self-end">
-              <Button
-                variant="default"
-                onClick={() => {}}
-                size="sm"
-                className="text-xs py-1 h-7"
-              >
-                Today
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {}}
-                size="sm"
-                className="text-xs py-1 h-7"
-              >
-                Next 3 Days
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {}}
-                size="sm"
-                className="text-xs py-1 h-7"
-              >
-                All
-              </Button>
+        {/* Missed Appointments */}
+        <Card className="bg-white dark:bg-dark-300 border-gray-200 dark:border-dark-400 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500 dark:text-muted-foreground">
+              Missed Appointments
+            </CardTitle>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 dark:bg-gradient-to-br dark:from-purple-500/20 dark:to-purple-700/20 shadow-inner">
+              <AlertTriangle className="text-purple-600 dark:text-purple-400 h-4 w-4" />
             </div>
-          </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {appointments?.missedCount || 0}
+            </div>
+            <p className="text-purple-600 dark:text-purple-400 text-xs font-medium mt-1">
+              No-show appointments
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-          <DataTable
-            columns={columns}
-            data={(appointments?.documents || []).slice(0, 10)}
-          />
-        </div>
-      </section>
-    </main>
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-7">
+        <Card className="col-span-7 bg-white dark:bg-dark-300 border-gray-200 dark:border-dark-400 shadow-md">
+          <CardHeader>
+            <CardTitle className="text-gray-900 dark:text-white">
+              Appointment Analytics
+            </CardTitle>
+            <CardDescription className="text-gray-500 dark:text-gray-400">
+              Appointment trends and statistics over time
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AppointmentChart className="w-full aspect-[4/1] max-h-[350px]" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

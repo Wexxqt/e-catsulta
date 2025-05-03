@@ -11,6 +11,10 @@ import {
   MoreHorizontal,
   CalendarClock,
   AlertCircle,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  UserRound,
 } from "lucide-react";
 
 import { Doctors } from "@/constants";
@@ -47,6 +51,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Helper function to safely handle potentially deleted patient data
 const safePatientAccess = (appointment: Appointment) => {
@@ -114,7 +125,7 @@ const AppointmentCodeModal = ({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center justify-center bg-blue-500/15 hover:bg-blue-500/30 text-blue-500 rounded-md px-2.5 py-1.5 transition-colors"
+        className="flex items-center justify-center bg-blue-100 dark:bg-blue-500/15 hover:bg-blue-200 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-500 rounded-md px-2.5 py-1.5 transition-colors"
         title="View Appointment Code"
       >
         <Clipboard size={18} className="mr-1.5" />
@@ -122,21 +133,25 @@ const AppointmentCodeModal = ({
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-dark-400 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500">
           <DialogHeader>
-            <DialogTitle>Appointment Code</DialogTitle>
+            <DialogTitle className="text-gray-900 dark:text-white">
+              Appointment Code
+            </DialogTitle>
           </DialogHeader>
           <div className="py-6">
             <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="text-2xl font-bold text-blue-500">{code}</div>
-              <p className="text-sm text-gray-400 text-center">
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-500">
+                {code}
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                 This is a unique code for this appointment. Patient can use this
                 code for check-in.
               </p>
               <Button
                 onClick={copyToClipboard}
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-white dark:bg-dark-300 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500"
               >
                 {copied ? (
                   <>
@@ -188,31 +203,33 @@ const CancelAppointmentModal = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="bg-white dark:bg-dark-400 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500">
         <AlertDialogHeader>
-          <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle className="text-gray-900 dark:text-white">
+            Cancel Appointment
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-500 dark:text-gray-400">
             This action cannot be undone. The patient will be notified about
             this cancellation.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="py-4">
-          <label className="text-sm text-gray-400 mb-2 block">
+          <label className="text-sm text-gray-500 dark:text-gray-400 mb-2 block">
             Cancellation Reason:
           </label>
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Please provide a reason for cancellation..."
-            className="w-full"
+            className="w-full bg-white dark:bg-dark-300 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500"
           />
         </div>
 
         <AlertDialogFooter>
           <AlertDialogCancel
             disabled={isLoading}
-            className="hover:bg-gray-100 hover:border-gray-300 transition-colors"
+            className="hover:bg-gray-100 dark:hover:bg-dark-400 text-gray-900 dark:text-white border border-gray-200 dark:border-dark-500"
           >
             Cancel
           </AlertDialogCancel>
@@ -222,7 +239,7 @@ const CancelAppointmentModal = ({
               handleCancel();
             }}
             disabled={isLoading || !reason.trim()}
-            className="bg-red-500 hover:bg-red-600"
+            className="bg-red-500 text-white hover:bg-red-600"
           >
             {isLoading ? "Processing..." : "Confirm Cancellation"}
           </AlertDialogAction>
@@ -268,14 +285,14 @@ const RescheduleModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] bg-white dark:bg-dark-400 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-gray-900 dark:text-white">
             {isReactivation
               ? "Reactivate Appointment"
               : "Reschedule Appointment"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-gray-500 dark:text-gray-400">
             {isReactivation
               ? "Select a new date and time to reactivate this cancelled appointment."
               : "Select a new date and time for this appointment."}
@@ -283,7 +300,7 @@ const RescheduleModal = ({
         </DialogHeader>
 
         <div className="py-4">
-          <p className="text-sm mb-4">
+          <p className="text-sm mb-4 text-gray-600 dark:text-gray-300">
             {isReactivation
               ? `Previously cancelled appointment was on: ${formatDateTime(appointment.schedule, "Asia/Manila").dateTime}`
               : `Current appointment: ${formatDateTime(appointment.schedule, "Asia/Manila").dateTime}`}
@@ -319,23 +336,20 @@ const RescheduleModal = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
+            className="bg-white dark:bg-dark-300 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500"
           >
             Cancel
           </Button>
           <Button
             onClick={handleReschedule}
             disabled={isLoading || !selectedDate}
-            className={
-              isReactivation
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-blue-600 hover:bg-blue-700"
-            }
+            className="bg-blue-500 text-white hover:bg-blue-600"
           >
             {isLoading
               ? "Processing..."
               : isReactivation
-                ? "Reactivate Appointment"
-                : "Confirm New Time"}
+                ? "Reactivate"
+                : "Reschedule"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -377,17 +391,19 @@ const ChangeDoctorModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] bg-white dark:bg-dark-400 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500">
         <DialogHeader>
-          <DialogTitle>Change Doctor</DialogTitle>
-          <DialogDescription>
-            Select a new doctor for this appointment.
+          <DialogTitle className="text-gray-900 dark:text-white">
+            Change Doctor
+          </DialogTitle>
+          <DialogDescription className="text-gray-500 dark:text-gray-400">
+            Assign this appointment to a different doctor.
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
-          <p className="text-sm mb-4">
-            Current doctor: Dr. {appointment.primaryPhysician}
+          <p className="text-sm mb-4 text-gray-600 dark:text-gray-300">
+            Current doctor: {appointment.primaryPhysician || "Not assigned"}
           </p>
 
           <div className="space-y-4">
@@ -462,11 +478,13 @@ const AppointmentReasonModal = ({
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] bg-white dark:bg-dark-400 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500">
           <DialogHeader>
-            <DialogTitle>Appointment Reason</DialogTitle>
-            <DialogDescription>
-              Patient: {safePatientAccess(appointment).name}
+            <DialogTitle className="text-gray-900 dark:text-white">
+              Appointment Details
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 dark:text-gray-400">
+              Patient's reason for booking this appointment
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -500,11 +518,13 @@ const CancellationReasonModal = ({
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] bg-white dark:bg-dark-400 text-gray-900 dark:text-white border-gray-200 dark:border-dark-500">
           <DialogHeader>
-            <DialogTitle>Cancellation Reason</DialogTitle>
-            <DialogDescription>
-              Patient: {safePatientAccess(appointment).name}
+            <DialogTitle className="text-gray-900 dark:text-white">
+              Cancellation Reason
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 dark:text-gray-400">
+              This appointment was cancelled with the following reason
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -587,17 +607,15 @@ const AppointmentActionMenu = ({
         timeZone: "Asia/Manila",
         appointment: {
           primaryPhysician: doctorName,
-          // Keep the current status
-          status: appointment.status,
         },
-        type: "schedule", // Use schedule type to notify patient
+        type: "schedule", // Use schedule type to send confirmation
       });
 
       // Refresh the table data
       onRefresh();
     } catch (error) {
       console.error("Error changing doctor:", error);
-      throw error;
+      throw error; // Re-throw to let the modal handle the error
     }
   };
 
@@ -607,7 +625,9 @@ const AppointmentActionMenu = ({
         appointmentId: appointment.$id,
         userId: appointment.userId,
         timeZone: "Asia/Manila",
-        appointment: { status: "scheduled" },
+        appointment: {
+          status: "scheduled",
+        },
         type: "schedule",
       });
 
@@ -618,59 +638,131 @@ const AppointmentActionMenu = ({
     }
   };
 
-  // Enhanced action buttons with text labels
+  // New function to mark an appointment as missed
+  const handleMarkMissed = async () => {
+    try {
+      await updateAppointment({
+        appointmentId: appointment.$id,
+        userId: appointment.userId,
+        timeZone: "Asia/Manila",
+        appointment: {
+          status: "missed",
+        },
+        type: "schedule",
+      });
+
+      // Refresh the table data
+      onRefresh();
+    } catch (error) {
+      console.error("Error marking appointment as missed:", error);
+    }
+  };
+
+  // New function to mark an appointment as completed
+  const handleMarkCompleted = async () => {
+    try {
+      await updateAppointment({
+        appointmentId: appointment.$id,
+        userId: appointment.userId,
+        timeZone: "Asia/Manila",
+        appointment: {
+          status: "completed",
+        },
+        type: "schedule", // Using schedule type since this is an administrative action
+      });
+
+      // Refresh the table data
+      onRefresh();
+    } catch (error) {
+      console.error("Error marking appointment as completed:", error);
+    }
+  };
+
   return (
-    <div className="flex flex-col space-y-2 min-w-[130px]">
-      {/* Change Doctor button - available for all appointments */}
-      <Button
-        variant="default"
-        size="sm"
-        className="h-8 text-xs font-medium bg-purple-600 hover:bg-purple-700"
-        onClick={() => setChangeDoctorDialogOpen(true)}
-      >
-        <Calendar className="h-3.5 w-3.5 mr-1" />
-        Change Doctor
-      </Button>
-
-      {appointment.status !== "cancelled" && (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <Button
-          variant="destructive"
-          size="sm"
-          className="h-8 text-xs font-medium"
-          onClick={() => setCancelDialogOpen(true)}
+          variant="ghost"
+          size="icon"
+          className="data-[state=open]:bg-gray-50 dark:data-[state=open]:bg-dark-400"
         >
-          <X className="h-3.5 w-3.5 mr-1" />
-          Cancel
+          <MoreHorizontal className="h-4 w-4" />
+          <span className="sr-only">Open menu</span>
         </Button>
-      )}
-
-      {/* Reschedule button for all appointments (including cancelled) */}
-      <Button
-        variant="default"
-        size="sm"
-        className={`h-8 text-xs font-medium ${
-          appointment.status === "cancelled"
-            ? "bg-green-600 hover:bg-green-700"
-            : "bg-blue-600 hover:bg-blue-700"
-        }`}
-        onClick={() => setRescheduleDialogOpen(true)}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="bg-white dark:bg-dark-300 border-gray-200 dark:border-dark-500"
       >
-        <CalendarClock className="h-3.5 w-3.5 mr-1" />
-        {appointment.status === "cancelled" ? "Reactivate" : "Reschedule"}
-      </Button>
+        <DropdownMenuLabel className="text-xs text-gray-500 dark:text-gray-400">
+          Actions
+        </DropdownMenuLabel>
 
-      {appointment.status === "pending" && (
-        <Button
-          variant="default"
-          size="sm"
-          className="h-8 text-xs font-medium bg-green-600 hover:bg-green-700"
-          onClick={handleConfirmAppointment}
-        >
-          <Check className="h-3.5 w-3.5 mr-1" />
-          Confirm
-        </Button>
-      )}
+        {/* Actions based on appointment status */}
+        {appointment.status === "pending" && (
+          <DropdownMenuItem
+            className="text-green-600 dark:text-green-400 cursor-pointer"
+            onClick={handleConfirmAppointment}
+          >
+            <CheckCircle className="mr-2 h-4 w-4" />
+            <span>Confirm Appointment</span>
+          </DropdownMenuItem>
+        )}
 
+        {appointment.status === "scheduled" && (
+          <>
+            <DropdownMenuItem
+              className="text-gray-700 dark:text-gray-200 cursor-pointer"
+              onClick={() => setRescheduleDialogOpen(true)}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              <span>Reschedule</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-gray-700 dark:text-gray-200 cursor-pointer"
+              onClick={() => setChangeDoctorDialogOpen(true)}
+            >
+              <UserRound className="mr-2 h-4 w-4" />
+              <span>Change Doctor</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-green-600 dark:text-green-400 cursor-pointer"
+              onClick={handleMarkCompleted}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              <span>Mark as Completed</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-amber-600 dark:text-amber-400 cursor-pointer"
+              onClick={handleMarkMissed}
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              <span>Mark as Missed</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600 dark:text-red-400 cursor-pointer"
+              onClick={() => setCancelDialogOpen(true)}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              <span>Cancel</span>
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {(appointment.status === "cancelled" ||
+          appointment.status === "completed" ||
+          appointment.status === "missed") && (
+          <DropdownMenuItem
+            className="text-gray-700 dark:text-gray-200 cursor-pointer"
+            onClick={() => setRescheduleDialogOpen(true)}
+          >
+            <Calendar className="mr-2 h-4 w-4" />
+            <span>Reschedule</span>
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+
+      {/* Dialogs/Modals */}
       <CancelAppointmentModal
         appointment={appointment}
         onCancel={handleCancel}
@@ -680,18 +772,18 @@ const AppointmentActionMenu = ({
 
       <RescheduleModal
         appointment={appointment}
-        onReschedule={handleReschedule}
         open={rescheduleDialogOpen}
         onOpenChange={setRescheduleDialogOpen}
+        onReschedule={handleReschedule}
       />
 
       <ChangeDoctorModal
         appointment={appointment}
-        onChangeDoctor={handleChangeDoctor}
         open={changeDoctorDialogOpen}
         onOpenChange={setChangeDoctorDialogOpen}
+        onChangeDoctor={handleChangeDoctor}
       />
-    </div>
+    </DropdownMenu>
   );
 };
 
@@ -710,7 +802,9 @@ export const createAdminAppointmentColumns = (
           <Avatar className="h-8 w-8">
             <AvatarImage
               src={
-                patient.email ? getGravatarUrl(patient.email, 40) : undefined
+                patient.email
+                  ? getGravatarUrl(patient.email, 40)
+                  : getGravatarUrl("", 40, "robohash", patient.$id || "")
               }
               alt={patient.name || "Patient"}
             />
@@ -726,6 +820,9 @@ export const createAdminAppointmentColumns = (
           </div>
         </div>
       );
+    },
+    meta: {
+      className: "min-w-[180px]",
     },
   },
   {
@@ -750,6 +847,9 @@ export const createAdminAppointmentColumns = (
           <p className="text-12-regular text-gray-400">{formatted.timeOnly}</p>
         </div>
       );
+    },
+    meta: {
+      className: "min-w-[140px]",
     },
   },
   {
@@ -782,6 +882,9 @@ export const createAdminAppointmentColumns = (
         </div>
       );
     },
+    meta: {
+      className: "min-w-[200px]",
+    },
   },
   {
     accessorKey: "reason",
@@ -809,6 +912,9 @@ export const createAdminAppointmentColumns = (
         </div>
       );
     },
+    meta: {
+      className: "min-w-[130px]",
+    },
   },
   {
     accessorKey: "appointmentCode",
@@ -816,6 +922,9 @@ export const createAdminAppointmentColumns = (
     cell: ({ row }) => {
       const appointment = row.original;
       return <AppointmentCodeModal appointment={appointment} />;
+    },
+    meta: {
+      className: "min-w-[100px]",
     },
   },
   {
@@ -831,7 +940,7 @@ export const createAdminAppointmentColumns = (
       );
     },
     meta: {
-      className: "min-w-[150px]",
+      className: "min-w-[160px]",
     },
   },
 ];

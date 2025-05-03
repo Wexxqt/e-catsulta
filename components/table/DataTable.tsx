@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { decryptKey } from "@/lib/utils";
+import { validatePasskey } from "@/lib/utils/validatePasskey";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -37,11 +38,20 @@ export function DataTable<TData, TValue>({
       : null;
 
   useEffect(() => {
-    const accessKey = encryptedKey && decryptKey(encryptedKey);
+    const checkAccess = async () => {
+      if (encryptedKey) {
+        const decryptedKey = decryptKey(encryptedKey);
+        const isValid = await validatePasskey(decryptedKey, "admin");
 
-    if (accessKey !== process.env.NEXT_PUBLIC_ADMIN_PASSKEY!.toString()) {
-      redirect("/");
-    }
+        if (!isValid) {
+          redirect("/");
+        }
+      } else {
+        redirect("/");
+      }
+    };
+
+    checkAccess();
   }, [encryptedKey]);
 
   const table = useReactTable({
@@ -54,7 +64,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="data-table">
       <Table className="shad-table">
-        <TableHeader className=" bg-dark-200">
+        <TableHeader className="bg-gray-50 dark:bg-dark-200">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="shad-table-row-header">
               {headerGroup.headers.map((header) => {
@@ -108,7 +118,7 @@ export function DataTable<TData, TValue>({
           <span className="sr-only">Previous Page</span>
         </Button>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-white">
+          <span className="text-sm text-gray-700 dark:text-white">
             Page {table.getState().pagination.pageIndex + 1} of{" "}
             {table.getPageCount()}
           </span>

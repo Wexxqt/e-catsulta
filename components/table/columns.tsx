@@ -11,29 +11,34 @@ import { Appointment } from "@/types/appwrite.types";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatusBadge } from "../StatusBadge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 // Helper function to safely handle potentially deleted patient data
 const safePatientAccess = (appointment: Appointment) => {
   try {
     // First verify the patient object exists
-    if (!appointment.patient || typeof appointment.patient !== 'object') {
+    if (!appointment.patient || typeof appointment.patient !== "object") {
       return {
-        name: 'Deleted Patient',
+        name: "Deleted Patient",
         email: null,
-        $id: appointment.userId || 'unknown'
+        $id: appointment.userId || "unknown",
       };
     }
-    
+
     // Return the patient data
     return appointment.patient;
   } catch (error) {
     console.error("Error accessing patient data:", error);
     return {
-      name: 'Deleted Patient',
+      name: "Deleted Patient",
       email: null,
-      $id: appointment.userId || 'unknown'
+      $id: appointment.userId || "unknown",
     };
   }
 };
@@ -43,37 +48,42 @@ const generateAppointmentCode = (appointment: Appointment) => {
   if (appointment.appointmentCode) {
     return appointment.appointmentCode;
   }
-  
+
   try {
     // Import actual implementation from utils
-    const { generateAppointmentCode } = require('@/lib/utils');
-    
+    const { generateAppointmentCode } = require("@/lib/utils");
+
     // Use the actual implementation from utils
-    const patientId = appointment.patient?.$id || appointment.userId || 'UNKNOWN';
-    const appointmentId = appointment.$id || 'UNKNOWN';
-    
+    const patientId =
+      appointment.patient?.$id || appointment.userId || "UNKNOWN";
+    const appointmentId = appointment.$id || "UNKNOWN";
+
     return generateAppointmentCode(appointmentId, patientId);
   } catch (error) {
     // Fallback to a basic format
-    return `TEMP-${appointment.$id?.substring(0, 6) || 'UNKNOWN'}`;
+    return `TEMP-${appointment.$id?.substring(0, 6) || "UNKNOWN"}`;
   }
 };
 
 // Appointment Code Modal Component
-const AppointmentCodeModal = ({ appointment }: { appointment: Appointment }) => {
+const AppointmentCodeModal = ({
+  appointment,
+}: {
+  appointment: Appointment;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const code = generateAppointmentCode(appointment);
-  
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   return (
     <>
-      <button 
+      <button
         onClick={() => setIsOpen(true)}
         className="flex items-center justify-center bg-blue-500/15 hover:bg-blue-500/30 text-blue-500 rounded-md px-2.5 py-1.5 transition-colors"
         title="View Appointment Code"
@@ -81,7 +91,7 @@ const AppointmentCodeModal = ({ appointment }: { appointment: Appointment }) => 
         <Clipboard size={18} className="mr-1.5" />
         <span className="text-xs font-medium">Code</span>
       </button>
-      
+
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -91,12 +101,12 @@ const AppointmentCodeModal = ({ appointment }: { appointment: Appointment }) => 
             <div className="flex flex-col items-center justify-center space-y-4">
               <div className="text-2xl font-bold text-blue-500">{code}</div>
               <p className="text-sm text-gray-400 text-center">
-                This is a unique code for this appointment. 
-                Patient can use this code for check-in.
+                This is a unique code for this appointment. Patient can use this
+                code for check-in.
               </p>
-              <Button 
-                onClick={copyToClipboard} 
-                variant="outline" 
+              <Button
+                onClick={copyToClipboard}
+                variant="outline"
                 className="flex items-center gap-2"
               >
                 {copied ? (
@@ -132,16 +142,25 @@ export const columns: ColumnDef<Appointment>[] = [
     cell: ({ row }) => {
       const appointment = row.original;
       const patient = safePatientAccess(appointment);
-      
+
       return (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage 
-              src={patient.email ? getGravatarUrl(patient.email, 40) : undefined} 
-              alt={patient.name || 'Patient'} 
+            <AvatarImage
+              src={
+                patient.email
+                  ? getGravatarUrl(patient.email, 40)
+                  : getGravatarUrl(
+                      "",
+                      40,
+                      "robohash",
+                      patient.$id || patient.userId
+                    )
+              }
+              alt={patient.name || "Patient"}
             />
             <AvatarFallback className="bg-gradient-to-br from-dark-300 to-dark-400 text-xs">
-              {patient.name ? patient.name.substring(0, 2).toUpperCase() : 'PT'}
+              {patient.name ? patient.name.substring(0, 2).toUpperCase() : "PT"}
             </AvatarFallback>
           </Avatar>
           <p className="text-14-medium">{patient.name}</p>
@@ -186,14 +205,14 @@ export const columns: ColumnDef<Appointment>[] = [
       return (
         <div className="flex items-center gap-3">
           <Image
-          src={doctor?.image || "/assets/images/default-doctor.png"}
-          alt="doctor"
-          width={100}
-          height={100}
-          className="size-8"
-        />
-        <p className="whitespace-nowrap">Dr. {doctor?.name}</p>
-      </div>
+            src={doctor?.image || "/assets/images/default-doctor.png"}
+            alt="doctor"
+            width={100}
+            height={100}
+            className="size-8"
+          />
+          <p className="whitespace-nowrap">Dr. {doctor?.name}</p>
+        </div>
       );
     },
   },

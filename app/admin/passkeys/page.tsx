@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useEffect, useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,33 +21,37 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Passkey } from '@/types/appwrite.types';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+} from "@/components/ui/alert-dialog";
+import { Passkey } from "@/types/appwrite.types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import Image from "next/image";
-import { Progress } from '@/components/ui/progress';
+import { Progress } from "@/components/ui/progress";
 
 export default function PasskeyAdmin() {
-  const [idNumber, setIdNumber] = useState('');
-  const [passkey, setPasskey] = useState('');
-  const [message, setMessage] = useState('');
+  const [idNumber, setIdNumber] = useState("");
+  const [passkey, setPasskey] = useState("");
+  const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [passkeys, setPasskeys] = useState<any[]>([]);
   const [loadingPasskeys, setLoadingPasskeys] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedPasskeyId, setSelectedPasskeyId] = useState('');
+  const [selectedPasskeyId, setSelectedPasskeyId] = useState("");
   const [showDeleteResult, setShowDeleteResult] = useState(false);
-  const [deleteResultMessage, setDeleteResultMessage] = useState('');
-  
+  const [deleteResultMessage, setDeleteResultMessage] = useState("");
+
   // New state for bulk import
   const [isImporting, setIsImporting] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -55,174 +59,178 @@ export default function PasskeyAdmin() {
   const [importResults, setImportResults] = useState<any>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Load passkeys on page load
   useEffect(() => {
     fetchPasskeys();
   }, []);
-  
+
   const fetchPasskeys = async () => {
     setLoadingPasskeys(true);
-    setErrorMessage('');
-    
+    setErrorMessage("");
+
     try {
-      const response = await fetch('/api/passkey');
-      
+      const response = await fetch("/api/passkey");
+
       if (!response.ok) {
-        throw new Error('Failed to fetch passkeys');
+        throw new Error("Failed to fetch passkeys");
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setPasskeys(data.passkeys || []);
       } else {
-        setErrorMessage(data.message || 'Failed to load passkeys');
+        setErrorMessage(data.message || "Failed to load passkeys");
       }
     } catch (error) {
-      console.error('Error fetching passkeys:', error);
-      setErrorMessage('Failed to load passkeys. Please try again.');
+      console.error("Error fetching passkeys:", error);
+      setErrorMessage("Failed to load passkeys. Please try again.");
     } finally {
       setLoadingPasskeys(false);
     }
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setMessage('');
-    
+    setMessage("");
+
     try {
       // Validate inputs
       if (!idNumber || !passkey) {
-        setMessage('Please enter both ID number and passkey');
+        setMessage("Please enter both ID number and passkey");
         setIsLoading(false);
         return;
       }
-      
+
       if (!/^\d{6}$/.test(passkey)) {
-        setMessage('Passkey must be exactly 6 digits');
+        setMessage("Passkey must be exactly 6 digits");
         setIsLoading(false);
         return;
       }
-      
+
       // Submit to API
-      const response = await fetch('/api/passkey', {
-        method: 'POST',
+      const response = await fetch("/api/passkey", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ idNumber, passkey }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         setMessage(`✅ Success: Passkey set for ID ${idNumber}`);
         // Clear form
-        setIdNumber('');
-        setPasskey('');
+        setIdNumber("");
+        setPasskey("");
         // Refresh the passkey list
         fetchPasskeys();
       } else {
         setMessage(`❌ Error: ${result.message || "Failed to set passkey"}`);
       }
     } catch (error) {
-      console.error('Error setting passkey:', error);
-      setMessage('❌ Error: Failed to set passkey');
+      console.error("Error setting passkey:", error);
+      setMessage("❌ Error: Failed to set passkey");
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleInitDefault = async () => {
     setIsLoading(true);
-    setMessage('');
-    
+    setMessage("");
+
     try {
-      const response = await fetch('/api/init-passkeys');
+      const response = await fetch("/api/init-passkeys");
       const result = await response.json();
-      
+
       if (result.success) {
-        setMessage('✅ Default test passkeys initialized successfully');
+        setMessage("✅ Default test passkeys initialized successfully");
         // Refresh the passkey list
         fetchPasskeys();
       } else {
-        setMessage(`❌ Error: ${result.message || "Failed to initialize default passkeys"}`);
+        setMessage(
+          `❌ Error: ${result.message || "Failed to initialize default passkeys"}`
+        );
       }
     } catch (error) {
-      console.error('Error initializing passkeys:', error);
-      setMessage('❌ Error: Failed to initialize default passkeys');
+      console.error("Error initializing passkeys:", error);
+      setMessage("❌ Error: Failed to initialize default passkeys");
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const prepareDelete = (passkeyId: string) => {
     setSelectedPasskeyId(passkeyId);
     setShowDeleteConfirm(true);
   };
-  
+
   const handleDelete = async () => {
     if (!selectedPasskeyId) return;
-    
+
     setIsLoading(true);
     setShowDeleteConfirm(false);
-    
+
     try {
       const response = await fetch(`/api/passkey/${selectedPasskeyId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
-        setDeleteResultMessage('Passkey deleted successfully');
+        setDeleteResultMessage("Passkey deleted successfully");
         // Refresh the passkey list
         fetchPasskeys();
       } else {
-        setDeleteResultMessage(`Failed to delete passkey: ${result.message || 'Unknown error'}`);
+        setDeleteResultMessage(
+          `Failed to delete passkey: ${result.message || "Unknown error"}`
+        );
       }
     } catch (error) {
-      console.error('Error deleting passkey:', error);
-      setDeleteResultMessage('Failed to delete passkey. Please try again.');
+      console.error("Error deleting passkey:", error);
+      setDeleteResultMessage("Failed to delete passkey. Please try again.");
     } finally {
       setIsLoading(false);
       setShowDeleteResult(true);
     }
   };
-  
+
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setImportFile(e.target.files[0]);
     }
   };
-  
+
   // Trigger file input click
   const handleBrowseClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-  
+
   // Handle bulk import submission
   const handleBulkImport = async () => {
     if (!importFile) {
-      setMessage('Please select a CSV file to import');
+      setMessage("Please select a CSV file to import");
       return;
     }
-    
+
     setIsImporting(true);
     setImportProgress(0);
-    setMessage('');
+    setMessage("");
     setImportResults(null);
-    
+
     try {
       // Create form data for file upload
       const formData = new FormData();
-      formData.append('file', importFile);
-      
+      formData.append("file", importFile);
+
       // Start progress animation
       let progress = 0;
       const progressInterval = setInterval(() => {
@@ -232,24 +240,24 @@ export default function PasskeyAdmin() {
         }
         setImportProgress(progress);
       }, 1000);
-      
+
       // Send file to API
-      const response = await fetch('/api/import-passkeys', {
-        method: 'POST',
+      const response = await fetch("/api/import-passkeys", {
+        method: "POST",
         body: formData,
       });
-      
+
       clearInterval(progressInterval);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to import passkeys');
+        throw new Error(errorData.message || "Failed to import passkeys");
       }
-      
+
       const results = await response.json();
       setImportProgress(100);
       setImportResults(results);
-      
+
       if (results.success) {
         setMessage(`✅ Success: ${results.message}`);
         // Show detailed results dialog
@@ -259,19 +267,21 @@ export default function PasskeyAdmin() {
         // Reset file input
         setImportFile(null);
         if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+          fileInputRef.current.value = "";
         }
       } else {
         setMessage(`❌ Error: ${results.message}`);
       }
     } catch (error) {
-      console.error('Error importing passkeys:', error);
-      setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Failed to import passkeys'}`);
+      console.error("Error importing passkeys:", error);
+      setMessage(
+        `❌ Error: ${error instanceof Error ? error.message : "Failed to import passkeys"}`
+      );
     } finally {
       setIsImporting(false);
     }
   };
-  
+
   return (
     <div className="admin-main">
       <div className="flex-between w-full mb-6">
@@ -284,21 +294,21 @@ export default function PasskeyAdmin() {
           />
           Passkey Management
         </h1>
-        <Button 
-          onClick={fetchPasskeys} 
-          variant="outline" 
+        <Button
+          onClick={fetchPasskeys}
+          variant="outline"
           disabled={loadingPasskeys}
           className="flex items-center gap-2"
         >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="16" 
-            height="16" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
             strokeLinejoin="round"
             className={loadingPasskeys ? "animate-spin" : ""}
           >
@@ -307,22 +317,22 @@ export default function PasskeyAdmin() {
             <path d="M3 12a9 9 0 0 0 15 6.7L21 16"></path>
             <path d="M21 22v-6h-6"></path>
           </svg>
-          {loadingPasskeys ? 'Refreshing...' : 'Refresh'}
+          {loadingPasskeys ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
-      
+
       <div className="dashboard-layout w-full mb-8">
         <div className="dashboard-card">
           <h2 className="sub-header mb-4 flex items-center gap-2">
             <Image
-              src="/assets/icons/plus.svg" 
+              src="/assets/icons/plus.svg"
               height={20}
               width={20}
               alt="add"
             />
             Add New Passkey
           </h2>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="shad-input-label" htmlFor="idNumber">
@@ -348,7 +358,7 @@ export default function PasskeyAdmin() {
                 />
               </div>
             </div>
-            
+
             <div>
               <label className="shad-input-label" htmlFor="passkey">
                 Passkey (6 digits)
@@ -375,13 +385,14 @@ export default function PasskeyAdmin() {
                     width={14}
                     alt="info"
                   />
-                  Must be exactly 6 digits. Will be securely hashed before storage.
+                  Must be exactly 6 digits. Will be securely hashed before
+                  storage.
                 </p>
               </div>
             </div>
-            
-            <Button 
-              type="submit" 
+
+            <Button
+              type="submit"
               className="shad-primary-btn w-full"
               disabled={isLoading}
             >
@@ -409,14 +420,16 @@ export default function PasskeyAdmin() {
               )}
             </Button>
           </form>
-          
+
           {message && (
-            <div className={`mt-4 p-3 rounded text-sm ${message.startsWith('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            <div
+              className={`mt-4 p-3 rounded text-sm ${message.startsWith("✅") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+            >
               {message}
             </div>
           )}
         </div>
-        
+
         <div className="dashboard-card">
           <h2 className="sub-header mb-4 flex items-center gap-2">
             <Image
@@ -427,7 +440,7 @@ export default function PasskeyAdmin() {
             />
             Bulk Import
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <h3 className="text-16-semibold mb-2 flex items-center gap-2">
@@ -441,16 +454,17 @@ export default function PasskeyAdmin() {
               </h3>
               <p className="text-14-regular text-dark-700 mb-3">
                 Upload a CSV file with ID numbers and passkeys for bulk import.
-                The file must have these column headers: <code>idNumber</code>, <code>passkey</code>
+                The file must have these column headers: <code>idNumber</code>,{" "}
+                <code>passkey</code>
               </p>
-              
+
               <div className="file-upload mb-4" onClick={handleBrowseClick}>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
+                <input
+                  type="file"
+                  ref={fileInputRef}
                   onChange={handleFileChange}
                   className="hidden"
-                  accept=".csv" 
+                  accept=".csv"
                   disabled={isImporting}
                 />
                 <Image
@@ -470,7 +484,7 @@ export default function PasskeyAdmin() {
                   )}
                 </div>
               </div>
-              
+
               {importFile && (
                 <div className="space-y-4">
                   {isImporting && (
@@ -482,7 +496,7 @@ export default function PasskeyAdmin() {
                       <Progress value={importProgress} className="h-2" />
                     </div>
                   )}
-                  
+
                   <div className="flex gap-2">
                     <Button
                       type="button"
@@ -491,7 +505,7 @@ export default function PasskeyAdmin() {
                       onClick={() => {
                         setImportFile(null);
                         if (fileInputRef.current) {
-                          fileInputRef.current.value = '';
+                          fileInputRef.current.value = "";
                         }
                       }}
                       disabled={isImporting}
@@ -530,7 +544,7 @@ export default function PasskeyAdmin() {
                   </div>
                 </div>
               )}
-              
+
               {!importFile && (
                 <Button
                   className="shad-primary-btn w-full flex items-center justify-center gap-2"
@@ -546,7 +560,7 @@ export default function PasskeyAdmin() {
                   <span>Browse for CSV File</span>
                 </Button>
               )}
-              
+
               <div className="mt-4">
                 <h4 className="text-14-medium flex items-center gap-2 mb-2">
                   <Image
@@ -557,18 +571,22 @@ export default function PasskeyAdmin() {
                   />
                   CSV Format Example
                 </h4>
-                <div className="bg-dark-300 rounded-md p-2 overflow-x-auto">
+                <div className="bg-dark-300 rounded-md max-h-60 overflow-y-auto">
                   <pre className="text-12-regular text-dark-700">
-                    idNumber,passkey<br/>
-                    2023-0001,123456<br/>
-                    EMP-1234,789012<br/>
-                    2022-9876,456789<br/>
+                    idNumber,passkey
+                    <br />
+                    2023-0001,123456
+                    <br />
+                    EMP-1234,789012
+                    <br />
+                    2022-9876,456789
+                    <br />
                     ...
                   </pre>
                 </div>
                 <div className="mt-3">
-                  <a 
-                    href="/assets/sample-passkeys.csv" 
+                  <a
+                    href="/assets/sample-passkeys.csv"
                     download="sample-passkeys.csv"
                     className="flex items-center gap-2 text-14-medium text-green-500 hover:text-green-400 transition-colors"
                   >
@@ -585,7 +603,7 @@ export default function PasskeyAdmin() {
             </div>
           </div>
         </div>
-        
+
         <div className="dashboard-card">
           <h2 className="sub-header mb-4 flex items-center gap-2">
             <Image
@@ -596,7 +614,7 @@ export default function PasskeyAdmin() {
             />
             Quick Actions
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <h3 className="text-16-semibold mb-2 flex items-center gap-2">
@@ -609,7 +627,8 @@ export default function PasskeyAdmin() {
                 Initialize Test Passkeys
               </h3>
               <p className="text-14-regular text-dark-700 mb-3">
-                This will add 5 test passkeys to the database with bcrypt hashing:
+                This will add 5 test passkeys to the database with bcrypt
+                hashing:
               </p>
               <ul className="text-12-regular text-dark-600 mb-4 space-y-1">
                 <li className="flex items-center gap-2">
@@ -687,7 +706,7 @@ export default function PasskeyAdmin() {
                 )}
               </Button>
             </div>
-            
+
             <div className="mt-6">
               <h3 className="text-16-semibold mb-2 flex items-center gap-2">
                 <Image
@@ -740,7 +759,7 @@ export default function PasskeyAdmin() {
           </div>
         </div>
       </div>
-      
+
       <div className="dashboard-card-full dashboard-card w-full">
         <h2 className="sub-header mb-4 flex items-center gap-2">
           <Image
@@ -751,7 +770,7 @@ export default function PasskeyAdmin() {
           />
           Passkey Database
         </h2>
-        
+
         {errorMessage && (
           <div className="mb-4 p-3 rounded bg-red-100 text-red-800 text-14-regular flex items-center gap-2">
             <Image
@@ -763,7 +782,7 @@ export default function PasskeyAdmin() {
             {errorMessage}
           </div>
         )}
-        
+
         {loadingPasskeys ? (
           <div className="text-center py-8">
             <Image
@@ -773,7 +792,9 @@ export default function PasskeyAdmin() {
               height={32}
               className="mx-auto animate-spin"
             />
-            <p className="mt-2 text-14-regular text-dark-600">Loading passkeys...</p>
+            <p className="mt-2 text-14-regular text-dark-600">
+              Loading passkeys...
+            </p>
           </div>
         ) : passkeys.length === 0 ? (
           <div className="text-center py-8 text-14-regular text-dark-600 flex flex-col items-center gap-2">
@@ -783,7 +804,10 @@ export default function PasskeyAdmin() {
               width={48}
               alt="empty"
             />
-            <p>No passkeys found. Add some passkeys or initialize the default test passkeys.</p>
+            <p>
+              No passkeys found. Add some passkeys or initialize the default
+              test passkeys.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -796,7 +820,10 @@ export default function PasskeyAdmin() {
                     width={14}
                     alt="info"
                   />
-                  <span>List of passkeys in the database. The actual passkeys are securely hashed.</span>
+                  <span>
+                    List of passkeys in the database. The actual passkeys are
+                    securely hashed.
+                  </span>
                 </div>
               </TableCaption>
               <TableHeader>
@@ -838,12 +865,12 @@ export default function PasskeyAdmin() {
                       {new Date(passkeyItem.updatedAt).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right table-actions">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => {
                           setIdNumber(passkeyItem.idNumber);
-                          setPasskey('');
+                          setPasskey("");
                         }}
                         title="Edit"
                         className="doctor-table-icon"
@@ -855,9 +882,9 @@ export default function PasskeyAdmin() {
                           alt="Edit"
                         />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => prepareDelete(passkeyItem.$id)}
                         title="Delete"
                         className="doctor-table-icon text-red-500"
@@ -877,7 +904,7 @@ export default function PasskeyAdmin() {
           </div>
         )}
       </div>
-      
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="shad-alert-dialog">
@@ -892,7 +919,8 @@ export default function PasskeyAdmin() {
               Are you sure?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-14-regular">
-              This will permanently delete this passkey. This action cannot be undone.
+              This will permanently delete this passkey. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -905,7 +933,10 @@ export default function PasskeyAdmin() {
               />
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="shad-danger-btn flex items-center gap-1">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="shad-danger-btn flex items-center gap-1"
+            >
               <Image
                 src="/assets/icons/delete.svg"
                 width={16}
@@ -917,7 +948,7 @@ export default function PasskeyAdmin() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {/* Delete Result Dialog */}
       <Dialog open={showDeleteResult} onOpenChange={setShowDeleteResult}>
         <DialogContent className="shad-dialog">
@@ -931,12 +962,13 @@ export default function PasskeyAdmin() {
               />
               Delete Result
             </DialogTitle>
-            <DialogDescription>
-              {deleteResultMessage}
-            </DialogDescription>
+            <DialogDescription>{deleteResultMessage}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => setShowDeleteResult(false)} className="shad-primary-btn flex items-center gap-1">
+            <Button
+              onClick={() => setShowDeleteResult(false)}
+              className="shad-primary-btn flex items-center gap-1"
+            >
               <Image
                 src="/assets/icons/check.svg"
                 width={16}
@@ -948,7 +980,7 @@ export default function PasskeyAdmin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Import Results Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <DialogContent className="shad-dialog max-w-3xl max-h-[80vh] overflow-y-auto">
@@ -966,32 +998,40 @@ export default function PasskeyAdmin() {
               Summary of the passkey import operation
             </DialogDescription>
           </DialogHeader>
-          
+
           {importResults && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-dark-300 p-3 rounded-md">
                   <div className="text-14-semibold">Total</div>
-                  <div className="text-24-bold">{importResults.results.total}</div>
+                  <div className="text-24-bold">
+                    {importResults.results.total}
+                  </div>
                 </div>
                 <div className="bg-dark-300 p-3 rounded-md">
                   <div className="text-14-semibold">Processed</div>
-                  <div className="text-24-bold">{importResults.results.processed}</div>
+                  <div className="text-24-bold">
+                    {importResults.results.processed}
+                  </div>
                 </div>
                 <div className="bg-green-900/30 p-3 rounded-md">
                   <div className="text-14-semibold">Successful</div>
-                  <div className="text-24-bold text-green-500">{importResults.results.successful}</div>
+                  <div className="text-24-bold text-green-500">
+                    {importResults.results.successful}
+                  </div>
                 </div>
                 <div className="bg-red-900/30 p-3 rounded-md">
                   <div className="text-14-semibold">Failed</div>
-                  <div className="text-24-bold text-red-500">{importResults.results.failed}</div>
+                  <div className="text-24-bold text-red-500">
+                    {importResults.results.failed}
+                  </div>
                 </div>
               </div>
-              
+
               {importResults.results.failed > 0 && (
                 <div>
                   <h3 className="text-16-semibold mb-2">Error Details</h3>
-                  <div className="bg-dark-300 rounded-md overflow-hidden max-h-60 overflow-y-auto">
+                  <div className="bg-dark-300 rounded-md max-h-60 overflow-y-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="bg-dark-500 text-14-medium">
@@ -1000,12 +1040,19 @@ export default function PasskeyAdmin() {
                         </tr>
                       </thead>
                       <tbody>
-                        {importResults.results.errors.map((error: any, index: number) => (
-                          <tr key={index} className="border-t border-dark-500 text-12-regular">
-                            <td className="py-2 px-3">{error.idNumber}</td>
-                            <td className="py-2 px-3 text-red-400">{error.error}</td>
-                          </tr>
-                        ))}
+                        {importResults.results.errors.map(
+                          (error: any, index: number) => (
+                            <tr
+                              key={index}
+                              className="border-t border-dark-500 text-12-regular"
+                            >
+                              <td className="py-2 px-3">{error.idNumber}</td>
+                              <td className="py-2 px-3 text-red-400">
+                                {error.error}
+                              </td>
+                            </tr>
+                          )
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1013,9 +1060,12 @@ export default function PasskeyAdmin() {
               )}
             </div>
           )}
-          
+
           <DialogFooter>
-            <Button onClick={() => setShowImportDialog(false)} className="shad-primary-btn">
+            <Button
+              onClick={() => setShowImportDialog(false)}
+              className="shad-primary-btn"
+            >
               Close
             </Button>
           </DialogFooter>
@@ -1023,4 +1073,4 @@ export default function PasskeyAdmin() {
       </Dialog>
     </div>
   );
-} 
+}

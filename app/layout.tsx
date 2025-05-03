@@ -3,7 +3,7 @@ import "./globals.css";
 import { Bricolage_Grotesque as FontSans } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
-import { ToastProvider } from "@/components/ui/use-toast";
+import ToastProvider from "@/components/ToastProvider";
 
 import { cn } from "@/lib/utils";
 

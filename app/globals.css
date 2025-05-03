@@ -40,7 +40,7 @@
 
   /* ===== UTILITIES */
   .sidebar {
-    @apply remove-scrollbar w-full max-w-72 flex-col overflow-auto bg-gray-900 px-7 py-10;
+    @apply remove-scrollbar w-full max-w-72 flex-col bg-gray-900 px-7 py-10;
   }
 
   .left-sidebar {
@@ -68,7 +68,7 @@
   }
 
   .container {
-    @apply relative flex-1 overflow-y-auto px-[5%];
+    @apply relative flex-1 px-[5%];
   }
 
   .sub-container {

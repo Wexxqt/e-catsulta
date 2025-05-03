@@ -19,6 +19,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { decryptKey, encryptKey } from "@/lib/utils";
+import { validatePasskey as validatePasskeyAPI } from "@/lib/utils/validatePasskey";
 
 export const PasskeyModal = () => {
   const router = useRouter();
@@ -26,6 +27,7 @@ export const PasskeyModal = () => {
   const [open, setOpen] = useState(true); // Always open the modal initially
   const [passkey, setPasskey] = useState("");
   const [error, setError] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
 
   const encryptedKey =
     typeof window !== "undefined"
@@ -35,16 +37,26 @@ export const PasskeyModal = () => {
   useEffect(() => {
     // Check if we're on the admin page and need to show the modal
     if (path === "/admin") {
-      // Check if we have a valid access key
-      const hasValidKey = encryptedKey && decryptKey(encryptedKey) === process.env.NEXT_PUBLIC_ADMIN_PASSKEY;
-      
-      if (!hasValidKey) {
-        // If no valid key, show the modal
-        setOpen(true);
-      } else {
-        // If we have a valid key, make sure the modal is closed
-        setOpen(false);
-      }
+      const checkPasskey = async () => {
+        // If we have an encrypted key, validate it
+        if (encryptedKey) {
+          const decryptedKey = decryptKey(encryptedKey);
+          const isValid = await validatePasskeyAPI(decryptedKey, "admin");
+
+          if (isValid) {
+            // If valid key, make sure the modal is closed
+            setOpen(false);
+          } else {
+            // If invalid key, show the modal
+            setOpen(true);
+          }
+        } else {
+          // No key, show the modal
+          setOpen(true);
+        }
+      };
+
+      checkPasskey();
     }
   }, [path, encryptedKey]);
 
@@ -53,20 +65,29 @@ export const PasskeyModal = () => {
     router.push("/");
   };
 
-  const validatePasskey = (
+  const validatePasskey = async (
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
     e.preventDefault();
+    setIsValidating(true);
+    setError("");
 
-    if (passkey === process.env.NEXT_PUBLIC_ADMIN_PASSKEY) {
-      const encryptedKey = encryptKey(passkey);
+    try {
+      const isValid = await validatePasskeyAPI(passkey, "admin");
 
-      localStorage.setItem("accessKey", encryptedKey);
-
-      setOpen(false);
-      router.replace("/admin"); // Use router.replace here
-    } else {
-      setError("Invalid passkey. Please try again.");
+      if (isValid) {
+        const encryptedKey = encryptKey(passkey);
+        localStorage.setItem("accessKey", encryptedKey);
+        setOpen(false);
+        router.replace("/admin"); // Use router.replace here
+      } else {
+        setError("Invalid passkey. Please try again.");
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again.");
+      console.error(error);
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -115,8 +136,9 @@ export const PasskeyModal = () => {
           <AlertDialogAction
             onClick={(e) => validatePasskey(e)}
             className="shad-primary-btn w-full"
+            disabled={isValidating}
           >
-            Enter Admin Passkey
+            {isValidating ? "Validating..." : "Enter Admin Passkey"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -4,7 +4,13 @@
 import NextError from "next/error";
 import { useEffect } from "react";
 
-export default function GlobalError({ error, reset }: { error: Error; reset: () => void }) {
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
   useEffect(() => {
     console.error(error); // Log the error to the console
   }, [error]);
