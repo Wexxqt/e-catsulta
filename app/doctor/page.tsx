@@ -97,6 +97,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Settings, LogOut, Archive } from "lucide-react";
+import { type } from "os";
 
 interface AppointmentState {
   documents: Appointment[];
@@ -131,20 +132,17 @@ interface AvailabilitySettings {
     date: string;
     startTime: string;
     endTime: string;
-    reason: string;
   }>;
   newBlockedSlot?: {
     date?: string;
     startTime?: string;
     endTime?: string;
-    reason?: string;
   };
   blockingDateRange?: {
     startDate?: string;
     endDate?: string;
     startTime?: string;
     endTime?: string;
-    reason?: string;
   };
 }
 
@@ -598,7 +596,7 @@ const DoctorDashboard = () => {
       );
 
       // Update the doctor object in memory
-      doctor.availability = updatedAvailability;
+      doctor.availability = updatedAvailability as any;
 
       // Save to the backend database using the API
       const result = await saveDoctorAvailability(
@@ -821,6 +819,21 @@ const DoctorDashboard = () => {
     return cleanup;
   }, [showAvailabilityModal]);
 
+  // Helper function to convert 24-hour format to 12-hour format
+  const formatTo12Hour = (time24: string): string => {
+    if (!time24) return "";
+
+    const [hourStr, minute] = time24.split(":");
+    const hour = parseInt(hourStr, 10);
+
+    if (isNaN(hour)) return time24;
+
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+
+    return `${hour12}:${minute} ${period}`;
+  };
+
   return (
     <>
       {/* Authentication Modal */}
@@ -973,22 +986,27 @@ const DoctorDashboard = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[900px] z-50">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
+        <DialogContent className="sm:max-w-[900px] xl:max-w-[1200px] 2xl:max-w-[1400px] z-50 bg-white dark:bg-dark-300 border border-gray-100 dark:border-gray-700 shadow-xl">
+          <DialogHeader className="pb-4 border-b border-gray-100 dark:border-gray-700">
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
               Availability Settings
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-gray-600 dark:text-gray-300">
               Configure your working hours and time off
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-            <div className="lg:col-span-2 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4 xl:gap-8">
+            <div className="col-span-1 space-y-4">
               <h3 className="text-16-medium font-semibold text-gray-800 dark:text-gray-100">
                 Working Hours
               </h3>
-              <div className="dashboard-card p-4 space-y-4">
+              <div className="dashboard-card p-4 xl:p-6 space-y-5 h-full bg-white dark:bg-dark-400 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Set your regular working days and hours when patients can book
+                  appointments.
+                </div>
+
                 <div className="space-y-2">
                   <h4 className="text-16-medium">Working Days</h4>
                   <div className="flex flex-wrap gap-2">
@@ -1011,7 +1029,7 @@ const DoctorDashboard = () => {
                         }
                         size="sm"
                         className={cn(
-                          "h-9",
+                          "h-9 w-12",
                           availabilitySettings.days.includes(day)
                             ? "bg-gray-900 text-white dark:bg-gray-200 dark:text-gray-900"
                             : "bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white"
@@ -1031,6 +1049,47 @@ const DoctorDashboard = () => {
                         {label}
                       </Button>
                     ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => {
+                        setAvailabilitySettings({
+                          ...availabilitySettings,
+                          days: [1, 2, 3, 4, 5], // Mon-Fri
+                        });
+                      }}
+                    >
+                      Weekdays
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => {
+                        setAvailabilitySettings({
+                          ...availabilitySettings,
+                          days: [0, 6], // Sat-Sun
+                        });
+                      }}
+                    >
+                      Weekends
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => {
+                        setAvailabilitySettings({
+                          ...availabilitySettings,
+                          days: [0, 1, 2, 3, 4, 5, 6], // All days
+                        });
+                      }}
+                    >
+                      All Days
+                    </Button>
                   </div>
                 </div>
 
@@ -1100,6 +1159,51 @@ const DoctorDashboard = () => {
                   </div>
                 </div>
 
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => {
+                      setAvailabilitySettings({
+                        ...availabilitySettings,
+                        startTime: 8,
+                        endTime: 17,
+                      });
+                    }}
+                  >
+                    8AM - 5PM
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => {
+                      setAvailabilitySettings({
+                        ...availabilitySettings,
+                        startTime: 9,
+                        endTime: 18,
+                      });
+                    }}
+                  >
+                    9AM - 6PM
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => {
+                      setAvailabilitySettings({
+                        ...availabilitySettings,
+                        startTime: 10,
+                        endTime: 19,
+                      });
+                    }}
+                  >
+                    10AM - 7PM
+                  </Button>
+                </div>
+
                 <div className="space-y-2">
                   <h4 className="text-16-medium">Appointment Booking Range</h4>
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -1109,7 +1213,7 @@ const DoctorDashboard = () => {
                       </label>
                       <Input
                         type="date"
-                        className="w-full text-gray-900 dark:text-white"
+                        className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                         value={availabilitySettings.bookingStartDate}
                         onChange={(e) =>
                           setAvailabilitySettings((prev) => ({
@@ -1125,7 +1229,7 @@ const DoctorDashboard = () => {
                       </label>
                       <Input
                         type="date"
-                        className="w-full text-gray-900 dark:text-white"
+                        className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                         value={availabilitySettings.bookingEndDate}
                         min={availabilitySettings.bookingStartDate}
                         onChange={(e) =>
@@ -1139,6 +1243,7 @@ const DoctorDashboard = () => {
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
                     Patients can only book appointments within this date range.
+                    Leave empty for no restrictions.
                   </p>
                 </div>
 
@@ -1165,447 +1270,408 @@ const DoctorDashboard = () => {
                     day.
                   </p>
                 </div>
-
-                {/* Blocked Time Slots Section */}
-                <div className="space-y-2 mt-6">
-                  <h4 className="text-16-medium">Blocked Time Slots</h4>
-                  <p className="text-xs text-gray-500">
-                    Block specific time slots or date ranges that should not be
-                    available for appointments.
-                  </p>
-
-                  {/* Add new blocked time slot */}
-                  <div className="border rounded-md p-3 space-y-3">
-                    <h5 className="text-sm font-medium">
-                      Add New Blocked Time
-                    </h5>
-
-                    <div className="flex space-x-2 mb-3">
-                      <Tabs defaultValue="single" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-3">
-                          <TabsTrigger value="single">Single Day</TabsTrigger>
-                          <TabsTrigger value="range">Date Range</TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="single" className="space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-sm block mb-1">Date</label>
-                              <Input
-                                type="date"
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    newBlockedSlot: {
-                                      ...(prev.newBlockedSlot || {}),
-                                      date: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm block mb-1">
-                                Start Time
-                              </label>
-                              <Input
-                                type="time"
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    newBlockedSlot: {
-                                      ...(prev.newBlockedSlot || {}),
-                                      startTime: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm block mb-1">
-                                End Time
-                              </label>
-                              <Input
-                                type="time"
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    newBlockedSlot: {
-                                      ...(prev.newBlockedSlot || {}),
-                                      endTime: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm block mb-1">
-                                Reason
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Lunch, Meeting, etc."
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    newBlockedSlot: {
-                                      ...(prev.newBlockedSlot || {}),
-                                      reason: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <Button
-                            className="w-full mt-2"
-                            onClick={() => {
-                              // Add new blocked slot to the list
-                              if (
-                                availabilitySettings.newBlockedSlot?.date &&
-                                availabilitySettings.newBlockedSlot
-                                  ?.startTime &&
-                                availabilitySettings.newBlockedSlot?.endTime
-                              ) {
-                                const newSlot = {
-                                  date: format(
-                                    new Date(
-                                      availabilitySettings.newBlockedSlot.date
-                                    ),
-                                    "MMM dd, yyyy"
-                                  ),
-                                  startTime:
-                                    availabilitySettings.newBlockedSlot
-                                      .startTime,
-                                  endTime:
-                                    availabilitySettings.newBlockedSlot.endTime,
-                                  reason:
-                                    availabilitySettings.newBlockedSlot
-                                      .reason || "Unavailable",
-                                };
-
-                                setAvailabilitySettings((prev) => ({
-                                  ...prev,
-                                  blockedTimeSlots: [
-                                    ...prev.blockedTimeSlots,
-                                    newSlot,
-                                  ],
-                                  newBlockedSlot: undefined,
-                                }));
-                              }
-                            }}
-                          >
-                            Add Single Day Block
-                          </Button>
-                        </TabsContent>
-
-                        <TabsContent value="range" className="space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-sm block mb-1">
-                                Start Date
-                              </label>
-                              <Input
-                                type="date"
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    blockingDateRange: {
-                                      ...(prev.blockingDateRange || {}),
-                                      startDate: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm block mb-1">
-                                End Date
-                              </label>
-                              <Input
-                                type="date"
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    blockingDateRange: {
-                                      ...(prev.blockingDateRange || {}),
-                                      endDate: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm block mb-1">
-                                Start Time
-                              </label>
-                              <Input
-                                type="time"
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    blockingDateRange: {
-                                      ...(prev.blockingDateRange || {}),
-                                      startTime: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm block mb-1">
-                                End Time
-                              </label>
-                              <Input
-                                type="time"
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    blockingDateRange: {
-                                      ...(prev.blockingDateRange || {}),
-                                      endTime: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                            <div className="sm:col-span-2">
-                              <label className="text-sm block mb-1">
-                                Reason
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Vacation, Conference, etc."
-                                className="w-full text-gray-900 dark:text-white"
-                                onChange={(e) => {
-                                  setAvailabilitySettings((prev) => ({
-                                    ...prev,
-                                    blockingDateRange: {
-                                      ...(prev.blockingDateRange || {}),
-                                      reason: e.target.value,
-                                    },
-                                  }));
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <Button
-                            className="w-full mt-2 text-white dark:text-gray-900"
-                            onClick={() => {
-                              // Generate a series of blocked slots for each day in the range
-                              if (
-                                availabilitySettings.blockingDateRange
-                                  ?.startDate &&
-                                availabilitySettings.blockingDateRange
-                                  ?.endDate &&
-                                availabilitySettings.blockingDateRange
-                                  ?.startTime &&
-                                availabilitySettings.blockingDateRange?.endTime
-                              ) {
-                                const startDate = new Date(
-                                  availabilitySettings.blockingDateRange.startDate
-                                );
-                                const endDate = new Date(
-                                  availabilitySettings.blockingDateRange.endDate
-                                );
-                                const reason =
-                                  availabilitySettings.blockingDateRange
-                                    .reason || "Date range block";
-                                const newSlots = [];
-
-                                // Create a slot for each day in the range
-                                const currentDate = new Date(startDate);
-                                while (currentDate <= endDate) {
-                                  newSlots.push({
-                                    date: format(
-                                      new Date(currentDate),
-                                      "MMM dd, yyyy"
-                                    ),
-                                    startTime:
-                                      availabilitySettings.blockingDateRange
-                                        .startTime,
-                                    endTime:
-                                      availabilitySettings.blockingDateRange
-                                        .endTime,
-                                    reason: reason,
-                                  });
-
-                                  // Move to next day
-                                  currentDate.setDate(
-                                    currentDate.getDate() + 1
-                                  );
-                                }
-
-                                // Add all the new slots
-                                setAvailabilitySettings((prev) => ({
-                                  ...prev,
-                                  blockedTimeSlots: [
-                                    ...prev.blockedTimeSlots,
-                                    ...newSlots,
-                                  ],
-                                  blockingDateRange: undefined,
-                                }));
-
-                                toast({
-                                  title: "Date Range Blocked",
-                                  description: `Blocked ${newSlots.length} days from ${format(startDate, "MMM dd")} to ${format(endDate, "MMM dd")}`,
-                                  variant: "default",
-                                });
-                              }
-                            }}
-                          >
-                            Add Date Range Block
-                          </Button>
-                        </TabsContent>
-                      </Tabs>
-                    </div>
-                  </div>
-
-                  {/* Update the display of the blocked time slots to include a badge for date range blocks */}
-                  <div className="mt-4">
-                    <h5 className="text-sm font-medium mb-2">
-                      Current Blocked Time Slots
-                    </h5>
-
-                    {!availabilitySettings.blockedTimeSlots ||
-                    availabilitySettings.blockedTimeSlots.length === 0 ? (
-                      <p className="text-14-regular text-dark-600 dark:text-gray-400">
-                        No time slots blocked
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        {availabilitySettings.blockedTimeSlots.map(
-                          (slot, i) => (
-                            <div
-                              key={i}
-                              className="rounded-md border border-gray-200 dark:border-dark-500 bg-white dark:bg-dark-400 shadow-sm overflow-hidden"
-                            >
-                              <div className="bg-gray-50 dark:bg-dark-300 px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-dark-500">
-                                <span className="font-medium text-sm text-gray-900 dark:text-white">
-                                  {slot.date}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setAvailabilitySettings((prev) => ({
-                                      ...prev,
-                                      blockedTimeSlots:
-                                        prev.blockedTimeSlots.filter(
-                                          (_, index) => index !== i
-                                        ),
-                                    }));
-                                  }}
-                                  className="h-6 w-6 p-0 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                  </svg>
-                                </Button>
-                              </div>
-                              <div className="p-3">
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    Time:
-                                  </span>
-                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {slot.startTime} - {slot.endTime}
-                                  </span>
-                                </div>
-                                <div className="flex items-start">
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    Reason:
-                                  </span>
-                                  <span className="text-sm ml-1 flex-1 text-gray-700 dark:text-gray-200">
-                                    {slot.reason}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-16-medium font-semibold">
-                Holidays/Time Off
+            {/* Blocked Time Slots - Now in its own column */}
+            <div className="col-span-1 space-y-4">
+              <h3 className="text-16-medium font-semibold text-gray-800 dark:text-gray-100">
+                Blocked Time Slots
               </h3>
-              <div className="dashboard-card p-4">
-                <div className="border rounded-md p-3 mb-3">
-                  <p className="text-sm text-dark-600 dark:text-gray-300 mb-2">
-                    Select dates to mark as holidays:
-                  </p>
-                  <Input
-                    type="date"
-                    className="mb-2 bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white"
-                    onChange={(e) => {
-                      const selectedDate = new Date(e.target.value);
-                      if (!isNaN(selectedDate.getTime())) {
-                        // Check if date already exists
-                        const exists = selectedDates.some(
-                          (date) =>
-                            date.toDateString() === selectedDate.toDateString()
-                        );
-                        if (!exists) {
-                          setSelectedDates((prev) => [...prev, selectedDate]);
-                        }
-                      }
-                    }}
-                  />
+              <div className="dashboard-card p-4 xl:p-6 space-y-5 h-full bg-white dark:bg-dark-400 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Block specific times when you're unavailable for appointments,
+                  such as lunch breaks or meetings.
                 </div>
 
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-16-medium">Selected Dates</h4>
-                  <div className="max-h-40 overflow-y-auto">
-                    {selectedDates.length === 0 ? (
-                      <p className="text-14-regular text-dark-600 dark:text-gray-400">
-                        No dates selected
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {selectedDates.map((date, i) => (
-                          <div
-                            key={i}
-                            className="flex justify-between items-center bg-gray-50 dark:bg-dark-400 p-2 rounded-md"
+                {/* Add new blocked time slot */}
+                <div className="border rounded-md p-3 space-y-3 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-dark-500/30">
+                  <h5 className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    Add New Blocked Time
+                  </h5>
+
+                  <div className="flex space-x-2 mb-3">
+                    <Tabs defaultValue="single" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2 mb-3 bg-gray-100 dark:bg-dark-600 p-1 rounded-md">
+                        <TabsTrigger
+                          value="single"
+                          className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-dark-400 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
+                        >
+                          Single Day
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="range"
+                          className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-dark-400 data-[state=active]:text-gray-900 dark:data-[state=active]:text-white"
+                        >
+                          Date Range
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="single" className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-sm block mb-1">Date</label>
+                            <Input
+                              type="date"
+                              className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
+                              onChange={(e) => {
+                                setAvailabilitySettings((prev) => ({
+                                  ...prev,
+                                  newBlockedSlot: {
+                                    ...(prev.newBlockedSlot || {}),
+                                    date: e.target.value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm block mb-1">
+                              Start Time
+                            </label>
+                            <Input
+                              type="time"
+                              className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
+                              onChange={(e) => {
+                                setAvailabilitySettings((prev) => ({
+                                  ...prev,
+                                  newBlockedSlot: {
+                                    ...(prev.newBlockedSlot || {}),
+                                    startTime: e.target.value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm block mb-1">
+                              End Time
+                            </label>
+                            <Input
+                              type="time"
+                              className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
+                              onChange={(e) => {
+                                setAvailabilitySettings((prev) => ({
+                                  ...prev,
+                                  newBlockedSlot: {
+                                    ...(prev.newBlockedSlot || {}),
+                                    endTime: e.target.value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {/* Preset buttons removed */}
+                        </div>
+
+                        <Button
+                          className="w-full mt-2"
+                          onClick={() => {
+                            // Add new blocked slot to the list
+                            if (
+                              availabilitySettings.newBlockedSlot?.date &&
+                              availabilitySettings.newBlockedSlot?.startTime &&
+                              availabilitySettings.newBlockedSlot?.endTime
+                            ) {
+                              const newSlot = {
+                                date: format(
+                                  new Date(
+                                    availabilitySettings.newBlockedSlot.date
+                                  ),
+                                  "MMM dd, yyyy"
+                                ),
+                                startTime:
+                                  availabilitySettings.newBlockedSlot.startTime,
+                                endTime:
+                                  availabilitySettings.newBlockedSlot.endTime,
+                              };
+
+                              setAvailabilitySettings((prev) => ({
+                                ...prev,
+                                blockedTimeSlots: [
+                                  ...prev.blockedTimeSlots,
+                                  newSlot,
+                                ],
+                                newBlockedSlot: undefined,
+                              }));
+                            }
+                          }}
+                        >
+                          Add Single Day Block
+                        </Button>
+                      </TabsContent>
+
+                      <TabsContent value="range" className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-sm block mb-1">
+                              Start Date
+                            </label>
+                            <Input
+                              type="date"
+                              className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
+                              onChange={(e) => {
+                                setAvailabilitySettings((prev) => ({
+                                  ...prev,
+                                  blockingDateRange: {
+                                    ...(prev.blockingDateRange || {}),
+                                    startDate: e.target.value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm block mb-1">
+                              End Date
+                            </label>
+                            <Input
+                              type="date"
+                              className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
+                              onChange={(e) => {
+                                setAvailabilitySettings((prev) => ({
+                                  ...prev,
+                                  blockingDateRange: {
+                                    ...(prev.blockingDateRange || {}),
+                                    endDate: e.target.value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm block mb-1">
+                              Start Time
+                            </label>
+                            <Input
+                              type="time"
+                              className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
+                              onChange={(e) => {
+                                setAvailabilitySettings((prev) => ({
+                                  ...prev,
+                                  blockingDateRange: {
+                                    ...(prev.blockingDateRange || {}),
+                                    startTime: e.target.value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm block mb-1">
+                              End Time
+                            </label>
+                            <Input
+                              type="time"
+                              className="w-full text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
+                              onChange={(e) => {
+                                setAvailabilitySettings((prev) => ({
+                                  ...prev,
+                                  blockingDateRange: {
+                                    ...(prev.blockingDateRange || {}),
+                                    endTime: e.target.value,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              // Set for next week, all day
+                              const today = new Date();
+                              const nextMonday = new Date(today);
+                              nextMonday.setDate(
+                                today.getDate() + ((8 - today.getDay()) % 7)
+                              );
+                              const nextFriday = new Date(nextMonday);
+                              nextFriday.setDate(nextMonday.getDate() + 4);
+
+                              setAvailabilitySettings((prev) => ({
+                                ...prev,
+                                blockingDateRange: {
+                                  startDate: nextMonday
+                                    .toISOString()
+                                    .split("T")[0],
+                                  endDate: nextFriday
+                                    .toISOString()
+                                    .split("T")[0],
+                                  startTime: "08:00",
+                                  endTime: "17:00",
+                                },
+                              }));
+                            }}
                           >
-                            <span className="text-gray-900 dark:text-white">
-                              {format(date, "MMM dd, yyyy")}
+                            Next Week
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              // Set for lunch hours (12-1) for the next 5 days
+                              const today = new Date();
+                              const fiveDaysLater = new Date(today);
+                              fiveDaysLater.setDate(today.getDate() + 4);
+
+                              setAvailabilitySettings((prev) => ({
+                                ...prev,
+                                blockingDateRange: {
+                                  startDate: today.toISOString().split("T")[0],
+                                  endDate: fiveDaysLater
+                                    .toISOString()
+                                    .split("T")[0],
+                                  startTime: "12:00",
+                                  endTime: "13:00",
+                                },
+                              }));
+                            }}
+                          >
+                            Lunch This Week
+                          </Button>
+                        </div>
+
+                        <Button
+                          className="w-full mt-2 text-white dark:text-gray-900"
+                          onClick={() => {
+                            // Generate a series of blocked slots for each day in the range
+                            if (
+                              availabilitySettings.blockingDateRange
+                                ?.startDate &&
+                              availabilitySettings.blockingDateRange?.endDate &&
+                              availabilitySettings.blockingDateRange
+                                ?.startTime &&
+                              availabilitySettings.blockingDateRange?.endTime
+                            ) {
+                              const startDate = new Date(
+                                availabilitySettings.blockingDateRange.startDate
+                              );
+                              const endDate = new Date(
+                                availabilitySettings.blockingDateRange.endDate
+                              );
+                              const newSlots: Array<{
+                                date: string;
+                                startTime: string;
+                                endTime: string;
+                              }> = [];
+
+                              // Create a slot for each day in the range
+                              const currentDate = new Date(startDate);
+                              while (currentDate <= endDate) {
+                                newSlots.push({
+                                  date: format(
+                                    new Date(currentDate),
+                                    "MMM dd, yyyy"
+                                  ),
+                                  startTime:
+                                    availabilitySettings.blockingDateRange
+                                      .startTime,
+                                  endTime:
+                                    availabilitySettings.blockingDateRange
+                                      .endTime,
+                                });
+
+                                // Move to next day
+                                currentDate.setDate(currentDate.getDate() + 1);
+                              }
+
+                              // Add all the new slots
+                              setAvailabilitySettings((prev) => ({
+                                ...prev,
+                                blockedTimeSlots: [
+                                  ...prev.blockedTimeSlots,
+                                  ...newSlots,
+                                ],
+                                blockingDateRange: undefined,
+                              }));
+
+                              toast({
+                                title: "Date Range Blocked",
+                                description: `Blocked ${newSlots.length} days from ${format(startDate, "MMM dd")} to ${format(endDate, "MMM dd")}`,
+                                variant: "default",
+                              });
+                            }
+                          }}
+                        >
+                          Add Date Range Block
+                        </Button>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </div>
+
+                {/* Display of the blocked time slots */}
+                <div className="mt-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h5 className="text-sm font-medium">
+                      Current Blocked Time Slots
+                    </h5>
+                    {availabilitySettings.blockedTimeSlots &&
+                      availabilitySettings.blockedTimeSlots.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                          onClick={() => {
+                            setAvailabilitySettings((prev) => ({
+                              ...prev,
+                              blockedTimeSlots: [],
+                            }));
+                            toast({
+                              title: "Cleared All Blocks",
+                              description:
+                                "All blocked time slots have been removed",
+                              variant: "default",
+                            });
+                          }}
+                        >
+                          Clear All
+                        </Button>
+                      )}
+                  </div>
+
+                  {!availabilitySettings.blockedTimeSlots ||
+                  availabilitySettings.blockedTimeSlots.length === 0 ? (
+                    <div className="text-center p-4 bg-gray-50 dark:bg-dark-500/20 rounded-md">
+                      <p className="text-14-regular text-gray-600 dark:text-gray-400">
+                        No time slots blocked
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Add blocked times using the form above
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 max-h-[350px] xl:max-h-[400px] overflow-y-auto pr-1">
+                      {availabilitySettings.blockedTimeSlots.map((slot, i) => (
+                        <div
+                          key={i}
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 shadow-sm overflow-hidden hover:border-blue-200 dark:hover:border-blue-800 hover:shadow-md transition-all duration-200"
+                        >
+                          <div className="bg-gray-50 dark:bg-dark-500 px-3 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+                            <span className="font-medium text-sm text-gray-900 dark:text-white">
+                              {slot.date}
                             </span>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                setSelectedDates((prev) =>
-                                  prev.filter(
-                                    (d) => d.getTime() !== date.getTime()
-                                  )
-                                );
+                                setAvailabilitySettings((prev) => ({
+                                  ...prev,
+                                  blockedTimeSlots:
+                                    prev.blockedTimeSlots.filter(
+                                      (_, index) => index !== i
+                                    ),
+                                }));
                               }}
-                              className="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
+                              className="h-6 w-6 p-0 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -1623,7 +1689,181 @@ const DoctorDashboard = () => {
                               </svg>
                             </Button>
                           </div>
-                        ))}
+                          <div className="p-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                Time:
+                              </span>
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                {formatTo12Hour(slot.startTime)} -{" "}
+                                {formatTo12Hour(slot.endTime)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="col-span-1 space-y-4">
+              <h3 className="text-16-medium font-semibold">
+                Holidays/Time Off
+              </h3>
+              <div className="dashboard-card p-4 xl:p-6 h-full space-y-5 bg-white dark:bg-dark-400 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Set full days when you're unavailable for appointments, such
+                  as holidays or vacation days.
+                </div>
+
+                <div className="border rounded-md p-3 mb-3">
+                  <p className="text-sm text-dark-600 dark:text-gray-300 mb-2">
+                    Select dates to mark as holidays:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      className="mb-2 bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
+                      onChange={(e) => {
+                        const selectedDate = new Date(e.target.value);
+                        if (!isNaN(selectedDate.getTime())) {
+                          // Check if date already exists
+                          const exists = selectedDates.some(
+                            (date) =>
+                              date.toDateString() ===
+                              selectedDate.toDateString()
+                          );
+                          if (!exists) {
+                            setSelectedDates((prev) => [...prev, selectedDate]);
+                          }
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        // Add today
+                        const today = new Date();
+                        const exists = selectedDates.some(
+                          (date) => date.toDateString() === today.toDateString()
+                        );
+                        if (!exists) {
+                          setSelectedDates((prev) => [...prev, today]);
+                        }
+                      }}
+                    >
+                      Today
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => {
+                      // Add next weekend
+                      const today = new Date();
+                      const nextSaturday = new Date(today);
+                      nextSaturday.setDate(
+                        today.getDate() + ((6 - today.getDay()) % 7)
+                      );
+                      const nextSunday = new Date(nextSaturday);
+                      nextSunday.setDate(nextSaturday.getDate() + 1);
+
+                      // Check if dates already exist
+                      const satExists = selectedDates.some(
+                        (date) =>
+                          date.toDateString() === nextSaturday.toDateString()
+                      );
+                      const sunExists = selectedDates.some(
+                        (date) =>
+                          date.toDateString() === nextSunday.toDateString()
+                      );
+
+                      setSelectedDates((prev) => [
+                        ...prev,
+                        ...(!satExists ? [nextSaturday] : []),
+                        ...(!sunExists ? [nextSunday] : []),
+                      ]);
+                    }}
+                  >
+                    Next Weekend
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => {
+                      // Clear selected dates
+                      setSelectedDates([]);
+                    }}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-16-medium">Selected Dates</h4>
+                    <span className="text-xs text-gray-500">
+                      {selectedDates.length} date(s) selected
+                    </span>
+                  </div>
+                  <div className="max-h-[350px] xl:max-h-[400px] overflow-y-auto">
+                    {selectedDates.length === 0 ? (
+                      <div className="text-center p-4 bg-gray-50 dark:bg-dark-500/20 rounded-md">
+                        <p className="text-14-regular text-dark-600 dark:text-gray-400">
+                          No dates selected
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Select dates using the calendar above
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {selectedDates
+                          .sort((a, b) => a.getTime() - b.getTime())
+                          .map((date, i) => (
+                            <div
+                              key={i}
+                              className="flex justify-between items-center bg-gray-50 dark:bg-dark-400 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-dark-300 transition-colors"
+                            >
+                              <span className="text-gray-900 dark:text-white">
+                                {format(date, "EEE, MMM dd, yyyy")}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedDates((prev) =>
+                                    prev.filter(
+                                      (d) => d.getTime() !== date.getTime()
+                                    )
+                                  );
+                                }}
+                                className="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                              </Button>
+                            </div>
+                          ))}
                       </div>
                     )}
                   </div>
@@ -1653,11 +1893,11 @@ const DoctorDashboard = () => {
             </div>
           </div>
 
-          <DialogFooter className="mt-6">
+          <DialogFooter className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
             <Button
               variant="outline"
               onClick={() => setShowAvailabilityModal(false)}
-              className="bg-white dark:bg-dark-400 border-gray-200 dark:border-dark-500 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-dark-500"
+              className="bg-white dark:bg-dark-500 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-dark-600"
             >
               Cancel
             </Button>
@@ -1666,7 +1906,7 @@ const DoctorDashboard = () => {
                 saveAvailabilitySettings();
                 setShowAvailabilityModal(false);
               }}
-              className="save-availability-btn bg-gray-900 hover:bg-gray-800 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900"
+              className="save-availability-btn bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
             >
               Save Availability Settings
             </Button>
