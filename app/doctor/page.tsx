@@ -2184,6 +2184,7 @@ const DoctorDashboard = () => {
                           <SelectItem value="scheduled">Scheduled</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="missed">Missed</SelectItem>
                         </SelectContent>
                       </Select>
                       <Button
