@@ -425,24 +425,68 @@ const DoctorDashboard = () => {
       const doctorName = localStorage.getItem("doctorName");
       if (!doctorName) return;
 
+      // Show a loading state or indicator
+      console.log(`Fetching patients for doctor: ${doctorName}`);
+
       // Call our new API endpoint to get all patients
       const response = await fetch(
         `/api/patients/doctor?name=${encodeURIComponent(doctorName)}`
       );
 
       if (!response.ok) {
-        console.error("Failed to fetch patients");
+        const errorText = await response.text();
+        console.error(
+          `Failed to fetch patients. Status: ${response.status}`,
+          errorText
+        );
+        toast({
+          title: "Error",
+          description: "Failed to load patient data. Please try again.",
+          variant: "destructive",
+        });
         return;
       }
 
       const data = await response.json();
+      console.log(
+        `Patient data response: Success=${data.success}, Count=${data.count || "N/A"}`
+      );
 
       if (data.success && data.patients) {
+        const patientCount = Object.keys(data.patients).length;
+        console.log(`Setting ${patientCount} patients to state`);
+
         // Set the uniquePatients state with this data
         setUniquePatients(data.patients);
+
+        // Log some information about the first patient to verify data structure
+        if (patientCount > 0) {
+          const firstPatientKey = Object.keys(data.patients)[0];
+          const firstPatient = data.patients[firstPatientKey];
+          console.log("Sample patient data structure:", {
+            hasPatientObject: !!firstPatient.patient,
+            patientId: firstPatient.patient?.$id || "missing",
+            patientProperties: firstPatient.patient
+              ? Object.keys(firstPatient.patient)
+              : [],
+          });
+        }
+      } else {
+        console.error("API returned success=false or no patients", data);
+        toast({
+          title: "Warning",
+          description:
+            "No patient data found. This could be your first time using the system.",
+          variant: "default",
+        });
       }
     } catch (error) {
       console.error("Error fetching patients:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load patient data due to an unexpected error.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -739,8 +783,10 @@ const DoctorDashboard = () => {
       if (!doctorName) {
         throw new Error("Doctor not authenticated");
       }
+
       // Store the current uniquePatients before clearing
-      const currentPatients = uniquePatients;
+      const currentPatients = { ...uniquePatients };
+
       // Call to backend to clear/archive appointments for this doctor
       const response = await fetch("/api/appointments/clear", {
         method: "POST",
@@ -753,12 +799,15 @@ const DoctorDashboard = () => {
           preservePatientData: true, // This indicates we want to keep patient data
         }),
       });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
           errorData.error || "Failed to clear appointment history"
         );
       }
+
+      // Clear the appointment displays
       setFilteredAppointments({
         documents: [],
         scheduledCount: 0,
@@ -769,11 +818,26 @@ const DoctorDashboard = () => {
         totalCount: 0,
       });
       setAllDoctorAppointments([]);
+
+      // Preserve the patient data by manually refreshing patient list
+      // This ensures patients remain visible even when all appointments are archived
+      console.log("Refreshing patient data after clearing appointments");
       await fetchPatients();
+
+      // If patients were lost during the clear, restore them from our stored copy
+      if (
+        Object.keys(uniquePatients).length === 0 &&
+        Object.keys(currentPatients).length > 0
+      ) {
+        console.log("Restoring patient data from stored copy");
+        setUniquePatients(currentPatients);
+      }
+
       setShowClearHistoryDialog(false);
       toast({
         title: "Success",
-        description: "Appointment history cleared successfully!",
+        description:
+          "Appointment history cleared successfully! Patient data preserved.",
         variant: "default",
       });
     } catch (error) {
@@ -2342,53 +2406,76 @@ const DoctorDashboard = () => {
                           (col.accessorKey === "patient" ||
                             col.accessorKey === "patientDetails")
                       )}
-                      data={Object.values(uniquePatients).filter(
-                        (appointment) => {
-                          // Apply category filter
-                          if (patientCategoryFilter !== "all") {
-                            const patientCategory =
-                              appointment.patient?.category?.toLowerCase() ||
-                              "";
-                            if (
-                              patientCategoryFilter === "student" &&
-                              !patientCategory.includes("student")
-                            ) {
+                      data={(() => {
+                        // Start with all patients
+                        const allPatients = Object.values(uniquePatients);
+                        console.log(
+                          `Total patients before filtering: ${allPatients.length}`
+                        );
+
+                        // Apply filters
+                        const filteredPatients = allPatients.filter(
+                          (appointment) => {
+                            // Validate patient object exists
+                            if (!appointment || !appointment.patient) {
+                              console.log(
+                                "Found appointment without patient object:",
+                                appointment
+                              );
                               return false;
                             }
-                            if (
-                              patientCategoryFilter === "employee" &&
-                              !patientCategory.includes("employee")
-                            ) {
-                              return false;
+
+                            // Apply category filter
+                            if (patientCategoryFilter !== "all") {
+                              const patientCategory =
+                                appointment.patient?.category?.toLowerCase() ||
+                                "";
+                              if (
+                                patientCategoryFilter === "student" &&
+                                !patientCategory.includes("student")
+                              ) {
+                                return false;
+                              }
+                              if (
+                                patientCategoryFilter === "employee" &&
+                                !patientCategory.includes("employee")
+                              ) {
+                                return false;
+                              }
                             }
-                          }
 
-                          // Apply search filter
-                          if (!patientSearch) {
-                            return true;
-                          }
+                            // Apply search filter
+                            if (!patientSearch) {
+                              return true;
+                            }
 
-                          const searchLower = patientSearch.toLowerCase();
-                          return (
-                            (appointment.patient?.name &&
-                              appointment.patient.name
-                                .toLowerCase()
-                                .includes(searchLower)) ||
-                            (appointment.patient?.email &&
-                              appointment.patient.email
-                                .toLowerCase()
-                                .includes(searchLower)) ||
-                            (appointment.patient?.phone &&
-                              appointment.patient.phone
-                                .toLowerCase()
-                                .includes(searchLower)) ||
-                            (appointment.patient?.category &&
-                              appointment.patient.category
-                                .toLowerCase()
-                                .includes(searchLower))
-                          );
-                        }
-                      )}
+                            const searchLower = patientSearch.toLowerCase();
+                            return (
+                              (appointment.patient?.name &&
+                                appointment.patient.name
+                                  .toLowerCase()
+                                  .includes(searchLower)) ||
+                              (appointment.patient?.email &&
+                                appointment.patient.email
+                                  .toLowerCase()
+                                  .includes(searchLower)) ||
+                              (appointment.patient?.phone &&
+                                appointment.patient.phone
+                                  .toLowerCase()
+                                  .includes(searchLower)) ||
+                              (appointment.patient?.category &&
+                                appointment.patient.category
+                                  .toLowerCase()
+                                  .includes(searchLower))
+                            );
+                          }
+                        );
+
+                        console.log(
+                          `Patients after filtering: ${filteredPatients.length}`
+                        );
+                        return filteredPatients;
+                      })()}
                     />
                   </div>
                 )}

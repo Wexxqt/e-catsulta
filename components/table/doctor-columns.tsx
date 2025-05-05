@@ -147,24 +147,48 @@ const generateAppointmentCode = (appointment: Appointment) => {
 // Helper function to safely handle potentially deleted patient data
 const safePatientAccess = (appointment: ExtendedAppointment) => {
   try {
-    // First verify the patient object exists
-    if (!appointment.patient || typeof appointment.patient !== "object") {
+    // First verify the appointment exists
+    if (!appointment) {
+      console.warn("Appointment object is undefined or null");
       return {
-        name: "Deleted Patient",
+        name: "Unknown Patient",
         email: null,
-        $id: appointment.userId || "unknown",
+        $id: "unknown",
         phone: "N/A",
       };
     }
 
-    // Return the patient data
-    return appointment.patient;
-  } catch (error) {
-    console.error("Error accessing patient data:", error);
+    // Check if patient exists directly in the appointment
+    if (appointment.patient && typeof appointment.patient === "object") {
+      // Make sure it has at least a name property or ID
+      if (appointment.patient.name || appointment.patient.$id) {
+        return appointment.patient;
+      }
+    }
+
+    // If no patient object, try to use userId
+    if (appointment.userId) {
+      return {
+        name: "Patient ID: " + appointment.userId.substring(0, 8),
+        email: null,
+        $id: appointment.userId,
+        phone: "N/A",
+      };
+    }
+
+    // Last resort fallback
     return {
       name: "Deleted Patient",
       email: null,
-      $id: appointment.userId || "unknown",
+      $id: "unknown",
+      phone: "N/A",
+    };
+  } catch (error) {
+    console.error("Error accessing patient data:", error);
+    return {
+      name: "Error: Deleted Patient",
+      email: null,
+      $id: "error",
       phone: "N/A",
     };
   }
