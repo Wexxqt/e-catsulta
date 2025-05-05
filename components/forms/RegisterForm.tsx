@@ -15,6 +15,7 @@ import { Category, GenderOptions, PatientFormDefaultValues } from "@/constants";
 import {
   registerPatient,
   verifyPatientPasskey,
+  setPatientPasskey,
 } from "@/lib/actions/patient.actions";
 import { PatientFormValidation } from "@/lib/validation";
 
@@ -32,7 +33,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import {
+  AlertCircle,
+  Info,
+  Check,
+  Key,
+  LockKeyhole,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
 import {
   InputOTP,
   InputOTPGroup,
@@ -55,6 +64,13 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
   const [passkey, setPasskey] = useState("");
   const [passkeyError, setPasskeyError] = useState("");
   const [formValues, setFormValues] = useState<any>(null);
+
+  // New state for change passkey feature
+  const [showChangePasskeyModal, setShowChangePasskeyModal] = useState(false);
+  const [newPasskey, setNewPasskey] = useState("");
+  const [confirmPasskey, setConfirmPasskey] = useState("");
+  const [changePasskeyError, setChangePasskeyError] = useState("");
+  const [changePasskeySuccess, setChangePasskeySuccess] = useState(false);
 
   // Format date as user types (automatically add /)
   const formatDateInput = (value: string) => {
@@ -99,7 +115,10 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       );
 
       if (isValid) {
-        // Continue with registration if passkey is valid
+        // Close the passkey modal
+        setShowPasskeyModal(false);
+
+        // Continue with registration
         await completeRegistration(formValues);
       } else {
         setPasskeyError("Invalid passkey. Please check and try again.");
@@ -108,6 +127,51 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
       console.error("Passkey validation error:", error);
       setPasskeyError(
         error instanceof Error ? error.message : "Failed to validate passkey"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // New function to handle changing passkey
+  const handleChangePasskey = async () => {
+    setIsLoading(true);
+    setChangePasskeyError("");
+
+    try {
+      if (newPasskey.length !== 6 || !/^\d{6}$/.test(newPasskey)) {
+        setChangePasskeyError("Passkey must be exactly 6 digits.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (newPasskey !== confirmPasskey) {
+        setChangePasskeyError("Passkeys do not match.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Call API to update passkey
+      const success = await setPatientPasskey(
+        formValues.identificationNumber,
+        newPasskey
+      );
+
+      if (success) {
+        setChangePasskeySuccess(true);
+
+        // After 3 seconds close the modal and redirect to dashboard
+        setTimeout(() => {
+          setShowChangePasskeyModal(false);
+          router.push(`/patients/${user.$id}/dashboard`);
+        }, 3000);
+      } else {
+        setChangePasskeyError("Failed to update passkey. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error changing passkey:", error);
+      setChangePasskeyError(
+        error instanceof Error ? error.message : "An unexpected error occurred"
       );
     } finally {
       setIsLoading(false);
@@ -237,13 +301,9 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
         // Ensure we have the user ID for redirection
         const userIdForRedirect = user.$id;
         console.log("User ID for redirection:", userIdForRedirect);
-        console.log(
-          "Redirecting to:",
-          `/patients/${userIdForRedirect}/dashboard`
-        );
 
-        // Show success modal instead of alert
-        setShowSuccessModal(true);
+        // Ask if user wants to change their passkey
+        setShowChangePasskeyModal(true);
       } else {
         // If newPatient is null or undefined, something went wrong
         throw new Error(
@@ -299,6 +359,12 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Skip changing passkey and go directly to dashboard
+  const skipChangePasskey = () => {
+    setShowChangePasskeyModal(false);
+    setShowSuccessModal(true);
   };
 
   // Add a handler to track the ID number length
@@ -644,6 +710,162 @@ const RegisterForm = ({ user }: { user: ExtendedUser }) => {
             >
               {isLoading ? "Verifying..." : "Verify"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Passkey Modal */}
+      <Dialog
+        open={showChangePasskeyModal}
+        onOpenChange={(open) => {
+          setShowChangePasskeyModal(open);
+          if (!open && !changePasskeySuccess) {
+            // If modal is closed without changing passkey, show success modal
+            setShowSuccessModal(true);
+          }
+        }}
+      >
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-bold text-primary">
+              Change Your Passkey
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              We recommend changing your temporary passkey to a new one for
+              better security.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {changePasskeyError && (
+              <div className="bg-red-100 p-3 rounded-md text-sm flex items-start gap-2 text-red-800">
+                <AlertCircle className="h-4 w-4 mt-0.5" />
+                {changePasskeyError}
+              </div>
+            )}
+
+            {changePasskeySuccess ? (
+              <div className="p-4 bg-green-100 rounded-md text-green-800 flex flex-col items-center">
+                <div className="rounded-full bg-green-500 p-2 mb-2">
+                  <Check className="h-5 w-5 text-white" />
+                </div>
+                <p className="text-center font-medium">
+                  Passkey updated successfully!
+                </p>
+                <p className="text-center text-sm mt-1">
+                  Redirecting to dashboard...
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-blue-50 p-4 rounded-md">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <LockKeyhole className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <p className="font-medium text-blue-900">
+                      Create New Passkey
+                    </p>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Choose a new 6-digit passkey that you'll remember. You'll
+                    need this for future logins.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPasskey" className="text-gray-700">
+                      New Passkey (6 digits)
+                    </Label>
+                    <div className="flex justify-center">
+                      <InputOTP
+                        maxLength={6}
+                        value={newPasskey}
+                        onChange={setNewPasskey}
+                        id="newPasskey"
+                      >
+                        <InputOTPGroup className="shad-otp">
+                          <InputOTPSlot className="shad-otp-slot" index={0} />
+                          <InputOTPSlot className="shad-otp-slot" index={1} />
+                          <InputOTPSlot className="shad-otp-slot" index={2} />
+                          <InputOTPSlot className="shad-otp-slot" index={3} />
+                          <InputOTPSlot className="shad-otp-slot" index={4} />
+                          <InputOTPSlot className="shad-otp-slot" index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPasskey" className="text-gray-700">
+                      Confirm New Passkey
+                    </Label>
+                    <div className="flex justify-center">
+                      <InputOTP
+                        maxLength={6}
+                        value={confirmPasskey}
+                        onChange={setConfirmPasskey}
+                        id="confirmPasskey"
+                      >
+                        <InputOTPGroup className="shad-otp">
+                          <InputOTPSlot className="shad-otp-slot" index={0} />
+                          <InputOTPSlot className="shad-otp-slot" index={1} />
+                          <InputOTPSlot className="shad-otp-slot" index={2} />
+                          <InputOTPSlot className="shad-otp-slot" index={3} />
+                          <InputOTPSlot className="shad-otp-slot" index={4} />
+                          <InputOTPSlot className="shad-otp-slot" index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-2">
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                    <Info className="h-3 w-3" />
+                    Your passkey must be exactly 6 digits and will be securely
+                    hashed.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+            {!changePasskeySuccess && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={skipChangePasskey}
+                  className="sm:w-[45%]"
+                >
+                  Skip for Now
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-primary text-white hover:bg-primary-dark sm:w-[45%]"
+                  onClick={handleChangePasskey}
+                  disabled={
+                    newPasskey.length < 6 ||
+                    confirmPasskey.length < 6 ||
+                    isLoading
+                  }
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span>Updating...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Update Passkey</span>
+                    </div>
+                  )}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
