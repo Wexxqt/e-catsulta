@@ -1240,8 +1240,8 @@ export const saveDoctorAvailability = async (
         existingSettings.documents[0].$id,
         {
           availability: JSON.stringify(availability), // Use availability field
-          updatedAt: new Date().toISOString(),
-          settingsType: "availability",
+          // Remove "settingsType" field since it's not in the schema
+          // Remove "updatedAt" field since it's not in the schema
         }
       );
       console.log(`Successfully updated settings document`);
@@ -1259,9 +1259,8 @@ export const saveDoctorAvailability = async (
         {
           doctorId: standardDoctorId,
           availability: JSON.stringify(availability), // Use availability field
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          settingsType: "availability",
+          // Remove "settingsType" field since it's not in the schema
+          // Remove "createdAt" and "updatedAt" fields since they're not in the schema
         }
       );
       console.log(`Successfully created new settings document: ${newDoc.$id}`);

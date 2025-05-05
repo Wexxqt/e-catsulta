@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { format, parse } from "date-fns";
+import {
+  format,
+  parse,
+  isToday,
+  isBefore,
+  setHours,
+  setMinutes,
+  addDays,
+} from "date-fns";
 import {
   ChevronDown,
   ChevronUp,
@@ -121,6 +129,7 @@ import {
 import {
   getPatientAppointments,
   clearPatientAppointmentHistory,
+  getDoctorAvailability,
 } from "@/lib/actions/appointment.actions";
 import {
   getPatientNotes,
@@ -141,6 +150,8 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
+import { Doctors } from "@/constants";
+import { document } from "postcss";
 
 // Personal info form schema
 const personalInfoSchema = z.object({
@@ -247,21 +258,35 @@ const PatientDashboard = () => {
       fetchData();
     }
 
-    // Also add an event listener to check auth when user navigates back to this page
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible") {
-        const user = await getCurrentUser();
-        if (!user) {
-          window.location.href = "/";
+    // Only run browser-specific code in the browser environment
+    if (typeof window !== "undefined") {
+      // Also add an event listener to check auth when user navigates back to this page
+      const handleVisibilityChange = async () => {
+        if (document?.visibilityState === "visible") {
+          const user = await getCurrentUser();
+          if (!user) {
+            window.location.href = "/";
+          }
         }
+      };
+
+      // Use a try-catch to prevent any potential errors
+      try {
+        window.document.addEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
+
+        return () => {
+          window.document.removeEventListener(
+            "visibilitychange",
+            handleVisibilityChange
+          );
+        };
+      } catch (err) {
+        console.log("Browser API not available", err);
       }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    }
   }, [userId]);
 
   // Clean up doctor notes for display when they load

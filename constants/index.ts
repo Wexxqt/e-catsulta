@@ -84,6 +84,7 @@ export const Doctors = [
     id: "dr-abundo",
     name: "Abegail M. Abundo",
     displayName: "Abegail M. Abundo (Medical)",
+    specialty: "Medical",
     image: "/assets/images/dr-abundo.png",
     availability: {
       days: [1, 2, 3, 4, 5],
@@ -100,6 +101,7 @@ export const Doctors = [
     id: "dr-decastro",
     name: "Genevieve S. De Castro",
     displayName: "Genevieve S. De Castro (Dental)",
+    specialty: "Dental",
     image: "/assets/images/dr-decastro.png",
     availability: {
       days: [1, 2, 3, 4, 5],
