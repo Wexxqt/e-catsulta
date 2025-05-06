@@ -5,7 +5,6 @@ import { PatientForm } from "@/components/forms/PatientForm";
 import { PasskeyModal } from "@/components/PasskeyModal";
 import { DoctorPasskeyModal } from "@/components/DoctorPasskeyModal";
 import { StaffPasskeyModal } from "@/components/StaffPasskeyModal";
-import IOSLoginHelper from "@/components/IOSLoginHelper";
 
 const Home = ({ searchParams }: SearchParamProps) => {
   const isAdmin = searchParams?.admin === "true";
@@ -23,7 +22,6 @@ const Home = ({ searchParams }: SearchParamProps) => {
 
         <section className="remove-scrollbar container my-auto">
           <div className="sub-container max-w-[496px]">
-            <IOSLoginHelper />
             <PatientForm />
 
             <div className="text-14-regular mt-20 flex justify-between items-center">
