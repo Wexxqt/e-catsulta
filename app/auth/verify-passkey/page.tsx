@@ -300,8 +300,8 @@ export default function VerifyPasskey() {
                           Having trouble?
                         </p>
                         <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                          If you've forgotten your passkey, please contact
-                          support or go to the admin dashboard to reset it.
+                          Forgot your passkey? Please contact e-CatSUlta support
+                          for assistance.
                         </p>
                       </div>
                     </div>

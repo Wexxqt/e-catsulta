@@ -45,13 +45,13 @@ export const loginWithGoogle = async () => {
     // Use different approach for iOS devices due to WebView limitations
     if (isIOS()) {
       console.log("iOS device detected, using alternative OAuth method");
-
-      // Generate the OAuth URL for iOS devices
-      const scope = encodeURIComponent("profile email");
-      const oauthUrl = `${process.env.NEXT_PUBLIC_ENDPOINT || "https://cloud.appwrite.io/v1"}/account/sessions/oauth2/${OAuthProvider.Google}?project=${process.env.PROJECT_ID || "676eecb00010826361f7"}&success=${encodeURIComponent(successUrl)}&failure=${encodeURIComponent(failureUrl)}&scopes=${scope}`;
-
-      // Redirect to the OAuth URL instead of using createOAuth2Session
-      window.location.href = oauthUrl;
+      // Use the same createOAuth2Session call for iOS
+      await account.createOAuth2Session(
+        OAuthProvider.Google,
+        successUrl,
+        failureUrl,
+        ["profile", "email"]
+      );
       return;
     }
 
