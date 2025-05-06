@@ -2,7 +2,9 @@ import { Account, Client, ID, Models, OAuthProvider } from "appwrite";
 import { getPatient } from "./actions/patient.actions";
 
 const client = new Client()
-  .setEndpoint(process.env.NEXT_PUBLIC_ENDPOINT || "https://cloud.appwrite.io/v1")
+  .setEndpoint(
+    process.env.NEXT_PUBLIC_ENDPOINT || "https://cloud.appwrite.io/v1"
+  )
   .setProject(process.env.PROJECT_ID || "676eecb00010826361f7");
 
 const account = new Account(client);
@@ -11,12 +13,12 @@ const handleOAuthRedirect = async (userId: string) => {
   try {
     // Check if user exists in our database
     const patient = await getPatient(userId);
-    
+
     // Determine redirect URL based on whether user exists
-    const redirectUrl = patient 
+    const redirectUrl = patient
       ? `${window.location.origin}/patients/${userId}/dashboard`
       : `${window.location.origin}/patients/${userId}/register`;
-      
+
     return redirectUrl;
   } catch (error) {
     console.error("Error checking user existence:", error);
@@ -25,14 +27,40 @@ const handleOAuthRedirect = async (userId: string) => {
   }
 };
 
+/**
+ * Helper function to detect iOS devices
+ */
+const isIOS = (): boolean => {
+  if (typeof window === "undefined") return false;
+
+  const userAgent = window.navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(userAgent);
+};
+
 export const loginWithGoogle = async () => {
   try {
-    // Create OAuth2 session for Google
+    const successUrl = `${window.location.origin}/auth/callback`;
+    const failureUrl = `${window.location.origin}/login-failed`;
+
+    // Use different approach for iOS devices due to WebView limitations
+    if (isIOS()) {
+      console.log("iOS device detected, using alternative OAuth method");
+
+      // Generate the OAuth URL for iOS devices
+      const scope = encodeURIComponent("profile email");
+      const oauthUrl = `${process.env.NEXT_PUBLIC_ENDPOINT || "https://cloud.appwrite.io/v1"}/account/sessions/oauth2/${OAuthProvider.Google}?project=${process.env.PROJECT_ID || "676eecb00010826361f7"}&success=${encodeURIComponent(successUrl)}&failure=${encodeURIComponent(failureUrl)}&scopes=${scope}`;
+
+      // Redirect to the OAuth URL instead of using createOAuth2Session
+      window.location.href = oauthUrl;
+      return;
+    }
+
+    // Standard approach for non-iOS devices
     await account.createOAuth2Session(
       OAuthProvider.Google,
-      `${window.location.origin}/auth/callback`, // Success URL - redirect to our callback handler
-      `${window.location.origin}/login-failed`,  // Failure URL
-      ['profile', 'email']                       // Requesting basic profile info and email
+      successUrl,
+      failureUrl,
+      ["profile", "email"]
     );
   } catch (error) {
     console.error("Google login error:", error);
@@ -44,15 +72,15 @@ export const getCurrentUser = async () => {
   try {
     // Get basic user data
     const currentUser = await account.get();
-    
+
     // Get user preferences including OAuth providers data (which contains profile image)
     try {
       const prefs = await account.getPrefs();
-      
+
       // Combine user data with preferences
       return {
         ...currentUser,
-        prefs
+        prefs,
       };
     } catch (prefsError) {
       console.error("Error getting user preferences:", prefsError);
@@ -67,11 +95,11 @@ export const getCurrentUser = async () => {
 export const logout = async () => {
   try {
     console.log("Deleting current session...");
-    const result = await account.deleteSession('current');
+    const result = await account.deleteSession("current");
     console.log("Session deleted successfully:", result);
     return { success: true };
   } catch (error) {
     console.error("Logout error:", error);
     throw error;
   }
-}; 
+};
