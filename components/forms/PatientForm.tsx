@@ -224,7 +224,7 @@ export const PatientForm = () => {
                   height={20}
                 />
               )}
-              Log in with Google
+          Continue with Google
             </Button>
 
             {isIOSDevice && (
