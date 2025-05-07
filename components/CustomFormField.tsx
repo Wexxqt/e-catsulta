@@ -778,6 +778,48 @@ const AppointmentDatePicker = ({
                     text-align: center;
                   }
                 }
+                
+                /* Styling for booked time slots with strikethrough */
+                .react-datepicker__time-list-item--booked {
+                  text-decoration: line-through !important;
+                  color: #808080 !important;
+                  font-weight: bold !important;
+                  background-color: rgba(128, 128, 128, 0.2) !important;
+                  pointer-events: none !important;
+                  opacity: 0.7 !important;
+                }
+                
+                /* Override any hover effects on booked slots */
+                .react-datepicker__time-list-item--booked:hover {
+                  background-color: rgba(128, 128, 128, 0.2) !important;
+                  cursor: not-allowed !important;
+                }
+                
+                /* Enhanced styling for current date (today) */
+                .react-datepicker__day--today {
+                  border: 2px solid #3b82f6 !important;
+                  background-color: rgba(59, 130, 246, 0.15) !important;
+                  border-radius: 4px !important;
+                  font-weight: bold !important;
+                  position: relative !important;
+                }
+                
+                /* Add "TODAY" label on top of today's date */
+                .react-datepicker__day--today::after {
+                  content: "TODAY";
+                  position: absolute;
+                  top: -8px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  font-size: 8px;
+                  background-color: #3b82f6;
+                  color: white;
+                  padding: 1px 3px;
+                  border-radius: 2px;
+                  font-weight: bold;
+                  letter-spacing: 0.5px;
+                  z-index: 1;
+                }
               `}</style>
               <ReactDatePicker
                 selected={tempSelectedDate}
@@ -799,6 +841,33 @@ const AppointmentDatePicker = ({
                 timeIntervals={30}
                 timeCaption="Time"
                 renderDayContents={renderDayContents}
+                timeClassName={(time) => {
+                  // Add class to booked time slots that are not selectable but should be displayed with strikethrough
+                  if (tempSelectedDate) {
+                    const dateTime = new Date(
+                      tempSelectedDate.getFullYear(),
+                      tempSelectedDate.getMonth(),
+                      tempSelectedDate.getDate(),
+                      time.getHours(),
+                      time.getMinutes()
+                    );
+                    
+                    // Check if this time is booked
+                    const isBooked = bookedSlots.some(slot => 
+                      slot.slots.some(bookedTime => {
+                        const bookedDate = new Date(bookedTime);
+                        return isSameDay(bookedDate, tempSelectedDate) && 
+                               bookedDate.getHours() === time.getHours() && 
+                               bookedDate.getMinutes() === time.getMinutes();
+                      })
+                    );
+                    
+                    if (isBooked) {
+                      return 'react-datepicker__time-list-item--booked';
+                    }
+                  }
+                  return '';
+                }}
                 renderCustomHeader={({
                   date,
                   decreaseMonth,
